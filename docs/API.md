@@ -548,6 +548,34 @@ POST /api/v1/quests/{questId}/complete
 
 ---
 
+# 파일 업로드 (File Upload)
+
+이미지 또는 오디오 파일을 AWS S3에 업로드하고 URL을 반환합니다. **인증 필요** (JWT 또는 세션).
+
+## 파일 업로드
+
+```
+POST /api/v1/upload
+Content-Type: multipart/form-data
+```
+
+| 구분 | 이름 | 타입 | 설명 |
+|------|------|------|------|
+| Body | file | File | 업로드할 파일 (필수) |
+| Query | type | string | 파일 타입 (선택: `image` \| `audio`) - 생략 시 Content-Type으로 자동 판별 |
+
+**지원 파일 형식**: 이미지(jpeg/png/gif/webp), 오디오(mp3/wav/ogg/m4a) | 최대 50MB
+
+**Response** `200 OK`
+
+```json
+{
+  "url": "https://bucket.s3.region.amazonaws.com/audio/uuid.mp3"
+}
+```
+
+---
+
 # 관리자 API (Admin)
 
 관리자 API는 모두 **인증 필요**입니다. JWT Bearer 토큰(`Authorization: Bearer <token>`) 또는 세션 쿠키(`sessionAuth`) 중 하나로 인증할 수 있습니다.

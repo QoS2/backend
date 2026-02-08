@@ -48,6 +48,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/v1/quests/nodes/{fromNodeId}/transition/{toNodeId}").permitAll()
                 .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll()
                 .requestMatchers("/api/v1/admin/**").authenticated()
+                .requestMatchers("/api/v1/upload/**").authenticated()
                 .anyRequest().authenticated()
             )
             .oauth2Login(oauth2 -> oauth2

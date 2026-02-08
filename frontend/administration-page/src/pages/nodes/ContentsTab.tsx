@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Button } from '../../components/ui/Button';
 import { Drawer } from '../../components/ui/Drawer';
+import { FileUploadInput } from '../../components/ui/FileUploadInput';
 import { Input } from '../../components/ui/Input';
 import { Select } from '../../components/ui/Select';
 import { Textarea } from '../../components/ui/Textarea';
@@ -56,6 +57,7 @@ export function ContentsTab({ questId, nodeId }: ContentsTabProps) {
     const language = (form.elements.namedItem('language') as HTMLSelectElement)
       ?.value as Content['language'];
     const body = (form.elements.namedItem('body') as HTMLTextAreaElement)?.value ?? '';
+    const audioUrl = (form.elements.namedItem('audioUrl') as HTMLInputElement)?.value?.trim();
     const displayMode = (form.elements.namedItem('displayMode') as HTMLSelectElement)
       ?.value as Content['displayMode'];
 
@@ -65,6 +67,7 @@ export function ContentsTab({ questId, nodeId }: ContentsTabProps) {
         contentType,
         language,
         body,
+        audioUrl: audioUrl || undefined,
         displayMode,
       };
       mutations.update.mutate(
@@ -77,6 +80,7 @@ export function ContentsTab({ questId, nodeId }: ContentsTabProps) {
         contentType,
         language,
         body,
+        audioUrl: audioUrl || undefined,
         displayMode,
       };
       mutations.create.mutate(bodyCreate, { onSuccess: handleClose });
@@ -180,6 +184,13 @@ export function ContentsTab({ questId, nodeId }: ContentsTabProps) {
             rows={6}
             defaultValue={editing?.body ?? ''}
             required
+          />
+          <FileUploadInput
+            label="오디오 URL"
+            name="audioUrl"
+            defaultValue={editing?.audioUrl ?? ''}
+            type="audio"
+            placeholder="파일 업로드 또는 URL 입력"
           />
           <div className={styles.formActions}>
             <Button type="button" variant="ghost" onClick={handleClose}>

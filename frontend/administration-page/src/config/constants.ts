@@ -6,6 +6,9 @@ const API_ORIGIN = API_BASE.startsWith('http') ? new URL(API_BASE).origin : '';
 
 export const ADMIN_BASE = `${API_BASE}/admin`;
 
+/** File upload (multipart, auth required) */
+export const UPLOAD_URL = `${API_BASE}/upload`;
+
 /** Auth: current user endpoint */
 export const AUTH_ME_URL = `${API_BASE}/auth/me`;
 

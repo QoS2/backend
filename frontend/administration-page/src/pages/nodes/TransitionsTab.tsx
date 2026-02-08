@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Button } from '../../components/ui/Button';
 import { Drawer } from '../../components/ui/Drawer';
+import { FileUploadInput } from '../../components/ui/FileUploadInput';
 import { Input } from '../../components/ui/Input';
 import { Select } from '../../components/ui/Select';
 import { Textarea } from '../../components/ui/Textarea';
@@ -266,10 +267,12 @@ export function TransitionsTab({ questId, nodeId, nodes }: TransitionsTabProps) 
             rows={3}
             defaultValue={editing?.textContent ?? ''}
           />
-          <Input
+          <FileUploadInput
             label="오디오 URL"
             name="audioUrl"
             defaultValue={editing?.audioUrl ?? ''}
+            type="audio"
+            placeholder="파일 업로드 또는 URL 입력"
           />
           <div className={styles.formActions}>
             <Button type="button" variant="ghost" onClick={handleClose}>

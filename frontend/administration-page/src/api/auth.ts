@@ -40,7 +40,7 @@ export function clearAccessToken(): void {
   localStorage.removeItem(ACCESS_TOKEN_KEY);
 }
 
-/** Fetch current user; throws on non-2xx (e.g. 401 unauthenticated). */
+/** Fetch current user */
 export async function fetchAuthMe(options?: { useCredentials?: boolean }): Promise<AuthMeResponse> {
   const useCredentials = options?.useCredentials ?? false;
   const token = getAccessToken();
@@ -59,7 +59,7 @@ export async function fetchAuthMe(options?: { useCredentials?: boolean }): Promi
   return res.json() as Promise<AuthMeResponse>;
 }
 
-/** JWT 로그인 (이메일 + 비밀번호). 성공 시 토큰 저장 후 반환. */
+/** JWT Login */
 export async function fetchLogin(body: LoginRequest): Promise<AuthTokenResponse> {
   const res = await fetch(AUTH_LOGIN_URL, {
     method: 'POST',
@@ -78,7 +78,7 @@ export async function fetchLogin(body: LoginRequest): Promise<AuthTokenResponse>
   return data;
 }
 
-/** 회원가입. 성공 시 토큰 저장 후 반환. */
+/** Register */
 export async function fetchRegister(body: RegisterRequest): Promise<AuthTokenResponse> {
   const res = await fetch(AUTH_REGISTER_URL, {
     method: 'POST',
@@ -97,7 +97,7 @@ export async function fetchRegister(body: RegisterRequest): Promise<AuthTokenRes
   return data;
 }
 
-/** OAuth2 로그인 후 세션으로 JWT 발급. */
+/** OAuth2 Login */
 export async function fetchAuthToken(): Promise<AuthTokenResponse> {
   const res = await fetch(AUTH_TOKEN_URL, {
     method: 'POST',

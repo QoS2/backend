@@ -1,5 +1,5 @@
 import { getAccessToken } from '../api/auth';
-import { ADMIN_BASE } from '../config/constants';
+import { ADMIN_BASE, API_BASE } from '../config/constants';
 import type { ErrorResponse } from '../types/admin';
 
 const DEFAULT_HEADERS: HeadersInit = {
@@ -20,16 +20,18 @@ function buildHeaders(overrides?: HeadersInit): HeadersInit {
   return headers;
 }
 
-/** Fetch with JWT (if stored) or session cookie; throws on non-ok with parsed ErrorResponse */
+/** Fetch with JWT (if stored) or session cookie */
 export async function fetchApi(
   path: string,
-  options: RequestInit = {}
+  options: RequestInit & { base?: 'admin' | 'api' } = {}
 ): Promise<Response> {
-  const url = path.startsWith('http') ? path : `${ADMIN_BASE}${path}`;
+  const { base = 'admin', ...fetchOptions } = options;
+  const baseUrl = base === 'api' ? API_BASE : ADMIN_BASE;
+  const url = path.startsWith('http') ? path : `${baseUrl}${path}`;
   const res = await fetch(url, {
-    ...options,
+    ...fetchOptions,
     credentials: 'include',
-    headers: buildHeaders(options.headers as HeadersInit),
+    headers: buildHeaders(fetchOptions.headers as HeadersInit),
   });
   if (!res.ok) {
     let body: ErrorResponse | string;
@@ -45,8 +47,8 @@ export async function fetchApi(
   return res;
 }
 
-export async function getJson<T>(path: string): Promise<T> {
-  const res = await fetchApi(path, { method: 'GET' });
+export async function getJson<T>(path: string, options?: { base?: 'admin' | 'api' }): Promise<T> {
+  const res = await fetchApi(path, { method: 'GET', ...options });
   return res.json() as Promise<T>;
 }
 

@@ -1,0 +1,80 @@
+services:
+  postgres:
+    image: postgis/postgis:16-3.4-alpine
+    container_name: questofseoul-db
+    environment:
+      POSTGRES_DB: questofseoul
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d questofseoul"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  ai-server:
+    build:
+      context: ./ai-server
+      dockerfile: Dockerfile
+    container_name: questofseoul-ai-server
+    ports:
+      - "8081:8081"
+    environment:
+      PORT: 8081
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o-mini}
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: ./spring-boot/questofseoul
+      dockerfile: Dockerfile
+    container_name: questofseoul-backend
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      SERVER_PORT: 8080
+      DB_URL: jdbc:postgresql://postgres:5432/questofseoul
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres
+      JPA_DDL_AUTO: update
+      JWT_SECRET: questofseoul-dev-secret-key-at-least-256-bits-for-hs256
+      FRONTEND_URL: http://localhost:3000
+      # OAuth / S3 are overridden in .env
+      AI_SERVER_URL: http://ai-server:8081
+      AI_SERVER_ENABLED: "true"
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      AWS_S3_ENABLED: ${AWS_S3_ENABLED:-false}
+      AWS_S3_BUCKET: ${AWS_S3_BUCKET:-}
+      AWS_REGION: ${AWS_REGION:-ap-northeast-2}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      ai-server:
+        condition: service_started
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend/administration-page
+      dockerfile: Dockerfile
+      # API URL for browser access (host-based)
+      args:
+        VITE_API_BASE: http://localhost:8080/api/v1
+    container_name: questofseoul-admin
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  postgres_data:

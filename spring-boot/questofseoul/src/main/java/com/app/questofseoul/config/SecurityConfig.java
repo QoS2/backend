@@ -40,6 +40,8 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/oauth2/**", "/login/**").permitAll()
                 .requestMatchers("/api/v1/auth/login", "/api/v1/auth/register").permitAll()
+                .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/v1/tours/**").permitAll()
+                .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/v1/steps/**").permitAll()
                 .requestMatchers("/api/v1/quests").permitAll()
                 .requestMatchers("/api/v1/quests/{questId}").permitAll()
                 .requestMatchers("/api/v1/quests/{questId}/check-arrival").permitAll()
@@ -47,6 +49,8 @@ public class SecurityConfig {
                 .requestMatchers("/api/v1/quests/nodes/{nodeId}/actions").permitAll()
                 .requestMatchers("/api/v1/quests/nodes/{fromNodeId}/transition/{toNodeId}").permitAll()
                 .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll()
+                .requestMatchers("/api/v1/tour-runs/**").authenticated()
+                .requestMatchers("/api/v1/chat-sessions/**").authenticated()
                 .requestMatchers("/api/v1/admin/**").authenticated()
                 .requestMatchers("/api/v1/upload/**").authenticated()
                 .anyRequest().authenticated()
@@ -69,7 +73,7 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of("http://localhost:5173", "http://localhost:8080"));
+        configuration.setAllowedOrigins(List.of("http://localhost:5173", "http://localhost:8080", "http://localhost:3000"));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setExposedHeaders(List.of("Authorization"));

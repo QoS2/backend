@@ -25,13 +25,13 @@ import java.util.UUID;
 @RequestMapping("/api/v1/auth")
 @RequiredArgsConstructor
 @Slf4j
-@Tag(name = "인증", description = "JWT 로그인(이메일/비밀번호), Google OAuth2 로그인, 회원가입, 현재 사용자 조회")
+@Tag(name = "인증", description = "로그인, 회원가입, 현재 사용자 조회")
 public class AuthController {
 
     private final AuthService authService;
     private final JwtTokenProvider jwtTokenProvider;
 
-    @Operation(summary = "JWT 로그인", description = "이메일과 비밀번호로 로그인하여 JWT 액세스 토큰을 발급합니다.")
+    @Operation(summary = "JWT 로그인", description = "로그인하여 JWT 액세스 토큰을 발급합니다.")
     @PostMapping("/login")
     public ResponseEntity<Map<String, Object>> login(@Valid @RequestBody LoginRequest request) {
         UUID userId = authService.login(request.getEmail(), request.getPassword());
@@ -44,7 +44,7 @@ public class AuthController {
         ));
     }
 
-    @Operation(summary = "회원가입", description = "이메일·비밀번호로 회원가입합니다. 가입 후 JWT 로그인으로 로그인할 수 있습니다.")
+    @Operation(summary = "회원가입", description = "가입 후 JWT 로그인으로 로그인할 수 있습니다.")
     @PostMapping("/register")
     public ResponseEntity<Map<String, Object>> register(@Valid @RequestBody RegisterRequest request) {
         UUID userId = authService.register(
@@ -68,7 +68,7 @@ public class AuthController {
         return ResponseEntity.ok(Map.of("userId", userId.toString()));
     }
 
-    @Operation(summary = "OAuth2 → JWT 토큰 발급", description = "Google OAuth2 로그인 후 세션이 있으면 JWT 액세스 토큰을 발급합니다.")
+    @Operation(summary = "OAuth2 -> JWT 토큰 발급", description = "로그인 후 세션이 있으면 JWT 액세스 토큰을 발급합니다.")
     @SecurityRequirement(name = "sessionAuth")
     @PostMapping("/token")
     public ResponseEntity<Map<String, Object>> issueToken() {

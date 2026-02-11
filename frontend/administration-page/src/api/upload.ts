@@ -6,9 +6,9 @@ export interface UploadResponse {
 }
 
 /**
- * 파일을 S3에 업로드하고 URL을 반환합니다.
- * @param file 업로드할 파일 (이미지 또는 오디오)
- * @param type 파일 타입 (image | audio) - 생략 시 Content-Type으로 자동 판별
+ * Upload file to S3 and return URL
+ * @param file File to upload (image or audio)
+ * @param type File type (image | audio) - auto-detected by Content-Type if omitted
  */
 export async function uploadFile(
   file: File,

@@ -37,6 +37,9 @@ public class User {
     @Column(name = "nickname")
     private String nickname;
 
+    @Column(name = "language", length = 10)
+    private String language; // KO, EN, JP, CN
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 

@@ -1,0 +1,449 @@
+.page {
+  padding: 24px;
+  background: #0a0a0a;
+  min-height: 100vh;
+}
+
+.toolbar {
+  margin-bottom: 16px;
+}
+
+.toolbarTitle {
+  color: #e5e7eb;
+  font-size: 14px;
+}
+
+.phoneFrame {
+  width: 375px;
+  height: 812px;
+  margin: 0 auto;
+  background: #000;
+  border-radius: 40px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+  overflow: hidden;
+  position: relative;
+  border: 10px solid #111;
+}
+
+.phoneNotch {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 150px;
+  height: 28px;
+  background: #000;
+  border-radius: 0 0 20px 20px;
+  z-index: 10;
+}
+
+.screen {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background: #000;
+}
+
+.header {
+  padding: 44px 16px 12px;
+  background: #0a0a0a;
+  border-bottom: 1px solid #1f2937;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.backBtn {
+  background: none;
+  border: none;
+  color: #3b82f6;
+  font-size: 20px;
+  cursor: pointer;
+  padding: 4px;
+}
+
+.headerTitle {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.main {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
+  color: #d1d5db;
+  background: #000;
+}
+
+.tabBar {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 12px;
+}
+
+.tab {
+  flex: 1;
+  padding: 10px 8px;
+  background: #111;
+  border: 1px solid #1f2937;
+  border-radius: 10px;
+  color: #6b7280;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.tab:hover {
+  color: #9ca3af;
+  border-color: #374151;
+}
+
+.tabActive {
+  background: #0f172a;
+  color: #3b82f6;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.3);
+}
+
+.contentArea {
+  min-height: 200px;
+}
+
+.mapPlaceholder {
+  background: #0a0a0a;
+  border: 1px dashed #374151;
+  border-radius: 12px;
+  padding: 20px;
+  text-align: center;
+  color: #6b7280;
+}
+
+.mapLabel {
+  display: block;
+  font-size: 12px;
+  margin-bottom: 8px;
+  color: #9ca3af;
+}
+
+.proximityBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 12px;
+  padding: 8px 14px;
+  background: linear-gradient(135deg, rgba(34, 211, 238, 0.2) 0%, rgba(45, 212, 191, 0.2) 100%);
+  border: 1px solid #2dd4bf;
+  border-radius: 20px;
+  color: #2dd4bf;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.proximityCircle {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #2dd4bf;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(1.2); }
+}
+
+.markerList {
+  list-style: none;
+  padding: 0;
+  margin: 16px 0 0;
+  text-align: left;
+  font-size: 12px;
+}
+
+.markerList li {
+  padding: 8px 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  border-bottom: 1px solid #1f2937;
+}
+
+.markerList li:last-child {
+  border-bottom: none;
+}
+
+.markerType {
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 600;
+}
+
+.markerTypeStep {
+  background: rgba(59, 130, 246, 0.3);
+  color: #60a5fa;
+}
+
+.markerTypeWaypoint {
+  background: rgba(45, 212, 191, 0.3);
+  color: #2dd4bf;
+}
+
+.markerTypePhoto {
+  background: rgba(251, 191, 36, 0.3);
+  color: #fbbf24;
+}
+
+.markerTypeTreasure {
+  background: rgba(168, 85, 247, 0.3);
+  color: #a78bfa;
+}
+
+.stepBtn {
+  padding: 6px 12px;
+  background: #3b82f6;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.stepBtn:hover {
+  background: #2563eb;
+}
+
+.placeList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.placeItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  background: #0a0a0a;
+  border-radius: 10px;
+  border: 1px solid #1f2937;
+}
+
+.placeItem:hover {
+  border-color: #374151;
+}
+
+.visited {
+  font-size: 11px;
+  color: #2dd4bf;
+}
+
+.notVisited {
+  font-size: 11px;
+  color: #6b7280;
+}
+
+.treasureArea,
+.photoArea {
+  padding: 24px;
+  background: #0a0a0a;
+  border: 1px dashed #374151;
+  border-radius: 12px;
+  text-align: center;
+}
+
+.treasureArea p,
+.photoArea p {
+  margin: 0;
+  color: #9ca3af;
+  font-size: 13px;
+}
+
+.hint {
+  font-size: 12px;
+  color: #6b7280;
+  margin-top: 8px;
+}
+
+.stepContent {
+  padding: 16px 0;
+}
+
+.arrivalBanner {
+  margin-bottom: 20px;
+  padding: 16px;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(45, 212, 191, 0.1) 100%);
+  border: 1px solid rgba(59, 130, 246, 0.4);
+  border-radius: 12px;
+  color: #60a5fa;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.guideSegment {
+  margin-bottom: 20px;
+}
+
+.guideSegment p {
+  margin: 0 0 8px;
+  line-height: 1.7;
+  color: #d1d5db;
+  font-size: 14px;
+}
+
+.mediaPlaceholder {
+  width: 100%;
+  height: 120px;
+  background: #111;
+  border: 1px dashed #374151;
+  border-radius: 8px;
+  margin-top: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #6b7280;
+  font-size: 12px;
+}
+
+.primaryBtn {
+  margin-top: 24px;
+  padding: 14px 24px;
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: #fff;
+  border: none;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+}
+
+.primaryBtn:hover {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+}
+
+.questContent {
+  padding: 16px 0;
+}
+
+.quizItem {
+  padding: 14px;
+  margin-top: 10px;
+  background: #0a0a0a;
+  border: 1px solid #1f2937;
+  border-radius: 10px;
+  font-size: 13px;
+  color: #d1d5db;
+}
+
+.quizItem span {
+  font-size: 10px;
+  padding: 2px 6px;
+  background: rgba(45, 212, 191, 0.2);
+  color: #2dd4bf;
+  border-radius: 4px;
+  margin-right: 8px;
+}
+
+.chatPanel {
+  border-top: 1px solid #1f2937;
+  padding: 14px 16px;
+  background: #0a0a0a;
+  max-height: 200px;
+}
+
+.chatMessages {
+  max-height: 110px;
+  overflow-y: auto;
+  margin-bottom: 10px;
+}
+
+.chatGuide {
+  padding: 10px 14px;
+  margin-bottom: 8px;
+  background: rgba(59, 130, 246, 0.2);
+  border-left: 4px solid #3b82f6;
+  border-radius: 0 12px 12px 0;
+  font-size: 13px;
+  color: #e5e7eb;
+}
+
+.chatUser {
+  padding: 10px 14px;
+  margin-bottom: 8px;
+  margin-left: 24px;
+  background: #1f2937;
+  border-radius: 12px 12px 0 0;
+  font-size: 13px;
+  color: #e5e7eb;
+}
+
+.badge {
+  display: inline-block;
+  font-size: 10px;
+  background: #2dd4bf;
+  color: #000;
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-right: 6px;
+  font-weight: 600;
+}
+
+.chatInputRow {
+  display: flex;
+  gap: 8px;
+}
+
+.chatInputRow input {
+  flex: 1;
+  padding: 10px 16px;
+  border: 1px solid #374151;
+  border-radius: 24px;
+  background: #111;
+  color: #fff;
+  font-size: 14px;
+}
+
+.chatInputRow input::placeholder {
+  color: #6b7280;
+}
+
+.chatInputRow input:focus {
+  outline: none;
+  border-color: #3b82f6;
+}
+
+.chatInputRow button {
+  padding: 10px 20px;
+  background: #3b82f6;
+  color: #fff;
+  border: none;
+  border-radius: 24px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.chatInputRow button:hover {
+  background: #2563eb;
+}
+
+.loading,
+.error {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #6b7280;
+}
+
+.error {
+  color: #ef4444;
+}

@@ -29,13 +29,13 @@ public class OpenApiConfig {
                         .name("JSESSIONID")
                         .type(SecurityScheme.Type.APIKEY)
                         .in(SecurityScheme.In.COOKIE)
-                        .description("Google OAuth2 로그인 후 발급되는 세션 쿠키"))
+                        .description("세션 쿠키"))
                 .addSecuritySchemes(bearerScheme,
                     new SecurityScheme()
                         .name("Authorization")
                         .type(SecurityScheme.Type.HTTP)
                         .scheme("bearer")
                         .bearerFormat("JWT")
-                        .description("POST /api/v1/auth/token 으로 발급받은 JWT 액세스 토큰")));
+                        .description("JWT 액세스 토큰")));
     }
 }

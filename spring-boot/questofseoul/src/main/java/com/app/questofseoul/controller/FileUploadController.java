@@ -30,7 +30,7 @@ public class FileUploadController {
     private final Optional<FileUploadService> fileUploadService;
 
     @Operation(summary = "파일 업로드",
-        description = "이미지 또는 오디오 파일을 S3에 업로드하고 URL을 반환합니다. 인증 필요.")
+        description = "이미지 또는 오디오 파일을 S3에 업로드하고 URL을 반환합니다.")
     @SecurityRequirement(name = "bearerAuth")
     @SecurityRequirement(name = "sessionAuth")
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)

@@ -1,0 +1,86 @@
+.page {
+  padding: 24px;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.header h1 {
+  margin: 0;
+  font-size: 24px;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.drawer {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: stretch;
+}
+
+.drawerBackdrop {
+  flex: 1;
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.drawerPanel {
+  width: 400px;
+  max-width: 90vw;
+  background: var(--bg-primary, #fff);
+  padding: 24px;
+  overflow-y: auto;
+}
+
+.drawerPanel h2 {
+  margin: 0 0 16px;
+}
+
+.formRow {
+  margin-bottom: 16px;
+}
+
+.formRow label {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 14px;
+}
+
+.formRow textarea {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+}
+
+.formActions {
+  display: flex;
+  gap: 8px;
+  margin-top: 24px;
+}
+
+.stepList {
+  list-style: none;
+  padding: 0;
+  margin: 16px 0;
+}
+
+.stepList li {
+  padding: 8px 0;
+  border-bottom: 1px solid #eee;
+}

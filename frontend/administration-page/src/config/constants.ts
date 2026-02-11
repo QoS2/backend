@@ -6,19 +6,19 @@ const API_ORIGIN = API_BASE.startsWith('http') ? new URL(API_BASE).origin : '';
 
 export const ADMIN_BASE = `${API_BASE}/admin`;
 
-/** File upload (multipart, auth required) */
+/** File upload */
 export const UPLOAD_URL = `${API_BASE}/upload`;
 
 /** Auth: current user endpoint */
 export const AUTH_ME_URL = `${API_BASE}/auth/me`;
 
-/** Auth: JWT login (email + password) */
+/** Auth: JWT login */
 export const AUTH_LOGIN_URL = `${API_BASE}/auth/login`;
 
-/** Auth: register (email + password) */
+/** Auth: register */
 export const AUTH_REGISTER_URL = `${API_BASE}/auth/register`;
 
-/** Auth: OAuth → JWT token (POST, requires session) */
+/** Auth: OAuth to JWT token */
 export const AUTH_TOKEN_URL = `${API_BASE}/auth/token`;
 
 /** OAuth: Google login redirect */
@@ -46,7 +46,7 @@ export const RADIUS = {
 /** Default page size for pagination */
 export const DEFAULT_PAGE_SIZE = 20;
 
-/** Animation duration for drawer/transitions (ms) */
+/** Animation duration for drawer/transitions */
 export const DRAWER_ANIMATION_MS = 300;
 
 /** Enum names for admin form dropdowns */

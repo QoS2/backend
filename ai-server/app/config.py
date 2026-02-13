@@ -21,9 +21,16 @@ class Settings(BaseSettings):
     openai_api_key: str = ""
     openai_model: str = "gpt-4o-mini"
 
+    # Korea Tourism Organization Tour API (VisitKorea)
+    data_go_kr_service_key: str = ""
+
     @property
     def is_openai_configured(self) -> bool:
         return bool(self.openai_api_key.strip())
+
+    @property
+    def is_tour_api_configured(self) -> bool:
+        return bool(self.data_go_kr_service_key.strip())
 
 
 @lru_cache

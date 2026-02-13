@@ -1,12 +1,16 @@
 package com.app.questofseoul.service.admin;
 
 import com.app.questofseoul.domain.entity.Tour;
+import com.app.questofseoul.domain.enums.SpotType;
+import com.app.questofseoul.domain.enums.StepKind;
 import com.app.questofseoul.dto.admin.TourAdminResponse;
 import com.app.questofseoul.dto.admin.TourCreateRequest;
 import com.app.questofseoul.dto.admin.TourUpdateRequest;
 import com.app.questofseoul.exception.DuplicateResourceException;
 import com.app.questofseoul.exception.ResourceNotFoundException;
-import com.app.questofseoul.repository.*;
+import com.app.questofseoul.repository.SpotContentStepRepository;
+import com.app.questofseoul.repository.TourRepository;
+import com.app.questofseoul.repository.TourSpotRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -18,11 +22,8 @@ import org.springframework.transaction.annotation.Transactional;
 public class AdminTourService {
 
     private final TourRepository tourRepository;
-    private final StepRepository stepRepository;
-    private final WaypointRepository waypointRepository;
-    private final PhotoSpotRepository photoSpotRepository;
-    private final TreasureRepository treasureRepository;
-    private final QuizRepository quizRepository;
+    private final TourSpotRepository tourSpotRepository;
+    private final SpotContentStepRepository spotContentStepRepository;
 
     @Transactional(readOnly = true)
     public Page<TourAdminResponse> list(Pageable pageable) {
@@ -32,7 +33,7 @@ public class AdminTourService {
     @Transactional(readOnly = true)
     public TourAdminResponse get(Long tourId) {
         Tour tour = tourRepository.findById(tourId)
-            .orElseThrow(() -> new ResourceNotFoundException("Tour not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Tour not found"));
         return toResponse(tour);
     }
 
@@ -49,7 +50,7 @@ public class AdminTourService {
     @Transactional
     public TourAdminResponse update(Long tourId, TourUpdateRequest req) {
         Tour tour = tourRepository.findById(tourId)
-            .orElseThrow(() -> new ResourceNotFoundException("Tour not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Tour not found"));
         if (req.titleEn() != null) tour.setTitleEn(req.titleEn());
         if (req.descriptionEn() != null) tour.setDescriptionEn(req.descriptionEn());
         if (req.infoJson() != null) tour.setInfoJson(req.infoJson());
@@ -61,19 +62,17 @@ public class AdminTourService {
     @Transactional
     public void delete(Long tourId) {
         Tour tour = tourRepository.findById(tourId)
-            .orElseThrow(() -> new ResourceNotFoundException("Tour not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Tour not found"));
         tourRepository.delete(tour);
     }
 
     private TourAdminResponse toResponse(Tour tour) {
-        int steps = stepRepository.findByTourIdOrderByStepOrderAsc(tour.getId()).size();
-        int waypoints = waypointRepository.findByTourId(tour.getId()).size();
-        int photos = photoSpotRepository.findByTourId(tour.getId()).size();
-        int treasures = treasureRepository.findByTourId(tour.getId()).size();
-        int quizzes = (int) stepRepository.findByTourIdOrderByStepOrderAsc(tour.getId()).stream()
-            .mapToLong(s -> quizRepository.findByStepIdOrderByIdAsc(s.getId()).size())
-            .sum();
-        return TourAdminResponse.from(tour.getId(), tour.getExternalKey(), tour.getTitleEn(), tour.getDescriptionEn(),
-            tour.getInfoJson(), tour.getGoodToKnowJson(), steps, waypoints, photos, treasures, quizzes);
+        int main = (int) tourSpotRepository.countByTourIdAndType(tour.getId(), SpotType.MAIN);
+        int sub = (int) tourSpotRepository.countByTourIdAndType(tour.getId(), SpotType.SUB);
+        int photos = (int) tourSpotRepository.countByTourIdAndType(tour.getId(), SpotType.PHOTO);
+        int treasures = (int) tourSpotRepository.countByTourIdAndType(tour.getId(), SpotType.TREASURE);
+        int missions = (int) spotContentStepRepository.countMissionsByTourId(tour.getId(), StepKind.MISSION);
+        return TourAdminResponse.from(tour.getId(), tour.getExternalKey(), tour.getDisplayTitle(), tour.getDisplayDescription(),
+                tour.getInfoJson(), tour.getGoodToKnowJson(), main, sub, photos, treasures, missions);
     }
 }

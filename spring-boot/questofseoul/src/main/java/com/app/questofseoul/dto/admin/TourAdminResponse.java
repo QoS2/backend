@@ -9,16 +9,16 @@ public record TourAdminResponse(
     String descriptionEn,
     java.util.Map<String, Object> infoJson,
     java.util.Map<String, Object> goodToKnowJson,
-    int stepsCount,
-    int waypointsCount,
+    int mainCount,
+    int subCount,
     int photoSpotsCount,
     int treasuresCount,
-    int quizzesCount
+    int missionsCount
 ) {
     public static TourAdminResponse from(Long id, String externalKey, String titleEn, String descriptionEn,
                                          java.util.Map<String, Object> infoJson, java.util.Map<String, Object> goodToKnowJson,
-                                         int steps, int waypoints, int photos, int treasures, int quizzes) {
+                                         int main, int waypoints, int photos, int treasures, int missions) {
         return new TourAdminResponse(id, externalKey, titleEn, descriptionEn, infoJson, goodToKnowJson,
-            steps, waypoints, photos, treasures, quizzes);
+            main, waypoints, photos, treasures, missions);
     }
 }

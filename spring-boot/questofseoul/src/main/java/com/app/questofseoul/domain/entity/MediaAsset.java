@@ -1,6 +1,6 @@
 package com.app.questofseoul.domain.entity;
 
-import com.app.questofseoul.domain.enums.MediaAssetType;
+import com.app.questofseoul.domain.enums.AssetType;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -21,36 +21,46 @@ public class MediaAsset {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "external_key", unique = true)
-    private String externalKey;
-
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private MediaAssetType type;
+    @Column(name = "asset_type", nullable = false)
+    private AssetType assetType;
 
-    @Column(name = "url_or_key", nullable = false)
-    private String urlOrKey;
+    @Column(name = "url", nullable = false, columnDefinition = "TEXT")
+    private String url;
+
+    @Column(name = "mime_type", nullable = false)
+    private String mimeType;
+
+    @Column(name = "bytes")
+    private Long bytes;
+
+    @Column(name = "width")
+    private Integer width;
+
+    @Column(name = "height")
+    private Integer height;
+
+    @Column(name = "duration_ms")
+    private Integer durationMs;
 
     @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name = "meta_json", columnDefinition = "jsonb")
-    private Map<String, Object> metaJson;
+    @Column(name = "metadata_json", columnDefinition = "jsonb")
+    private Map<String, Object> metadataJson;
 
-    @Column(name = "updated_at", nullable = false)
-    private LocalDateTime updatedAt;
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private LocalDateTime createdAt;
 
     @PrePersist
-    @PreUpdate
-    protected void onUpdate() {
-        updatedAt = LocalDateTime.now();
+    protected void onCreate() {
+        if (metadataJson == null) metadataJson = Map.of();
+        createdAt = LocalDateTime.now();
     }
 
-    public static MediaAsset create(String externalKey, MediaAssetType type,
-                                    String urlOrKey, Map<String, Object> metaJson) {
-        MediaAsset e = new MediaAsset();
-        e.externalKey = externalKey;
-        e.type = type;
-        e.urlOrKey = urlOrKey;
-        e.metaJson = metaJson;
-        return e;
+    public static MediaAsset create(AssetType assetType, String url, String mimeType) {
+        MediaAsset a = new MediaAsset();
+        a.assetType = assetType;
+        a.url = url;
+        a.mimeType = mimeType != null ? mimeType : "application/octet-stream";
+        return a;
     }
 }

@@ -42,7 +42,7 @@
 .drawerPanel {
   width: 400px;
   max-width: 90vw;
-  background: var(--bg-primary, #fff);
+  background: var(--color-bg-elevated);
   padding: 24px;
   overflow-y: auto;
 }
@@ -59,13 +59,25 @@
   display: block;
   margin-bottom: 4px;
   font-size: 14px;
+  color: var(--color-text);
 }
 
-.formRow textarea {
+.formRow select {
   width: 100%;
-  padding: 8px;
-  border: 1px solid #ccc;
-  border-radius: 6px;
+  height: 40px;
+  padding: 0 var(--space-md);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-text);
+  font-size: 14px;
+  outline: none;
+  cursor: pointer;
+}
+
+.formRow select:focus {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
 }
 
 .formActions {
@@ -82,5 +94,163 @@
 
 .stepList li {
   padding: 8px 0;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.spotItem {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.spotRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.spotRow span {
+  flex: 1;
+}
+
+.guidePreview {
+  padding: 12px;
+  background: var(--color-bg-hover);
+  border-radius: var(--radius-sm);
+  margin-left: 0;
+  font-size: 13px;
+}
+
+.guideTitle {
+  font-weight: 600;
+  margin: 0 0 8px;
+}
+
+.guideSegment {
+  margin: 4px 0;
+  line-height: 1.4;
+}
+
+.guideEmpty {
+  color: var(--color-text-muted);
+  margin: 0;
+}
+
+.previewSection {
+  margin-bottom: 16px;
+}
+
+.previewSection h3 {
+  margin: 0 0 8px;
+  font-size: 18px;
+}
+
+.previewDesc {
+  color: var(--color-text-muted);
+  margin: 0 0 8px;
+  font-size: 14px;
+}
+
+.previewCounts {
+  margin: 4px 0;
+  font-size: 13px;
+}
+
+.previewSubtitle {
+  margin: 16px 0 8px;
+  font-size: 14px;
+}
+
+.markerList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  font-size: 13px;
+}
+
+.markerList li {
+  padding: 4px 0;
+  border: none;
+}
+
+.spotActions {
+  display: flex;
+  gap: 4px;
+}
+
+.formHint {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  margin-bottom: 8px;
+}
+
+.guideEditor {
+  margin-bottom: var(--space-lg);
+}
+
+.guideEditor h3 {
+  margin: 0 0 var(--space-md);
+  font-size: 16px;
+}
+
+.guideLine {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-md);
+  margin-bottom: var(--space-sm);
+}
+
+.guideLineHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-xs);
+}
+
+.guideLineNum {
+  font-weight: 600;
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.guideAssets {
+  margin-top: var(--space-sm);
+}
+
+.guideAssetRow {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-xs);
+}
+
+.guideAssetRow > div:first-child {
+  flex: 1;
+}
+
+.guideError {
+  color: var(--color-text-muted);
+  margin: 0 0 var(--space-md);
+  font-size: 14px;
+}
+
+.guideAssetAdd {
+  display: flex;
+  gap: var(--space-xs);
+  margin-top: var(--space-sm);
+}
+
+.deleteConfirm {
+  padding: 12px;
+  background: rgba(234, 179, 8, 0.15);
+  border: 1px solid rgba(234, 179, 8, 0.4);
+  border-radius: var(--radius-sm);
+  margin: 12px 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  color: var(--color-text);
 }

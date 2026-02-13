@@ -8,7 +8,7 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "tour_tags")
+@Table(name = "tour_tags", uniqueConstraints = @UniqueConstraint(columnNames = {"tour_id", "tag_id"}))
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class TourTag {
@@ -25,7 +25,7 @@ public class TourTag {
     @JoinColumn(name = "tag_id", nullable = false)
     private Tag tag;
 
-    @Column(name = "created_at", nullable = false)
+    @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
     @PrePersist

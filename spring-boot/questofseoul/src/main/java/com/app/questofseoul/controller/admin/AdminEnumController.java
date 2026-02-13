@@ -22,16 +22,10 @@ import java.util.stream.Collectors;
 public class AdminEnumController {
 
     private static final Map<String, Class<? extends Enum<?>>> ENUM_MAP = Map.ofEntries(
-        Map.entry("questTheme", QuestTheme.class),
-        Map.entry("questTone", QuestTone.class),
-        Map.entry("difficulty", Difficulty.class),
-        Map.entry("nodeType", NodeType.class),
-        Map.entry("contentType", ContentType.class),
-        Map.entry("actionType", ActionType.class),
-        Map.entry("effectType", EffectType.class),
         Map.entry("language", Language.class),
-        Map.entry("displayMode", DisplayMode.class),
-        Map.entry("transitionMessageType", TransitionMessageType.class)
+        Map.entry("spotType", SpotType.class),
+        Map.entry("markerType", MarkerType.class),
+        Map.entry("stepKind", StepKind.class)
     );
 
     @Operation(summary = "Enum 값 목록 조회", description = "프론트 폼용 Enum 상수 목록을 조회합니다.")

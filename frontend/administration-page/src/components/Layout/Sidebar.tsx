@@ -3,7 +3,6 @@ import styles from './Sidebar.module.css';
 
 const NAV_ITEMS = [
   { to: '/', label: 'Dashboard' },
-  { to: '/quests', label: 'Quests' },
   { to: '/tours', label: 'Tours' },
   { to: '/enums', label: 'Enums' },
 ] as const;

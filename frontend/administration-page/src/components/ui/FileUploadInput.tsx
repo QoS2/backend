@@ -1,27 +1,40 @@
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import { uploadFile } from '../../api/upload';
 import styles from './FileUploadInput.module.css';
 
 interface FileUploadInputProps {
-  label: string;
-  name: string;
+  label?: string;
+  name?: string;
+  value?: string;
   defaultValue?: string;
   accept?: string;
   type?: 'image' | 'audio';
   placeholder?: string;
+  /** Controlled mode: 호출 시 URL 반영 */
+  onChange?: (url: string) => void;
 }
 
 export function FileUploadInput({
   label,
   name,
+  value,
   defaultValue = '',
   accept,
   type = 'audio',
   placeholder = '파일을 선택하거나 URL을 입력하세요',
+  onChange,
 }: FileUploadInputProps) {
-  const urlInputRef = useRef<HTMLInputElement>(null);
+  const [internalValue, setInternalValue] = useState(defaultValue);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const isControlled = value !== undefined;
+  const displayValue = isControlled ? value : internalValue;
+
+  const setUrl = (url: string) => {
+    if (!isControlled) setInternalValue(url);
+    onChange?.(url);
+  };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -30,9 +43,7 @@ export function FileUploadInput({
     setUploading(true);
     try {
       const url = await uploadFile(file, type);
-      if (urlInputRef.current) {
-        urlInputRef.current.value = url;
-      }
+      setUrl(url);
     } catch (err) {
       setError(err instanceof Error ? err.message : '업로드 실패');
     } finally {
@@ -49,13 +60,13 @@ export function FileUploadInput({
 
   return (
     <div className={styles.wrapper}>
-      <label className={styles.label}>{label}</label>
+      {label && <label className={styles.label}>{label}</label>}
       <div className={styles.row}>
         <input
-          ref={urlInputRef}
           type="text"
           name={name}
-          defaultValue={defaultValue}
+          value={displayValue}
+          onChange={(e) => setUrl(e.target.value)}
           placeholder={placeholder}
           className={styles.urlInput}
         />

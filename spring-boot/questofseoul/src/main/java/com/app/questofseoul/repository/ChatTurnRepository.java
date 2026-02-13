@@ -6,6 +6,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;
 
 public interface ChatTurnRepository extends JpaRepository<ChatTurn, Long> {
-    List<ChatTurn> findBySessionIdOrderByTurnIdxAsc(Long sessionId);
-    long countBySessionId(Long sessionId);
+
+    List<ChatTurn> findBySession_IdOrderByCreatedAtAsc(Long sessionId);
+
+    long countBySession_Id(Long sessionId);
 }

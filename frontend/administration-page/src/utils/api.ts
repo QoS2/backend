@@ -68,6 +68,14 @@ export async function patchJson<T, B>(path: string, body: B): Promise<T> {
   return res.json() as Promise<T>;
 }
 
+export async function putJson<T, B>(path: string, body: B): Promise<T> {
+  const res = await fetchApi(path, {
+    method: 'PUT',
+    body: JSON.stringify(body),
+  });
+  return res.json() as Promise<T>;
+}
+
 export async function deleteNoContent(path: string): Promise<void> {
   await fetchApi(path, { method: 'DELETE' });
 }

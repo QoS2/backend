@@ -35,7 +35,7 @@
   border: none;
   padding: var(--space-xs) 0;
   font-size: 14px;
-  color: var(--color-primary, #2563eb);
+  color: var(--color-accent);
   cursor: pointer;
   text-decoration: underline;
 }
@@ -82,7 +82,7 @@
 .error {
   margin: 0;
   font-size: 14px;
-  color: var(--color-error, #dc3545);
+  color: var(--color-danger);
   line-height: 1.5;
 }
 

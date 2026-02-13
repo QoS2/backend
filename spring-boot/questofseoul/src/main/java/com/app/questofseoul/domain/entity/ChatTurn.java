@@ -26,32 +26,38 @@ public class ChatTurn {
     @JoinColumn(name = "session_id", nullable = false)
     private ChatSession session;
 
-    @Column(name = "turn_idx", nullable = false)
-    private Integer turnIdx;
-
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private ChatRole role;
-
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(name = "source", nullable = false)
     private ChatSource source;
 
-    @Column(columnDefinition = "TEXT")
+    @Enumerated(EnumType.STRING)
+    @Column(name = "role", nullable = false)
+    private ChatRole role;
+
+    @Column(name = "text", columnDefinition = "TEXT")
     private String text;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "step_id")
+    private SpotContentStep step;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "script_line_id")
+    private SpotScriptLine scriptLine;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "mission_id")
+    private Mission mission;
 
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "action_json", columnDefinition = "jsonb")
     private Map<String, Object> actionJson;
 
     @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name = "meta_json", columnDefinition = "jsonb")
-    private Map<String, Object> metaJson; // assets 등
+    @Column(name = "context_json", columnDefinition = "jsonb")
+    private Map<String, Object> contextJson;
 
-    @Column(name = "turn_key")
-    private String turnKey;
-
-    @Column(name = "created_at", nullable = false)
+    @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
     @PrePersist
@@ -59,16 +65,12 @@ public class ChatTurn {
         createdAt = LocalDateTime.now();
     }
 
-    public static ChatTurn create(ChatSession session, Integer turnIdx, ChatRole role, ChatSource source,
-                                  String text, Map<String, Object> actionJson, Map<String, Object> metaJson) {
+    public static ChatTurn create(ChatSession session, ChatSource source, ChatRole role, String text) {
         ChatTurn t = new ChatTurn();
         t.session = session;
-        t.turnIdx = turnIdx;
-        t.role = role;
         t.source = source;
+        t.role = role;
         t.text = text;
-        t.actionJson = actionJson;
-        t.metaJson = metaJson;
         return t;
     }
 }

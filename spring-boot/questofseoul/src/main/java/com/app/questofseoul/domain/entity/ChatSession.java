@@ -1,7 +1,5 @@
 package com.app.questofseoul.domain.entity;
 
-import com.app.questofseoul.domain.enums.ChatRefType;
-import com.app.questofseoul.domain.enums.SessionKind;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -12,7 +10,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name = "chat_sessions")
+@Table(name = "chat_sessions", uniqueConstraints = @UniqueConstraint(columnNames = {"tour_run_id", "spot_id"}))
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class ChatSession {
@@ -22,50 +20,51 @@ public class ChatSession {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false)
-    private User user;
-
-    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "tour_run_id", nullable = false)
     private TourRun tourRun;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "session_kind", nullable = false)
-    private SessionKind sessionKind;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "spot_id", nullable = false)
+    private TourSpot spot;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "context_ref_type")
-    private ChatRefType contextRefType;
+    @Column(name = "language", nullable = false)
+    private String language = "ko";
 
-    @Column(name = "context_ref_id")
-    private Long contextRefId;
+    @Column(name = "allow_user_question", nullable = false)
+    private Boolean allowUserQuestion = false;
 
-    @Column(nullable = false)
-    private String status = "ACTIVE";
+    @Column(name = "cursor_step_index", nullable = false)
+    private Integer cursorStepIndex = 0;
+
+    @Column(name = "is_active", nullable = false)
+    private Boolean isActive = true;
+
+    @Column(name = "last_activity_at")
+    private LocalDateTime lastActivityAt;
 
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
-    @Column(name = "last_active_at")
-    private LocalDateTime lastActiveAt;
+    @Column(name = "updated_at", nullable = false)
+    private LocalDateTime updatedAt;
 
-    @OneToMany(mappedBy = "session", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "session", cascade = CascadeType.ALL)
     private List<ChatTurn> turns = new ArrayList<>();
 
     @PrePersist
-    protected void onCreate() {
-        createdAt = LocalDateTime.now();
-        lastActiveAt = LocalDateTime.now();
+    @PreUpdate
+    protected void onUpdate() {
+        LocalDateTime now = LocalDateTime.now();
+        if (createdAt == null) createdAt = now;
+        updatedAt = now;
+        lastActivityAt = now;
     }
 
-    public static ChatSession create(User user, TourRun tourRun, SessionKind sessionKind,
-                                     ChatRefType contextRefType, Long contextRefId) {
+    public static ChatSession create(TourRun tourRun, TourSpot spot) {
         ChatSession s = new ChatSession();
-        s.user = user;
         s.tourRun = tourRun;
-        s.sessionKind = sessionKind;
-        s.contextRefType = contextRefType;
-        s.contextRefId = contextRefId;
+        s.spot = spot;
+        s.allowUserQuestion = spot.getAiChatEnabled() != null && spot.getAiChatEnabled();
         return s;
     }
 }

@@ -1,4 +1,62 @@
-import { getJson, postJson, patchJson, deleteNoContent } from '../utils/api';
+import { getJson, postJson, patchJson, putJson, deleteNoContent } from '../utils/api';
+
+// --- 사용자 API (base: 'api', 미리보기용) ---
+export type TourDetailResponse = {
+  tourId: number;
+  title: string;
+  description: string | null;
+  tags: Array<{ id: number; name: string; slug: string }>;
+  counts: { main: number; sub: number; photo: number; treasure: number; missions: number };
+  info: Record<string, unknown> | null;
+  goodToKnow: string[];
+  startSpot: { spotId: number; title: string; lat: number; lng: number; radiusM: number } | null;
+  mapSpots: Array<{ spotId: number; type: string; title: string; lat: number; lng: number }>;
+  access: { status: string; hasAccess: boolean };
+  currentRun: { runId: number; status: string; startedAt: string; progress: { completedSpots: number; totalSpots: number } } | null;
+  actions: { primaryButton: string; secondaryButton: string | null; moreActions: string[] };
+};
+
+export type MarkerResponse = {
+  id: number;
+  type: string;
+  title: string;
+  latitude: number;
+  longitude: number;
+  radiusM: number;
+  refId: number;
+  stepOrder: number;
+};
+
+export type SpotGuideResponse = {
+  stepId: number;
+  stepTitle: string;
+  segments: Array<{
+    id: number;
+    segIdx: number;
+    textEn: string;
+    triggerKey: string | null;
+    media: Array<{ id: number; url: string; meta: unknown }>;
+  }>;
+};
+
+/** 사용자용 투어 디테일 (미리보기) */
+export async function fetchTourDetail(tourId: number) {
+  return getJson<TourDetailResponse>(`/tours/${tourId}`, { base: 'api' });
+}
+
+/** 사용자용 마커 목록 (미리보기) */
+export async function fetchMarkers(tourId: number, filter?: string) {
+  const q = filter ? `?filter=${filter}` : '';
+  return getJson<MarkerResponse[]>(`/tours/${tourId}/markers${q}`, { base: 'api' });
+}
+
+/** 사용자용 스팟 가이드 (미리보기) */
+export async function fetchSpotGuide(spotId: number, lang?: string) {
+  const q = lang ? `?lang=${lang}` : '';
+  return getJson<SpotGuideResponse>(`/spots/${spotId}/guide${q}`, { base: 'api' });
+}
+
+// --- 관리자 API (base: 'admin') ---
 
 export type TourAdminResponse = {
   id: number;
@@ -7,11 +65,11 @@ export type TourAdminResponse = {
   descriptionEn: string | null;
   infoJson: Record<string, unknown> | null;
   goodToKnowJson: Record<string, unknown> | null;
-  stepsCount: number;
-  waypointsCount: number;
+  mainCount: number;
+  subCount: number;
   photoSpotsCount: number;
   treasuresCount: number;
-  quizzesCount: number;
+  missionsCount: number;
 };
 
 export type TourCreateRequest = {
@@ -29,32 +87,32 @@ export type TourUpdateRequest = {
   goodToKnowJson?: Record<string, unknown>;
 };
 
-export type StepAdminResponse = {
+export type SpotAdminResponse = {
   id: number;
-  externalKey: string;
   tourId: number;
-  stepOrder: number;
-  titleEn: string | null;
-  shortDescEn: string | null;
+  type: string;
+  title: string;
+  description: string | null;
   latitude: number | null;
   longitude: number | null;
   radiusM: number | null;
+  orderIndex: number;
 };
 
-export type StepCreateRequest = {
-  externalKey: string;
-  stepOrder: number;
-  titleEn: string;
-  shortDescEn?: string;
+export type SpotCreateRequest = {
+  type: string;
+  title: string;
+  description?: string;
   latitude?: number;
   longitude?: number;
+  orderIndex: number;
   radiusM?: number;
 };
 
-export type StepUpdateRequest = {
-  stepOrder?: number;
-  titleEn?: string;
-  shortDescEn?: string;
+export type SpotUpdateRequest = {
+  title?: string;
+  description?: string;
+  orderIndex?: number;
   latitude?: number;
   longitude?: number;
   radiusM?: number;
@@ -87,25 +145,80 @@ export async function deleteTour(tourId: number) {
   return deleteNoContent(`${TOURS_BASE}/${tourId}`);
 }
 
-export async function fetchSteps(tourId: number) {
-  return getJson<StepAdminResponse[]>(`${TOURS_BASE}/${tourId}/steps`);
+export async function fetchSpots(tourId: number) {
+  return getJson<SpotAdminResponse[]>(`${TOURS_BASE}/${tourId}/spots`);
 }
 
-export async function createStep(tourId: number, body: StepCreateRequest) {
-  return postJson<StepAdminResponse, StepCreateRequest>(`${TOURS_BASE}/${tourId}/steps`, body);
+export async function createSpot(tourId: number, body: SpotCreateRequest) {
+  return postJson<SpotAdminResponse, SpotCreateRequest>(`${TOURS_BASE}/${tourId}/spots`, body);
 }
 
-export async function updateStep(
+export async function updateSpot(
   tourId: number,
-  stepId: number,
-  body: StepUpdateRequest
+  spotId: number,
+  body: SpotUpdateRequest
 ) {
-  return patchJson<StepAdminResponse, StepUpdateRequest>(
-    `${TOURS_BASE}/${tourId}/steps/${stepId}`,
+  return patchJson<SpotAdminResponse, SpotUpdateRequest>(
+    `${TOURS_BASE}/${tourId}/spots/${spotId}`,
     body
   );
 }
 
-export async function deleteStep(tourId: number, stepId: number) {
-  return deleteNoContent(`${TOURS_BASE}/${tourId}/steps/${stepId}`);
+export async function deleteSpot(tourId: number, spotId: number) {
+  return deleteNoContent(`${TOURS_BASE}/${tourId}/spots/${spotId}`);
+}
+
+// --- 가이드 (Guide) API ---
+
+export type GuideAssetRequest = {
+  url: string;
+  assetType: 'IMAGE' | 'AUDIO';
+  usage: 'ILLUSTRATION' | 'SCRIPT_AUDIO';
+};
+
+export type GuideLineRequest = {
+  text: string;
+  assets: GuideAssetRequest[];
+};
+
+export type GuideSaveRequest = {
+  language: string;
+  stepTitle?: string;
+  lines: GuideLineRequest[];
+};
+
+export type GuideAssetResponse = {
+  id: number;
+  url: string;
+  assetType: string;
+  usage: string;
+};
+
+export type GuideLineResponse = {
+  id: number;
+  seq: number;
+  text: string;
+  assets: GuideAssetResponse[];
+};
+
+export type GuideAdminResponse = {
+  stepId: number | null;
+  language: string;
+  stepTitle: string;
+  lines: GuideLineResponse[];
+};
+
+export async function fetchGuide(tourId: number, spotId: number) {
+  return getJson<GuideAdminResponse>(`${TOURS_BASE}/${tourId}/spots/${spotId}/guide`);
+}
+
+export async function saveGuide(
+  tourId: number,
+  spotId: number,
+  body: GuideSaveRequest
+) {
+  return putJson<GuideAdminResponse, GuideSaveRequest>(
+    `${TOURS_BASE}/${tourId}/spots/${spotId}/guide`,
+    body
+  );
 }

@@ -25,57 +25,76 @@ public class Tour {
     @Column(name = "external_key", unique = true)
     private String externalKey;
 
+    @Column(name = "title")
+    private String title;
+
     @Column(name = "title_en")
     private String titleEn;
+
+    @Column(name = "description", columnDefinition = "TEXT")
+    private String description;
 
     @Column(name = "description_en", columnDefinition = "TEXT")
     private String descriptionEn;
 
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "info_json", columnDefinition = "jsonb")
-    private Map<String, Object> infoJson; // 입장료, 이용시간 등
+    private Map<String, Object> infoJson;
 
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "good_to_know_json", columnDefinition = "jsonb")
     private Map<String, Object> goodToKnowJson;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "start_spot_id")
+    private TourSpot startSpot;
+
+    @Column(name = "is_published")
+    private Boolean isPublished = true;
+
     @Column(nullable = false)
     private Integer version = 1;
+
+    @Column(name = "created_at")
+    private LocalDateTime createdAt;
 
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
-    @OneToMany(mappedBy = "tour", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<Step> steps = new ArrayList<>();
+    @OneToMany(mappedBy = "tour", cascade = CascadeType.ALL)
+    private List<TourSpot> spots = new ArrayList<>();
 
-    @OneToMany(mappedBy = "tour", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<Waypoint> waypoints = new ArrayList<>();
-
-    @OneToMany(mappedBy = "tour", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<PhotoSpot> photoSpots = new ArrayList<>();
-
-    @OneToMany(mappedBy = "tour", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<Treasure> treasures = new ArrayList<>();
+    @OneToMany(mappedBy = "tour", cascade = CascadeType.ALL)
+    private List<TourTag> tourTags = new ArrayList<>();
 
     @PrePersist
     @PreUpdate
     protected void onUpdate() {
         updatedAt = LocalDateTime.now();
+        if (createdAt == null) createdAt = LocalDateTime.now();
     }
 
-    public static Tour create(String externalKey, String titleEn, String descriptionEn,
-                              Map<String, Object> infoJson, Map<String, Object> goodToKnowJson) {
-        Tour t = new Tour();
-        t.externalKey = externalKey;
-        t.titleEn = titleEn;
-        t.descriptionEn = descriptionEn;
-        t.infoJson = infoJson;
-        t.goodToKnowJson = goodToKnowJson;
-        return t;
+    public String getDisplayTitle() {
+        return title != null && !title.isBlank() ? title : titleEn;
+    }
+
+    public String getDisplayDescription() {
+        return description != null && !description.isBlank() ? description : descriptionEn;
     }
 
     public void setTitleEn(String titleEn) { this.titleEn = titleEn; }
     public void setDescriptionEn(String descriptionEn) { this.descriptionEn = descriptionEn; }
     public void setInfoJson(Map<String, Object> infoJson) { this.infoJson = infoJson; }
     public void setGoodToKnowJson(Map<String, Object> goodToKnowJson) { this.goodToKnowJson = goodToKnowJson; }
+
+    public static Tour create(String externalKey, String titleEn, String descriptionEn,
+                             Map<String, Object> infoJson, Map<String, Object> goodToKnowJson) {
+        Tour t = new Tour();
+        t.externalKey = externalKey;
+        t.titleEn = titleEn;
+        t.descriptionEn = descriptionEn;
+        t.infoJson = infoJson != null ? infoJson : Map.of();
+        t.goodToKnowJson = goodToKnowJson != null ? goodToKnowJson : Map.of();
+        return t;
+    }
 }

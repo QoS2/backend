@@ -48,11 +48,11 @@ CREATE DATABASE questofseoul;
 psql -U postgres -d questofseoul
 
 # SQL 스크립트 실행
-\i src/main/resources/data/init_quest_data.sql
+\i src/main/resources/data/-.sql
 ```
 
 또는 직접 실행:
 
 ```bash
-psql -U postgres -d questofseoul -f src/main/resources/data/init_quest_data.sql
+psql -U postgres -d questofseoul -f src/main/resources/data/-.sql
 ```

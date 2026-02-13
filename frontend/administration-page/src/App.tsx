@@ -5,8 +5,6 @@ import { AuthGuard } from './components/AuthGuard';
 import { AdminLayout } from './components/Layout/AdminLayout';
 import { DashboardPage } from './pages/DashboardPage';
 import { LoginPage } from './pages/LoginPage';
-import { QuestsPage } from './pages/QuestsPage';
-import { NodesPage } from './pages/NodesPage';
 import { EnumsPage } from './pages/EnumsPage';
 import { ToursPage } from './pages/ToursPage';
 
@@ -34,9 +32,7 @@ function App() {
             }
           >
             <Route index element={<DashboardPage />} />
-            <Route path="quests" element={<QuestsPage />} />
             <Route path="tours" element={<ToursPage />} />
-            <Route path="quests/:questId/nodes" element={<NodesPage />} />
             <Route path="enums" element={<EnumsPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Route>

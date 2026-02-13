@@ -51,16 +51,10 @@ export const DRAWER_ANIMATION_MS = 300;
 
 /** Enum names for admin form dropdowns */
 export const ENUM_NAMES = [
-  'questTheme',
-  'questTone',
-  'difficulty',
-  'nodeType',
-  'contentType',
-  'actionType',
-  'effectType',
   'language',
-  'displayMode',
-  'transitionMessageType',
+  'spotType',
+  'markerType',
+  'stepKind',
 ] as const;
 
 export type EnumName = (typeof ENUM_NAMES)[number];

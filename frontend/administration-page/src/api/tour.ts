@@ -109,18 +109,3 @@ export async function updateStep(
 export async function deleteStep(tourId: number, stepId: number) {
   return deleteNoContent(`${TOURS_BASE}/${tourId}/steps/${stepId}`);
 }
-
-/** Mobile Preview AI Chat */
-export async function previewChat(
-  tourId: number,
-  text: string,
-  history: Array<{ role: string; content: string }> = []
-) {
-  return postJson<{ aiText: string }, { text: string; history: Array<{ role: string; content: string }> }>(
-    `${TOURS_BASE}/${tourId}/preview/chat`,
-    {
-      text,
-      history: history.map((h) => ({ role: h.role, content: h.content })),
-    }
-  );
-}

@@ -3,11 +3,8 @@ package com.app.questofseoul.controller.admin;
 import com.app.questofseoul.dto.admin.TourAdminResponse;
 import com.app.questofseoul.dto.admin.TourCreateRequest;
 import com.app.questofseoul.dto.admin.TourUpdateRequest;
-import com.app.questofseoul.dto.tour.PreviewChatRequest;
-import com.app.questofseoul.service.TourService;
 import com.app.questofseoul.service.admin.AdminTourService;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -26,7 +23,6 @@ import org.springframework.web.bind.annotation.*;
 public class AdminTourController {
 
     private final AdminTourService adminTourService;
-    private final TourService tourService;
 
     @Operation(summary = "Tour 목록")
     @SecurityRequirement(name = "sessionAuth")
@@ -65,17 +61,4 @@ public class AdminTourController {
         adminTourService.delete(tourId);
         return ResponseEntity.noContent().build();
     }
-
-    @Operation(summary = "모바일 미리보기 AI 채팅 (데모)")
-    @SecurityRequirement(name = "sessionAuth")
-    @PostMapping("/{tourId}/preview/chat")
-    public ResponseEntity<PreviewChatResponse> previewChat(
-            @PathVariable Long tourId,
-            @Valid @RequestBody PreviewChatRequest request) {
-        String aiText = tourService.previewChat(tourId, request.text(), request.history());
-        return ResponseEntity.ok(new PreviewChatResponse(aiText));
-    }
-
-    public record PreviewChatResponse(String aiText) {}
-
 }

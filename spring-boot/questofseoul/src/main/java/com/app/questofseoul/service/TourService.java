@@ -338,17 +338,6 @@ public class TourService {
     }
 
     @Transactional(readOnly = true)
-    public String previewChat(Long tourId, String text, List<com.app.questofseoul.dto.tour.PreviewChatRequest.ChatHistoryItem> history) {
-        String tourContext = buildTourContextForAi(tourId, null);
-        List<Map<String, String>> msgHistory = history != null ? history.stream()
-            .map(h -> Map.<String, String>of("role", "user".equalsIgnoreCase(h.role()) ? "user" : "assistant", "content", h.content() != null ? h.content() : ""))
-            .toList() : List.of();
-        msgHistory = new java.util.ArrayList<>(msgHistory);
-        msgHistory.add(Map.of("role", "user", "content", text));
-        return tourGuideAiService.generateResponse(tourContext, msgHistory);
-    }
-
-    @Transactional(readOnly = true)
     public GuideSegmentResponse getStepGuide(Long stepId, Language lang) {
         Step step = stepRepository.findById(stepId).orElseThrow(() -> new ResourceNotFoundException("Step not found"));
         GuideContent guide = guideContentRepository.findByStepId(stepId).orElse(null);

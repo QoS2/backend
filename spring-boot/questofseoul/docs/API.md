@@ -1148,32 +1148,6 @@ GET /api/v1/admin/tours?page=0&size=20
 
 모든 필드 optional.
 
-#### 모바일 미리보기 AI 채팅
-
-```
-POST /api/v1/admin/tours/{tourId}/preview/chat
-```
-
-**Request Body**
-
-```json
-{
-  "text": "이 궁에 대해 알려줘",
-  "history": [
-    {"role": "user", "content": "안녕"},
-    {"role": "assistant", "content": "안녕하세요!"}
-  ]
-}
-```
-
-**Response 200**
-
-```json
-{
-  "aiText": "경복궁은 1395년에..."
-}
-```
-
 ---
 
 ### 5.8 투어 스텝

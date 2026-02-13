@@ -6,7 +6,6 @@ const NAV_ITEMS = [
   { to: '/quests', label: 'Quests' },
   { to: '/tours', label: 'Tours' },
   { to: '/enums', label: 'Enums' },
-  { to: '/mobile-preview', label: 'Mobile Preview' },
 ] as const;
 
 export function Sidebar() {

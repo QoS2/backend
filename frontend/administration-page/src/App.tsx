@@ -8,7 +8,6 @@ import { LoginPage } from './pages/LoginPage';
 import { QuestsPage } from './pages/QuestsPage';
 import { NodesPage } from './pages/NodesPage';
 import { EnumsPage } from './pages/EnumsPage';
-import { MobilePreviewPage } from './pages/MobilePreviewPage';
 import { ToursPage } from './pages/ToursPage';
 
 const queryClient = new QueryClient({
@@ -39,7 +38,6 @@ function App() {
             <Route path="tours" element={<ToursPage />} />
             <Route path="quests/:questId/nodes" element={<NodesPage />} />
             <Route path="enums" element={<EnumsPage />} />
-            <Route path="mobile-preview" element={<MobilePreviewPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Route>
         </Routes>

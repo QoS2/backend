@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "allow": [
+      "Bash(git *)",
+      "Bash(npm *)",
+      "Bash(npx *)",
+      "Bash(node *)",
+      "Bash(python *)",
+      "Bash(pip *)",
+      "Bash(uvicorn *)",
+      "Bash(cd *)",
+      "Bash(ls *)",
+      "Bash(find *)",
+      "Bash(./gradlew *)",
+      "Read(*)",
+      "Write(*)"
+    ],
+    "deny": [
+      "Read(./.env)",
+      "Read(./.env.*)",
+      "Read(./**/.env)",
+      "Read(./**/.env.*)",
+      "Read(./**/secrets/**)"
+    ]
+  },
+  "language": "korean"
+}

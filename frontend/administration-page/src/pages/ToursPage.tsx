@@ -1,6 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { DndContext, closestCenter, type DragEndEvent } from '@dnd-kit/core';
+import { SortableContext, useSortable, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import { MapPin, Camera, Gem, Circle, GripVertical } from 'lucide-react';
 import { syncRag } from '../api/rag';
+import { uploadFile } from '../api/upload';
 import {
   fetchTours,
   fetchTour,
@@ -31,6 +36,9 @@ import { Modal } from '../components/ui/Modal';
 import { Input } from '../components/ui/Input';
 import { Textarea } from '../components/ui/Textarea';
 import { FileUploadInput } from '../components/ui/FileUploadInput';
+import { MapPicker } from '../components/Map/MapPicker';
+import { SpotsMap } from '../components/Map/SpotsMap';
+import { reverseGeocode, type ReverseGeocodeResult } from '../utils/geocode';
 import { useToast } from '../context/ToastContext';
 import styles from './ToursPage.module.css';
 
@@ -146,17 +154,25 @@ export function ToursPage() {
 
       {isLoading ? (
         <p>로딩 중...</p>
+      ) : tours.length === 0 ? (
+        <div className={styles.emptyState}>
+          <MapPin size={48} strokeWidth={1.5} className={styles.emptyIcon} />
+          <h3>등록된 투어가 없습니다</h3>
+          <p>우측 상단 &quot;투어 추가&quot; 버튼으로 첫 번째 투어를 만들어보세요.</p>
+          <Button onClick={handleCreate}>투어 추가</Button>
+        </div>
       ) : (
-        <Table
-          columns={[
+        <div className={styles.tableWrapper}>
+          <Table
+            columns={[
             { key: 'externalKey', label: 'Key' },
             { key: 'titleEn', label: '제목' },
             {
               key: 'spots',
               label: 'Spots',
               render: (row: TourAdminResponse) => (
-                <span>
-                  Main: {row.mainCount} / Sub: {row.subCount} / Photo: {row.photoSpotsCount} / Treasure: {row.treasuresCount} / Missions: {row.missionsCount}
+                <span className={styles.spotsCounts}>
+                  Main: {row.mainCount} · Sub: {row.subCount} · Photo: {row.photoSpotsCount} · Treasure: {row.treasuresCount} · Missions: {row.missionsCount}
                 </span>
               ),
             },
@@ -179,9 +195,10 @@ export function ToursPage() {
               ),
             },
           ]}
-          data={tours}
-          keyExtractor={(row) => String(row.id)}
-        />
+            data={tours}
+            keyExtractor={(row) => String(row.id)}
+          />
+        </div>
       )}
 
       {totalPages > 1 && (
@@ -413,7 +430,63 @@ function TourPreviewDrawer({ tourId, onClose }: { tourId: number; onClose: () =>
 
 const SPOT_TYPES = ['MAIN', 'SUB', 'PHOTO', 'TREASURE'] as const;
 
-function SpotItemWithGuide({
+const SPOT_TYPE_CONFIG: Record<string, { Icon: typeof MapPin; label: string; color: string }> = {
+  MAIN: { Icon: MapPin, label: 'MAIN', color: 'var(--color-accent)' },
+  SUB: { Icon: Circle, label: 'SUB', color: '#22c55e' },
+  PHOTO: { Icon: Camera, label: 'PHOTO', color: '#f59e0b' },
+  TREASURE: { Icon: Gem, label: 'TREASURE', color: '#a855f7' },
+};
+
+function SortableSpotItem({
+  spot,
+  onEdit,
+  onEditGuide,
+  onDelete,
+}: {
+  spot: SpotAdminResponse;
+  onEdit: () => void;
+  onEditGuide: () => void;
+  onDelete: () => void;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: spot.id });
+
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <li ref={setNodeRef} style={style} className={styles.spotItem}>
+      <div className={styles.spotRow}>
+        <button
+          type="button"
+          className={styles.dragHandle}
+          {...attributes}
+          {...listeners}
+          aria-label="순서 변경"
+        >
+          <GripVertical size={16} />
+        </button>
+        <SpotItemContent
+          spot={spot}
+          onEdit={onEdit}
+          onEditGuide={onEditGuide}
+          onDelete={onDelete}
+        />
+      </div>
+    </li>
+  );
+}
+
+function SpotItemContent({
   spot,
   onEdit,
   onEditGuide,
@@ -431,10 +504,26 @@ function SpotItemWithGuide({
     enabled: guideOpen,
   });
 
+  const cfg = SPOT_TYPE_CONFIG[spot.type] ?? { Icon: Circle, label: spot.type, color: 'var(--color-text-muted)' };
+  const SpotIcon = cfg.Icon;
   return (
-    <li className={styles.spotItem}>
-      <div className={styles.spotRow}>
-        <span>[{spot.type}] {spot.orderIndex}. {spot.title}{spot.latitude != null && ` (${spot.latitude}, ${spot.longitude})`}</span>
+    <div className={styles.spotContent}>
+      <div className={styles.spotLabelRow}>
+        <span className={styles.spotLabel}>
+          <span
+            className={styles.spotTypeBadge}
+            style={{ '--spot-type-color': cfg.color } as React.CSSProperties}
+            title={cfg.label}
+          >
+            <SpotIcon size={12} strokeWidth={2.5} /> {cfg.label}
+          </span>
+          <span className={styles.spotTitle} title={spot.title}>
+            {spot.orderIndex}. {spot.title}
+          </span>
+          {spot.latitude != null && (
+            <span className={styles.spotCoords}>({spot.latitude}, {spot.longitude})</span>
+          )}
+        </span>
         <div className={styles.spotActions}>
           <Button variant="ghost" onClick={() => setGuideOpen((v) => !v)}>
             {guideOpen ? '가이드 접기' : '가이드'}
@@ -463,7 +552,7 @@ function SpotItemWithGuide({
           )}
         </div>
       )}
-    </li>
+    </div>
   );
 }
 
@@ -497,6 +586,9 @@ function GuideEditor({
   const [stepTitle, setStepTitle] = useState('');
   const [lines, setLines] = useState<GuideLineRequest[]>([]);
   const [forceCreateMode, setForceCreateMode] = useState(false);
+  const [assetUploading, setAssetUploading] = useState(false);
+  const [pendingAddLineIdx, setPendingAddLineIdx] = useState<number | null>(null);
+  const assetFileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!guide && !isError) return;
@@ -546,6 +638,31 @@ function GuideEditor({
         i === lineIdx ? { ...l, assets: l.assets.filter((_, j) => j !== assetIdx) } : l
       )
     );
+
+  const handleAddAssetFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    const lineIdx = pendingAddLineIdx;
+    e.target.value = '';
+    setPendingAddLineIdx(null);
+    if (!file || lineIdx === null) return;
+    const isImage = file.type.startsWith('image/');
+    const isAudio = file.type.startsWith('audio/');
+    if (!isImage && !isAudio) {
+      showError('이미지 또는 오디오 파일만 업로드할 수 있습니다.');
+      return;
+    }
+    const assetType = isImage ? 'IMAGE' : 'AUDIO';
+    const usage = isImage ? 'ILLUSTRATION' : 'SCRIPT_AUDIO';
+    setAssetUploading(true);
+    try {
+      const url = await uploadFile(file, isImage ? 'image' : 'audio');
+      addAsset(lineIdx, { url, assetType, usage });
+    } catch (err) {
+      showError(err instanceof Error ? err.message : '업로드 실패');
+    } finally {
+      setAssetUploading(false);
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -614,6 +731,13 @@ function GuideEditor({
           onChange={(e) => setStepTitle(e.target.value)}
           placeholder={spotTitle}
         />
+        <input
+          ref={assetFileInputRef}
+          type="file"
+          accept="image/*,audio/*"
+          className={styles.hiddenFileInput}
+          onChange={handleAddAssetFile}
+        />
         {lines.map((line, lineIdx) => (
           <div key={lineIdx} className={styles.guideLine}>
             <div className={styles.guideLineHeader}>
@@ -655,28 +779,13 @@ function GuideEditor({
                 <Button
                   type="button"
                   variant="ghost"
-                  onClick={() =>
-                    addAsset(lineIdx, {
-                      url: '',
-                      assetType: 'IMAGE',
-                      usage: 'ILLUSTRATION',
-                    })
-                  }
+                  disabled={assetUploading}
+                  onClick={() => {
+                    setPendingAddLineIdx(lineIdx);
+                    assetFileInputRef.current?.click();
+                  }}
                 >
-                  + 이미지
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  onClick={() =>
-                    addAsset(lineIdx, {
-                      url: '',
-                      assetType: 'AUDIO',
-                      usage: 'SCRIPT_AUDIO',
-                    })
-                  }
-                >
-                  + 오디오
+                  {assetUploading ? '업로드 중…' : '+ 에셋 추가'}
                 </Button>
               </div>
             </div>
@@ -720,6 +829,8 @@ function SpotsDrawer({
   const [latitude, setLatitude] = useState('');
   const [longitude, setLongitude] = useState('');
   const [radiusM, setRadiusM] = useState('60');
+  const [geocodeResult, setGeocodeResult] = useState<ReverseGeocodeResult | null>(null);
+  const [geocodeLoading, setGeocodeLoading] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<SpotAdminResponse | null>(null);
   const [editingGuideSpot, setEditingGuideSpot] = useState<SpotAdminResponse | null>(null);
   const queryClient = useQueryClient();
@@ -770,6 +881,7 @@ function SpotsDrawer({
     setLatitude('');
     setLongitude('');
     setRadiusM('60');
+    setGeocodeResult(null);
   }
 
   const handleAddSpot = () => {
@@ -785,8 +897,55 @@ function SpotsDrawer({
     setLatitude(spot.latitude?.toString() ?? '');
     setLongitude(spot.longitude?.toString() ?? '');
     setRadiusM(spot.radiusM?.toString() ?? '60');
+    setGeocodeResult(null);
     setFormOpen(true);
   };
+
+  const handleMapSelect = async (lat: number, lng: number) => {
+    setLatitude(lat.toFixed(6));
+    setLongitude(lng.toFixed(6));
+    setGeocodeLoading(true);
+    setGeocodeResult(null);
+    try {
+      const result = await reverseGeocode(lat, lng);
+      if (result) {
+        setGeocodeResult(result);
+        if (!editingSpot && !title.trim()) {
+          setTitle(result.name);
+        }
+        if (result.suggestedRadiusM != null && !editingSpot) {
+          setRadiusM(String(result.suggestedRadiusM));
+        }
+      }
+    } finally {
+      setGeocodeLoading(false);
+    }
+  };
+  const handleSpotDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIndex = spots.findIndex((s) => s.id === active.id);
+    const newIndex = spots.findIndex((s) => s.id === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
+    const reordered = arrayMove([...spots], oldIndex, newIndex);
+    const updates = reordered
+      .map((s, i) => (s.orderIndex !== i ? { spotId: s.id, orderIndex: i } : null))
+      .filter((u): u is { spotId: number; orderIndex: number } => u != null);
+    if (updates.length === 0) return;
+    try {
+      await Promise.all(
+        updates.map((u) =>
+          updateSpot(tourId, u.spotId, { orderIndex: u.orderIndex })
+        )
+      );
+      queryClient.invalidateQueries({ queryKey: ['admin', 'tours', tourId, 'spots'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'tours'] });
+      showSuccess('순서가 변경되었습니다.');
+    } catch (e) {
+      showError(e instanceof Error ? e.message : '순서 변경에 실패했습니다.');
+    }
+  };
+
   const handleSubmitSpot = (e: React.FormEvent) => {
     e.preventDefault();
     if (editingSpot) {
@@ -817,19 +976,26 @@ function SpotsDrawer({
   return (
     <div className={styles.drawer}>
       <div className={styles.drawerBackdrop} onClick={onClose} />
-      <div className={styles.drawerPanel}>
-        <div className={styles.spotsDrawerHeader}>
-          <h2>Spots</h2>
-          {onRagSync && (
-            <Button
-              variant="ghost"
-              onClick={onRagSync}
-              disabled={ragSyncPending}
-            >
-              {ragSyncPending ? '동기화 중...' : '지식 동기화'}
-            </Button>
-          )}
-        </div>
+      <div
+        className={
+          spots.length > 0 && !editingGuideSpot && !formOpen
+            ? `${styles.spotsDrawerPanel} ${styles.spotsDrawerPanelWithMap}`
+            : styles.spotsDrawerPanel
+        }
+      >
+        <div className={styles.spotsDrawerMain}>
+          <div className={styles.spotsDrawerHeader}>
+            <h2>Spots</h2>
+            {onRagSync && (
+              <Button
+                variant="ghost"
+                onClick={onRagSync}
+                disabled={ragSyncPending}
+              >
+                {ragSyncPending ? '동기화 중...' : '지식 동기화'}
+              </Button>
+            )}
+          </div>
         {editingGuideSpot ? (
           <GuideEditor
             tourId={tourId}
@@ -842,7 +1008,16 @@ function SpotsDrawer({
             }}
           />
         ) : !formOpen ? (
-          <Button onClick={handleAddSpot}>Spot 추가</Button>
+          spots.length === 0 ? (
+            <div className={styles.emptyState}>
+              <MapPin size={40} strokeWidth={1.5} className={styles.emptyIcon} />
+              <h3>아직 Spot이 없습니다</h3>
+              <p>아래 버튼으로 이 투어의 첫 번째 Spot을 추가하세요.</p>
+              <Button onClick={handleAddSpot}>Spot 추가</Button>
+            </div>
+          ) : (
+            <Button onClick={handleAddSpot}>Spot 추가</Button>
+          )
         ) : (
           <form onSubmit={handleSubmitSpot}>
             {!editingSpot && (
@@ -857,11 +1032,65 @@ function SpotsDrawer({
             )}
             {editingSpot && <p className={styles.formHint}>Type: {editingSpot.type} (수정 불가)</p>}
             <Input label="Order" type="number" value={String(orderIndex)} onChange={(e) => setOrderIndex(parseInt(e.target.value, 10) || 1)} />
-            <Input label="제목" value={title} onChange={(e) => setTitle(e.target.value)} required />
-            <Input label="설명" value={description} onChange={(e) => setDescription(e.target.value)} />
-            <Input label="Latitude" value={latitude} onChange={(e) => setLatitude(e.target.value)} />
-            <Input label="Longitude" value={longitude} onChange={(e) => setLongitude(e.target.value)} />
-            <Input label="Radius (m)" type="number" value={radiusM} onChange={(e) => setRadiusM(e.target.value)} />
+            <Input label="제목" value={title} onChange={(e) => setTitle(e.target.value)} required placeholder="지도에서 클릭 시 자동 입력" />
+            <Input label="설명" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="가이드에서 안내할 내용" />
+            <div className={styles.formSection}>
+              <label className={styles.formSectionLabel}>위치 (지도에서 클릭하여 설정)</label>
+              <MapPicker
+                lat={latitude ? parseFloat(latitude) : undefined}
+                lng={longitude ? parseFloat(longitude) : undefined}
+                onSelect={handleMapSelect}
+                height={220}
+              />
+              {(geocodeLoading || (geocodeResult && !geocodeLoading)) && (
+                <div className={styles.geocodeSection}>
+                  {geocodeLoading && (
+                    <p className={styles.geocodeHint}>위치 정보 조회 중...</p>
+                  )}
+                  {geocodeResult && !geocodeLoading && (
+                    <div className={styles.geocodeResult}>
+                      <p className={styles.geocodeAddress}>📍 {geocodeResult.displayName}</p>
+                      <div className={styles.geocodeActions}>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          onClick={() => setTitle(geocodeResult.name)}
+                        >
+                          제목에 반영
+                        </Button>
+                        {geocodeResult.suggestedRadiusM != null && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            onClick={() => setRadiusM(String(geocodeResult.suggestedRadiusM))}
+                          >
+                            반경 {geocodeResult.suggestedRadiusM}m
+                          </Button>
+                        )}
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          onClick={() =>
+                            setDescription((prev) =>
+                              prev.trim()
+                                ? `${prev}\n\n📍 ${geocodeResult.displayName}`
+                                : `📍 ${geocodeResult.displayName}`
+                            )
+                          }
+                        >
+                          설명에 주소 추가
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+              <div className={styles.coordInputs}>
+                <Input label="위도" value={latitude} onChange={(e) => setLatitude(e.target.value)} placeholder="37.5665" />
+                <Input label="경도" value={longitude} onChange={(e) => setLongitude(e.target.value)} placeholder="126.978" />
+              </div>
+            </div>
+            <Input label="반경 (m)" type="number" value={radiusM} onChange={(e) => setRadiusM(e.target.value)} />
             <div className={styles.formActions}>
               <Button type="button" variant="secondary" onClick={() => { setFormOpen(false); setEditingSpot(null); }}>취소</Button>
               <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending}>
@@ -870,20 +1099,40 @@ function SpotsDrawer({
             </div>
           </form>
         )}
-        {!editingGuideSpot && (
-          <ul className={styles.stepList}>
-            {spots.map((s) => (
-              <SpotItemWithGuide
-                key={s.id}
-                spot={s}
-                onEdit={() => handleEditSpot(s)}
-                onEditGuide={() => setEditingGuideSpot(s)}
-                onDelete={() => setDeleteTarget(s)}
-              />
-            ))}
-          </ul>
+        {!editingGuideSpot && spots.length > 0 && (
+          <>
+            <h3 className={styles.listSectionTitle}>Spot 목록 ({spots.length}개)</h3>
+            <DndContext
+            collisionDetection={closestCenter}
+            onDragEnd={(e) => handleSpotDragEnd(e)}
+          >
+            <SortableContext
+              items={spots.map((s) => s.id)}
+              strategy={verticalListSortingStrategy}
+            >
+              <ul className={styles.stepList}>
+                {spots.map((s) => (
+                  <SortableSpotItem
+                    key={s.id}
+                    spot={s}
+                    onEdit={() => handleEditSpot(s)}
+                    onEditGuide={() => setEditingGuideSpot(s)}
+                    onDelete={() => setDeleteTarget(s)}
+                  />
+                ))}
+              </ul>
+            </SortableContext>
+          </DndContext>
+          </>
         )}
         <Button variant="secondary" onClick={onClose}>닫기</Button>
+        </div>
+        {spots.length > 0 && !editingGuideSpot && !formOpen && (
+          <div className={styles.spotsDrawerMap}>
+            <h3 className={styles.mapSectionTitle}>위치 미리보기</h3>
+            <SpotsMap spots={spots} />
+          </div>
+        )}
       </div>
       {deleteTarget && (
         <Modal

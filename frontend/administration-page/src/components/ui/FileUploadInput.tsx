@@ -58,6 +58,8 @@ export function FileUploadInput({
       ? 'audio/mpeg,audio/mp3,audio/wav,audio/ogg,audio/m4a,.mp3,.wav,.ogg,.m4a'
       : 'image/jpeg,image/png,image/gif,image/webp');
 
+  const hasPreview = displayValue && (displayValue.startsWith('http://') || displayValue.startsWith('https://'));
+
   return (
     <div className={styles.wrapper}>
       {label && <label className={styles.label}>{label}</label>}
@@ -83,6 +85,16 @@ export function FileUploadInput({
           </span>
         </label>
       </div>
+      {hasPreview && type === 'image' && (
+        <div className={styles.preview}>
+          <img src={displayValue} alt="미리보기" className={styles.imagePreview} referrerPolicy="no-referrer" />
+        </div>
+      )}
+      {hasPreview && type === 'audio' && (
+        <div className={styles.preview}>
+          <audio controls src={displayValue} className={styles.audioPreview} />
+        </div>
+      )}
       {error && <p className={styles.error}>{error}</p>}
     </div>
   );

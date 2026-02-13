@@ -12,6 +12,10 @@ logger = logging.getLogger(__name__)
 # Open-Meteo free API
 OPEN_METEO_URL = "https://api.open-meteo.com/v1/forecast"
 
+USER_AGENT = (
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.132 Safari/537.36"
+)
+
 # Keywords related to weather/clothes - if these keywords are present, weather is retrieved
 WEATHER_RELATED_KEYWORDS = [
     "날씨", "옷", "복장", "입고", "쌀쌀", "따뜻", "춥", "더우", "선선",
@@ -80,7 +84,7 @@ class WeatherRetriever(BaseRetriever):
             }
             qs = "&".join(f"{k}={v}" for k, v in params.items())
             url = f"{OPEN_METEO_URL}?{qs}"
-            req = Request(url, headers={"User-Agent": "QuestOfSeoul-AI/1.0"})
+            req = Request(url, headers={"User-Agent": USER_AGENT})
             with urlopen(req, timeout=5) as resp:
                 data = json.loads(resp.read().decode())
 

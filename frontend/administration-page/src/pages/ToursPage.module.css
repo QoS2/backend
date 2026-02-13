@@ -1,29 +1,76 @@
 .page {
-  padding: 24px;
+  padding: var(--space-md);
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+@media (min-width: 768px) {
+  .page {
+    padding: var(--space-lg);
+  }
 }
 
 .header {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 24px;
+  flex-direction: column;
+  align-items: stretch;
+  margin-bottom: var(--space-lg);
+  gap: var(--space-sm);
+}
+
+@media (min-width: 640px) {
+  .header {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--space-xl);
+    gap: var(--space-md);
+  }
 }
 
 .header h1 {
   margin: 0;
-  font-size: 24px;
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--color-text);
+}
+
+@media (min-width: 768px) {
+  .header h1 {
+    font-size: 26px;
+  }
 }
 
 .actions {
   display: flex;
-  gap: 8px;
+  gap: var(--space-sm);
+  flex-wrap: wrap;
+}
+
+.tableWrapper {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin: 0 calc(-1 * var(--space-md));
+}
+
+@media (min-width: 768px) {
+  .tableWrapper {
+    margin: 0;
+  }
+}
+
+.spotsCounts {
+  font-size: 13px;
+  line-height: 1.5;
+  white-space: normal;
 }
 
 .pagination {
   display: flex;
   align-items: center;
-  gap: 16px;
-  margin-top: 16px;
+  gap: var(--space-md);
+  margin-top: var(--space-lg);
 }
 
 .drawer {
@@ -36,40 +83,204 @@
 
 .drawerBackdrop {
   flex: 1;
+  min-width: 0;
   background: rgba(0, 0, 0, 0.5);
 }
 
 .drawerPanel {
-  width: 400px;
-  max-width: 90vw;
+  width: 100%;
+  max-width: 100vw;
   background: var(--color-bg-elevated);
-  padding: 24px;
+  padding: var(--space-md);
   overflow-y: auto;
+}
+
+@media (min-width: 480px) {
+  .drawerPanel {
+    width: 440px;
+    max-width: 92vw;
+    padding: var(--space-lg);
+  }
 }
 
 .drawerPanel h2 {
   margin: 0 0 16px;
 }
 
+/* Spots Drawer: 넓은 2단 레이아웃 (리스트 + 지도) */
+.spotsDrawerPanel {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 100vw;
+  max-height: 100vh;
+  background: var(--color-bg-elevated);
+  box-shadow: 0 0 40px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+}
+
+@media (min-width: 768px) {
+  .spotsDrawerPanel {
+    flex-direction: row;
+    width: min(95vw, 1200px);
+    max-width: 1200px;
+  }
+}
+
+.spotsDrawerMain {
+  flex: 1;
+  min-width: 0;
+  padding: var(--space-md);
+  overflow-y: auto;
+}
+
+@media (min-width: 768px) {
+  .spotsDrawerMain {
+    padding: var(--space-lg);
+    min-width: 420px;
+    flex: 1 1 55%;
+  }
+}
+
+.spotsDrawerPanelWithMap .spotsDrawerMain {
+  max-height: 45vh;
+}
+
+@media (min-width: 768px) {
+  .spotsDrawerPanelWithMap .spotsDrawerMain {
+    flex: 1 1 55%;
+    min-width: 460px;
+    max-width: 620px;
+    max-height: none;
+    border-right: 1px solid var(--color-border);
+  }
+}
+
+.spotsDrawerMap {
+  flex: 0 0 auto;
+  min-height: 240px;
+  padding: var(--space-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  border-top: 1px solid var(--color-border);
+}
+
+@media (min-width: 768px) {
+  .spotsDrawerMap {
+    flex: 1 1 45%;
+    min-width: 320px;
+    max-width: 540px;
+    min-height: 280px;
+    padding: var(--space-lg);
+    border-top: none;
+  }
+}
+
+.mapSectionTitle {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+
+.listSectionTitle {
+  margin: var(--space-md) 0 var(--space-sm);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+
 .spotsDrawerHeader {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 16px;
-  gap: 8px;
+  margin-bottom: var(--space-lg);
+  gap: var(--space-sm);
 }
 
 .spotsDrawerHeader h2 {
   margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.formSection {
+  margin: var(--space-lg) 0;
+  padding: var(--space-md);
+  background: var(--color-bg-hover);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+}
+
+.formSectionLabel {
+  display: block;
+  margin-bottom: var(--space-sm);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text);
+}
+
+.coordInputs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-sm);
+  margin-top: var(--space-xl);
+}
+
+@media (max-width: 400px) {
+  .coordInputs {
+    grid-template-columns: 1fr;
+  }
+}
+
+.geocodeSection {
+  margin-top: var(--space-md);
+  padding-top: var(--space-md);
+  border-top: 1px solid var(--color-border);
+}
+
+.geocodeHint {
+  margin: 0;
+  font-size: 12px;
+  color: var(--color-text-muted);
+  line-height: 1.5;
+}
+
+.geocodeResult {
+  margin-top: var(--space-sm);
+  padding: var(--space-md);
+  background: var(--color-bg);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+}
+
+.geocodeAddress {
+  margin: 0 0 var(--space-sm);
+  font-size: 12px;
+  color: var(--color-text-muted);
+  line-height: 1.5;
+  word-break: break-word;
+}
+
+.geocodeActions {
+  display: flex;
+  gap: var(--space-sm);
+  flex-wrap: wrap;
+}
+
+.geocodeActions button {
+  font-size: 12px;
+  padding: 6px 12px;
 }
 
 .formRow {
-  margin-bottom: 16px;
+  margin-bottom: var(--space-md);
 }
 
 .formRow label {
   display: block;
-  margin-bottom: 4px;
+  margin-bottom: var(--space-xs);
   font-size: 14px;
   color: var(--color-text);
 }
@@ -94,19 +305,37 @@
 
 .formActions {
   display: flex;
-  gap: 8px;
-  margin-top: 24px;
+  gap: var(--space-sm);
+  margin-top: var(--space-lg);
+  flex-wrap: wrap;
 }
 
 .stepList {
   list-style: none;
   padding: 0;
-  margin: 16px 0;
+  margin: var(--space-md) 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  min-width: 0;
 }
 
 .stepList li {
-  padding: 8px 0;
-  border-bottom: 1px solid var(--color-border);
+  padding: var(--space-sm) var(--space-md);
+  background: var(--color-bg-hover);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+@media (max-width: 480px) {
+  .stepList li {
+    padding: var(--space-sm);
+  }
+}
+
+.stepList li:hover {
+  border-color: color-mix(in srgb, var(--color-accent) 40%, var(--color-border));
 }
 
 .spotItem {
@@ -122,16 +351,88 @@
   gap: 8px;
 }
 
+.spotContent {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.spotLabelRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-md);
+  min-width: 0;
+}
+
+.dragHandle {
+  flex-shrink: 0;
+  padding: 4px;
+  margin: 0 0 0 -4px;
+  align-self: center;
+  background: none;
+  border: none;
+  color: var(--color-text-muted);
+  cursor: grab;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+}
+
+.dragHandle:hover {
+  color: var(--color-text);
+  background: var(--color-bg-hover);
+}
+
+.dragHandle:active {
+  cursor: grabbing;
+}
+
 .spotRow span {
   flex: 1;
 }
 
+.spotLabel {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  flex-wrap: wrap;
+  min-width: 120px;
+  line-height: 1.5;
+}
+
+.spotTypeBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: 3px 10px;
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+  font-weight: 600;
+  background: color-mix(in srgb, var(--spot-type-color, var(--color-text-muted)) 18%, transparent);
+  color: var(--spot-type-color, var(--color-text-muted));
+  flex-shrink: 0;
+}
+
+.spotCoords {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.spotLabel .spotCoords {
+  margin-left: var(--space-xs);
+}
+
 .guidePreview {
-  padding: 12px;
+  padding: var(--space-md);
   background: var(--color-bg-hover);
   border-radius: var(--radius-sm);
-  margin-left: 0;
   font-size: 13px;
+  line-height: 1.5;
 }
 
 .guideTitle {
@@ -140,8 +441,8 @@
 }
 
 .guideSegment {
-  margin: 4px 0;
-  line-height: 1.4;
+  margin: var(--space-xs) 0;
+  line-height: 1.5;
 }
 
 .guideEmpty {
@@ -150,27 +451,30 @@
 }
 
 .previewSection {
-  margin-bottom: 16px;
+  margin-bottom: var(--space-lg);
+  line-height: 1.5;
 }
 
 .previewSection h3 {
-  margin: 0 0 8px;
+  margin: 0 0 var(--space-sm);
   font-size: 18px;
+}
+
+.previewSection p {
+  margin: 0 0 var(--space-sm);
 }
 
 .previewDesc {
   color: var(--color-text-muted);
-  margin: 0 0 8px;
   font-size: 14px;
 }
 
 .previewCounts {
-  margin: 4px 0;
   font-size: 13px;
 }
 
 .previewSubtitle {
-  margin: 16px 0 8px;
+  margin: var(--space-md) 0 var(--space-sm);
   font-size: 14px;
 }
 
@@ -179,16 +483,32 @@
   padding: 0;
   margin: 0;
   font-size: 13px;
+  line-height: 1.5;
 }
 
 .markerList li {
-  padding: 4px 0;
+  padding: var(--space-xs) 0;
   border: none;
+}
+
+.spotTitle {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+  min-width: 0;
 }
 
 .spotActions {
   display: flex;
-  gap: 4px;
+  gap: var(--space-xs);
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+.stepList .spotActions button {
+  font-size: 12px;
+  padding: 4px 8px;
 }
 
 .formHint {
@@ -232,13 +552,17 @@
 
 .guideAssetRow {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: var(--space-sm);
   margin-bottom: var(--space-xs);
 }
 
 .guideAssetRow > div:first-child {
   flex: 1;
+}
+
+.guideAssetRow > button {
+  margin-top: 2px;
 }
 
 .guideError {
@@ -251,6 +575,45 @@
   display: flex;
   gap: var(--space-xs);
   margin-top: var(--space-sm);
+}
+
+.hiddenFileInput {
+  position: absolute;
+  width: 0;
+  height: 0;
+  opacity: 0;
+}
+
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-xl) var(--space-lg);
+  background: var(--color-bg-elevated);
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-lg);
+  margin: var(--space-md) 0;
+  text-align: center;
+}
+
+.emptyState h3 {
+  margin: 0 0 var(--space-sm);
+  font-size: 18px;
+  color: var(--color-text);
+}
+
+.emptyState p {
+  margin: 0 0 var(--space-lg);
+  font-size: 14px;
+  color: var(--color-text-muted);
+  line-height: 1.5;
+}
+
+.emptyIcon {
+  color: var(--color-text-muted);
+  opacity: 0.5;
+  margin-bottom: var(--space-md);
 }
 
 .deleteConfirm {

@@ -1,5 +1,6 @@
 .table {
   width: 100%;
+  min-width: 600px;
   border-collapse: collapse;
   background: var(--color-bg-elevated);
   border-radius: var(--radius-md);

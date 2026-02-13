@@ -9,6 +9,9 @@ logger = logging.getLogger(__name__)
 
 BASE_URL = "http://apis.data.go.kr/B551011/KorService2"
 
+USER_AGENT = (
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.132 Safari/537.36"
+)
 
 def fetch_tour_info(service_key: str, keyword: str) -> dict | None:
     """
@@ -58,7 +61,7 @@ def _build_url(path: str, params: dict) -> str:
 
 def _request(url: str) -> dict | None:
     try:
-        req = Request(url, headers={"User-Agent": "QuestOfSeoul-AI/1.0"})
+        req = Request(url, headers={"User-Agent": USER_AGENT})
         with urlopen(req, timeout=10) as resp:
             data = json.loads(resp.read().decode("utf-8"))
         return data

@@ -10,6 +10,10 @@ logger = logging.getLogger(__name__)
 OPEN_METEO_URL = "https://geocoding-api.open-meteo.com/v1/search"
 NOMINATIM_URL = "https://nominatim.openstreetmap.org/search"
 
+USER_AGENT = (
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.132 Safari/537.36"
+)
+
 # Geocoding API try countryCode (KR=Korea)
 DEFAULT_COUNTRY = "KR"
 
@@ -79,7 +83,7 @@ def _geocode_openmeteo(query: str, country_code: str = "KR") -> tuple[float, flo
     """Open-Meteo Geocoding API."""
     encoded = quote(query)
     url = f"{OPEN_METEO_URL}?name={encoded}&count=3&language=ko&countryCode={country_code}"
-    req = Request(url, headers={"User-Agent": "QuestOfSeoul-AI/1.0"})
+    req = Request(url, headers={"User-Agent": USER_AGENT})
     with urlopen(req, timeout=4) as resp:
         data = json.loads(resp.read().decode())
     results = data.get("results")
@@ -96,7 +100,7 @@ def _geocode_nominatim(query: str) -> tuple[float, float] | None:
     """Nominatim(OSM) Geocoding API (fallback)."""
     encoded = quote(query)
     url = f"{NOMINATIM_URL}?q={encoded}&format=json&limit=1"
-    req = Request(url, headers={"User-Agent": "QuestOfSeoul-AI/1.0"})
+    req = Request(url, headers={"User-Agent": USER_AGENT})
     with urlopen(req, timeout=4) as resp:
         data = json.loads(resp.read().decode())
     if not data or not isinstance(data, list):

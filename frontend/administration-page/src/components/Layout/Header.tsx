@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
+import { Menu } from 'lucide-react';
 import { clearAccessToken, getAccessToken } from '../../api/auth';
 import { AUTH_QUERY_KEY } from '../../hooks/useAuth';
 import { LOGOUT_URL } from '../../config/constants';
@@ -11,6 +11,7 @@ interface HeaderProps {
   onSearch?: (value: string) => void;
   darkMode: boolean;
   onDarkModeToggle: () => void;
+  onMenuClick?: () => void;
 }
 
 export function Header({
@@ -18,21 +19,21 @@ export function Header({
   onSearch,
   darkMode,
   onDarkModeToggle,
+  onMenuClick,
 }: HeaderProps) {
-  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [searchValue, setSearchValue] = useState('');
 
-  const handleLogout = (e: React.MouseEvent) => {
+  const handleLogout = async (e: React.MouseEvent) => {
     e.preventDefault();
-    const hadJwt = getAccessToken() != null;
     clearAccessToken();
     queryClient.removeQueries({ queryKey: AUTH_QUERY_KEY });
-    if (hadJwt) {
-      navigate('/login', { replace: true });
-      return;
+    try {
+      await fetch(LOGOUT_URL, { method: 'GET', credentials: 'include' });
+    } finally {
+      // 전체 페이지 이동으로 확실히 로그인 페이지로
+      window.location.replace('/login');
     }
-    window.location.href = LOGOUT_URL;
   };
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -43,6 +44,14 @@ export function Header({
 
   return (
     <header className={styles.header}>
+      <button
+        type="button"
+        className={styles.menuButton}
+        onClick={onMenuClick}
+        aria-label="메뉴 열기"
+      >
+        <Menu size={22} />
+      </button>
       {onSearch ? (
         <input
           type="search"

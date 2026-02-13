@@ -3,8 +3,14 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: var(--space-lg);
+  padding: var(--space-md);
   background: var(--color-bg);
+}
+
+@media (min-width: 640px) {
+  .page {
+    padding: var(--space-lg);
+  }
 }
 
 .card {

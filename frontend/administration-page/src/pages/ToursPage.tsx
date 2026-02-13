@@ -883,17 +883,29 @@ function SpotsDrawer({
             ))}
           </ul>
         )}
-        {deleteTarget && (
-          <div className={styles.deleteConfirm}>
-            <span>{deleteTarget.title} 삭제할까요?</span>
-            <div>
-              <Button variant="secondary" onClick={() => setDeleteTarget(null)}>취소</Button>
-              <Button variant="danger" onClick={() => deleteMutation.mutate(deleteTarget.id)}>삭제</Button>
-            </div>
-          </div>
-        )}
         <Button variant="secondary" onClick={onClose}>닫기</Button>
       </div>
+      {deleteTarget && (
+        <Modal
+          open={!!deleteTarget}
+          title="Spot 삭제"
+          onClose={() => setDeleteTarget(null)}
+          footer={
+            <>
+              <Button variant="secondary" onClick={() => setDeleteTarget(null)}>취소</Button>
+              <Button
+                variant="danger"
+                onClick={() => deleteMutation.mutate(deleteTarget.id)}
+                disabled={deleteMutation.isPending}
+              >
+                {deleteMutation.isPending ? '삭제 중...' : '삭제'}
+              </Button>
+            </>
+          }
+        >
+          {deleteTarget.title}을(를) 삭제하시겠습니까?
+        </Modal>
+      )}
     </div>
   );
 }

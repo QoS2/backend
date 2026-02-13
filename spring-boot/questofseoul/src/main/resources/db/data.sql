@@ -1,16 +1,14 @@
 -- 경복궁 투어 init 데이터
--- 실행: schema.sql 실행 후 data.sql 실행
--- 또는 Spring Boot: spring.sql.init.mode=always
+-- 실행: psql -h localhost -U postgres -d questofseoul -f src/main/resources/db/data.sql
+-- 또는: cd spring-boot/questofseoul && psql $DATABASE_URL -f src/main/resources/db/data.sql
 
--- 기존 데이터 있으면 스킵
 INSERT INTO tours (external_key, title, title_en, description, description_en, info_json, good_to_know_json, is_published, version, created_at, updated_at)
-SELECT 'gyeongbokgung', '경복궁 투어', 'Gyeongbokgung Palace Tour',
+VALUES ('gyeongbokgung', '경복궁 투어', 'Gyeongbokgung Palace Tour',
        '조선 왕조의 정궁인 경복궁을 둘러보는 투어입니다. 광화문·해태상부터 근정전, 경회루, 자경전·십장생굴뚝까지 왕의 동선을 따라갑니다.',
        'Explore the main royal palace of the Joseon Dynasty.',
        '{"durationMinutes":90,"distanceKm":1.5,"difficulty":"easy"}'::jsonb,
        '{"openingHours":"09:00~18:00 (계절별 변동)","closed":"매주 화요일","admission":"성인 3,000원 (한복 착용 시 무료)"}'::jsonb,
-       true, 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
-WHERE NOT EXISTS (SELECT 1 FROM tours WHERE external_key = 'gyeongbokgung');
+       true, 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
 
 -- tour_spots (Guide List MAIN+SUB)
 INSERT INTO tour_spots (tour_id, type, title, description, latitude, longitude, radius_m, order_index, ai_chat_enabled, created_at, updated_at)
@@ -58,16 +56,13 @@ SELECT t.id, 'PHOTO', '포토스팟: 향원정', '향원정은 감성샷이 잘 
 UPDATE tours t SET start_spot_id = (SELECT id FROM tour_spots WHERE tour_id = t.id ORDER BY order_index LIMIT 1), updated_at = CURRENT_TIMESTAMP WHERE t.external_key = 'gyeongbokgung';
 
 -- spot_content_steps + spot_script_lines (각 스팟별 가이드)
--- 기존 데이터 있으면 스킵 (재시작 시 중복 방지)
 INSERT INTO spot_content_steps (spot_id, language, step_index, kind, title, is_published, created_at, updated_at)
 SELECT s.id, 'ko', 0, 'GUIDE', s.title, true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
-FROM tour_spots s JOIN tours t ON s.tour_id = t.id WHERE t.external_key = 'gyeongbokgung'
-ON CONFLICT (spot_id, language, step_index) DO NOTHING;
+FROM tour_spots s JOIN tours t ON s.tour_id = t.id WHERE t.external_key = 'gyeongbokgung';
 
 INSERT INTO spot_script_lines (step_id, seq, role, text, created_at)
 SELECT scs.id, 1, 'GUIDE', ts.description, CURRENT_TIMESTAMP
 FROM spot_content_steps scs
 JOIN tour_spots ts ON scs.spot_id = ts.id AND scs.title = ts.title
 JOIN tours t ON ts.tour_id = t.id
-WHERE t.external_key = 'gyeongbokgung'
-ON CONFLICT (step_id, seq) DO NOTHING;
+WHERE t.external_key = 'gyeongbokgung';

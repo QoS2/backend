@@ -62,6 +62,9 @@ public class TourSpot {
     @OneToMany(mappedBy = "parentSpot", cascade = CascadeType.ALL)
     private List<TourSpot> childSpots = new ArrayList<>();
 
+    @OneToMany(mappedBy = "spot", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<SpotContentStep> contentSteps = new ArrayList<>();
+
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();

@@ -1,0 +1,51 @@
+{
+  // Common
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": null,
+  "files.exclude": {
+    "**/.git": true,
+    "**/.DS_Store": true
+  },
+
+  // Python (ai-server)
+  "python.defaultInterpreterPath": "${workspaceFolder}/ai-server/.venv/bin/python",
+  "python.analysis.extraPaths": ["${workspaceFolder}/ai-server"],
+  "[python]": {
+    "editor.defaultFormatter": "ms-python.black-formatter",
+    "editor.codeActionsOnSave": {
+      "source.organizeImports": "explicit"
+    }
+  },
+  "python.testing.pytestEnabled": true,
+  "python.testing.unittestEnabled": false,
+  "python.testing.pytestArgs": ["ai-server"],
+
+  // Java (Spring Boot)
+  "java.configuration.runtimes": [
+    {
+      "name": "JavaSE-17",
+      "path": "java.home",
+      "default": true
+    }
+  ],
+  "java.import.gradle.enabled": true,
+  "java.import.gradle.wrapper.enabled": true,
+  "java.project.sourcePaths": [
+    "spring-boot/questofseoul/src/main/java"
+  ],
+  "[java]": {
+    "editor.defaultFormatter": "redhat.java",
+    "editor.tabSize": 4
+  },
+
+  // TypeScript / JavaScript (frontend)
+  "[typescript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[typescriptreact]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[json]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  }
+}

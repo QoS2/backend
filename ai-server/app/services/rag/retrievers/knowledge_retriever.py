@@ -1,9 +1,11 @@
 """Knowledge Retriever - Tour API(VisitKorea) for tour information"""
+import hashlib
 import logging
 import re
 
 from app.config import get_settings
 from app.services.rag.retrievers.base import BaseRetriever
+from app.services.rag.simple_cache import get as cache_get, set as cache_set
 from app.services.rag.tour_api_client import fetch_tour_info
 
 logger = logging.getLogger(__name__)
@@ -67,12 +69,28 @@ class KnowledgeRetriever(BaseRetriever):
         if not settings.data_go_kr_service_key:
             return None
 
-        for kw in keywords:
-            info = fetch_tour_info(settings.data_go_kr_service_key, kw)
+        infos = []
+        for kw in keywords[:3]:  # Maximum 3 places search (for comparison questions)
+            cache_key = f"tour:{hashlib.md5(kw.encode()).hexdigest()}"
+            cached = cache_get(cache_key)
+            if cached is not None:
+                info = cached
+            else:
+                info = fetch_tour_info(settings.data_go_kr_service_key, kw)
+                if info:
+                    cache_set(cache_key, info, ttl=600)
             if info:
-                lines = [f"[{info.get('장소', kw)} 관광 정보 - Tour API]"]
-                for k, v in info.items():
-                    if k != "장소" and v:
-                        lines.append(f"- {k}: {v}")
-                return "\n".join(lines)
-        return None
+                place = info.get("장소", "")
+                if not any(i.get("장소") == place for i in infos):
+                    infos.append(info)
+
+        if not infos:
+            return None
+        parts = []
+        for info in infos:
+            lines = [f"[{info.get('장소', '')} 관광 정보 - Tour API]"]
+            for k, v in info.items():
+                if k != "장소" and v:
+                    lines.append(f"- {k}: {v}")
+            parts.append("\n".join(lines))
+        return "\n\n".join(parts)

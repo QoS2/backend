@@ -36,8 +36,10 @@ def fetch_tour_info(service_key: str, keyword: str) -> dict | None:
         common = _detail_common2(service_key, content_id)
         # 3. Introduction information (opening hours, holidays, etc.).
         intro = _detail_intro2(service_key, content_id, item.get("contenttypeid", "12"))
+        # 4. Image information (detailImage2).
+        images = _detail_image2(service_key, content_id)
 
-        return _merge_info(item, common, intro, title)
+        return _merge_info(item, common, intro, title, images)
     except Exception as e:
         logger.warning("Tour API fetch failed for %r: %s", keyword, e)
         return None
@@ -124,6 +126,34 @@ def _is_error_response(data: dict) -> bool:
     return code != "0000"
 
 
+def _detail_image2(service_key: str, content_id: str) -> list:
+    """Retrieve image information (maximum 3 URLs)"""
+    url = _build_url("detailImage2", {
+        "serviceKey": service_key,
+        "contentId": content_id,
+        "numOfRows": 3,
+        "imageYN": "Y",
+    })
+    data = _request(url)
+    if not data or _is_error_response(data):
+        return []
+    try:
+        items = data.get("response", {}).get("body", {}).get("items", {})
+        if not items:
+            return []
+        item_list = items.get("item")
+        if isinstance(item_list, dict):
+            item_list = [item_list]
+        urls = []
+        for it in (item_list or []):
+            u = it.get("originimgurl") or it.get("smallimageurl")
+            if u:
+                urls.append(u)
+        return urls[:3]
+    except (KeyError, TypeError):
+        return []
+
+
 def _detail_intro2(service_key: str, content_id: str, content_type_id: str) -> dict:
     url = _build_url("detailIntro2", {
         "serviceKey": service_key,
@@ -152,8 +182,8 @@ def _item_to_info(item: dict, title: str) -> dict:
     return info
 
 
-def _merge_info(item: dict, common: dict, intro: dict, title: str) -> dict:
-    """Merge search/common/introduction information into a single dict for RAG"""
+def _merge_info(item: dict, common: dict, intro: dict, title: str, images: list | None = None) -> dict:
+    """Merge search/common/introduction/image information into a single dict for RAG"""
     info = {"장소": title}
 
     overview = common.get("overview") or item.get("overview")
@@ -179,5 +209,9 @@ def _merge_info(item: dict, common: dict, intro: dict, title: str) -> dict:
     tel = common.get("tel") or item.get("tel")
     if tel:
         info["연락처"] = tel
+
+    # Images (detailImage2)
+    if images:
+        info["이미지URL"] = ", ".join(images[:3])
 
     return info

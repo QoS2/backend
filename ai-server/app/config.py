@@ -24,6 +24,9 @@ class Settings(BaseSettings):
     # Korea Tourism Organization Tour API (VisitKorea)
     data_go_kr_service_key: str = ""
 
+    # PostgreSQL (for Pgvector RAG - shared with Spring Boot)
+    database_url: str = ""
+
     @property
     def is_openai_configured(self) -> bool:
         return bool(self.openai_api_key.strip())
@@ -31,6 +34,10 @@ class Settings(BaseSettings):
     @property
     def is_tour_api_configured(self) -> bool:
         return bool(self.data_go_kr_service_key.strip())
+
+    @property
+    def is_database_configured(self) -> bool:
+        return bool(self.database_url.strip())
 
 
 @lru_cache

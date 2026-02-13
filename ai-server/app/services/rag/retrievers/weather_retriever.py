@@ -72,8 +72,11 @@ class WeatherRetriever(BaseRetriever):
             params = {
                 "latitude": lat,
                 "longitude": lon,
-                "current": "temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m,precipitation",
+                "current": "temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m,precipitation,apparent_temperature",
+                "hourly": "temperature_2m,weather_code,precipitation_probability",
+                "daily": "weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max",
                 "timezone": "Asia/Seoul",
+                "forecast_days": 2,
             }
             qs = "&".join(f"{k}={v}" for k, v in params.items())
             url = f"{OPEN_METEO_URL}?{qs}"
@@ -100,6 +103,16 @@ class WeatherRetriever(BaseRetriever):
             ]
             if precip and float(precip) > 0:
                 parts.append(f"강수량: {precip} mm")
+            apparent = curr.get("apparent_temperature")
+            if apparent is not None:
+                parts.append(f"체감기온: {apparent}°C")
+
+            daily = data.get("daily", {})
+            if daily and daily.get("temperature_2m_max"):
+                max_temps = daily["temperature_2m_max"]
+                min_temps = daily["temperature_2m_min"]
+                if max_temps and min_temps:
+                    parts.append(f"내일 예상: 최저 {min_temps[0]}°C, 최고 {max_temps[0]}°C")
 
             return "\n".join(parts)
         except (URLError, HTTPError, json.JSONDecodeError, KeyError) as e:

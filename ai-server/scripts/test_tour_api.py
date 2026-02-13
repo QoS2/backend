@@ -54,10 +54,24 @@ def main():
     result = fetch_tour_info(key, "경복궁")
     if result:
         print("  Success:", list(result.keys()))
-        for k, v in list(result.items())[:3]:
-            print(f"      {k}: {str(v)[:60]}...")
+        for k, v in result.items():
+            val_str = str(v)
+            if len(val_str) > 80:
+                val_str = val_str[:80] + "..."
+            print(f"      {k}: {val_str}")
+
+    # 3. Image URLs (detailImage2) check
+    print()
+    print("3. Image URLs (detailImage2) check...")
+    if result and result.get("이미지URL"):
+        urls = [u.strip() for u in result["이미지URL"].split(",")]
+        print(f"   {len(urls)} images collected:")
+        for i, url in enumerate(urls[:3], 1):
+            print(f"      [{i}] {url[:70]}...")
+    elif result:
+        print("   No images")
     else:
-        print("  None returned")
+        print("   fetch_tour_info failed")
 
     return 0 if result else 1
 

@@ -8,8 +8,9 @@
 
 | Retriever | 용도 | API | 비고 |
 |-----------|------|-----|------|
-| **WeatherRetriever** | 실시간 날씨 조회 | Open-Meteo | LocationResolver 좌표 기반 |
-| **KnowledgeRetriever** | 관광지 운영시간·개요·휴무일 | 한국관광공사 Tour API | searchKeyword2, detailCommon2, detailIntro2 |
+| **WeatherRetriever** | 실시간 날씨·체감기온·내일 예보 | Open-Meteo | LocationResolver 좌표 기반 |
+| **KnowledgeRetriever** | 관광지 운영시간·개요·휴무일·이미지 | 한국관광공사 Tour API | searchKeyword2, detailCommon2, detailIntro2, detailImage2 |
+| **VectorRetriever** | 역사·문화·가이드 지식 검색 | Pgvector + OpenAI Embedding | Spring Boot와 DB 공유 |
 | **LocationResolver** | 장소명 → 위경도 변환 | Open-Meteo Geocoding, Nominatim | 텍스트에서 키워드 추출 후 API 조회 |
 
 ## 폴더 구조
@@ -33,8 +34,9 @@ ai-server/
 │           ├── context_enricher.py
 │           ├── tour_api_client.py  # 한국관광공사 Tour API 클라이언트
 │           └── retrievers/
-│               ├── weather_retriever.py   # Open-Meteo 날씨
-│               ├── knowledge_retriever.py # Tour API 관광지 정보
+│               ├── weather_retriever.py   # Open-Meteo 날씨·예보
+│               ├── knowledge_retriever.py # Tour API 관광지 정보 (캐시, 다중 장소)
+│               ├── vector_retriever.py   # Pgvector 벡터 검색
 │               └── location_resolver.py   # Geocoding (Open-Meteo, Nominatim)
 ├── scripts/
 │   └── test_tour_api.py    # Tour API 연결 테스트
@@ -76,8 +78,9 @@ python run.py
 | OPENAI_API_KEY | OpenAI API 키 | (필수) |
 | OPENAI_MODEL | 사용 모델 | gpt-4o-mini |
 | DATA_GO_KR_SERVICE_KEY | 한국관광공사 Tour API 키 (공공데이터포털 활용신청) | - |
+| DATABASE_URL | PostgreSQL 연결 URL (Pgvector RAG용, Spring Boot와 공유) | - |
 
-Tour API 키가 없으면 KnowledgeRetriever는 비활성화되고, 날씨·위치 조회(Open-Meteo)는 API 키 없이 동작합니다.
+Tour API 키가 없으면 KnowledgeRetriever는 비활성화됩니다. DATABASE_URL이 없으면 VectorRetriever는 비활성화됩니다. 날씨·위치 조회(Open-Meteo)는 API 키 없이 동작합니다.
 
 **Tour API 키 설정 시:**
 1. [공공데이터포털](https://www.data.go.kr) → "한국관광공사 국문 관광정보서비스" 활용신청

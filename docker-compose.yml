@@ -1,6 +1,6 @@
 services:
   postgres:
-    image: postgis/postgis:16-3.4-alpine
+    image: garapadev/postgres-postgis-pgvector:16-optimized
     container_name: questofseoul-db
     environment:
       POSTGRES_DB: questofseoul
@@ -28,6 +28,10 @@ services:
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o-mini}
       DATA_GO_KR_SERVICE_KEY: ${DATA_GO_KR_SERVICE_KEY:-}
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/questofseoul
+    depends_on:
+      postgres:
+        condition: service_healthy
     restart: unless-stopped
 
   backend:
@@ -49,6 +53,7 @@ services:
       # OAuth / S3 are overridden in .env
       AI_SERVER_URL: http://ai-server:8081
       AI_SERVER_ENABLED: "true"
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
       AWS_S3_ENABLED: ${AWS_S3_ENABLED:-false}

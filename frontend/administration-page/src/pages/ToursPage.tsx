@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { syncRag } from '../api/rag';
 import {
   fetchTours,
   fetchTour,
@@ -88,6 +89,20 @@ export function ToursPage() {
     },
     onError: (e: Error) => showError(e.message),
   });
+  const ragSyncAllMutation = useMutation({
+    mutationFn: () => syncRag(),
+    onSuccess: (res) => {
+      showSuccess(`전체 RAG 동기화 완료 (${res.embeddingsCount}개 임베딩)`);
+    },
+    onError: (e: Error) => showError(e.message),
+  });
+  const ragSyncTourMutation = useMutation({
+    mutationFn: (tourId: number) => syncRag(tourId),
+    onSuccess: (res) => {
+      showSuccess(`지식 동기화 완료 (${res.embeddingsCount}개 임베딩)`);
+    },
+    onError: (e: Error) => showError(e.message),
+  });
 
   const tours = data?.content ?? [];
   const totalPages = data?.totalPages ?? 0;
@@ -117,7 +132,16 @@ export function ToursPage() {
     <div className={styles.page}>
       <div className={styles.header}>
         <h1>Tours</h1>
-        <Button onClick={handleCreate}>투어 추가</Button>
+        <div className={styles.actions}>
+          <Button
+            variant="secondary"
+            onClick={() => ragSyncAllMutation.mutate()}
+            disabled={ragSyncAllMutation.isPending}
+          >
+            {ragSyncAllMutation.isPending ? '동기화 중...' : '전체 RAG 동기화'}
+          </Button>
+          <Button onClick={handleCreate}>투어 추가</Button>
+        </div>
       </div>
 
       {isLoading ? (
@@ -177,6 +201,7 @@ export function ToursPage() {
       {drawerOpen && (
         <TourFormDrawer
           tour={editingTourId ? tourDetail ?? undefined : undefined}
+          editingTourId={editingTourId}
           onClose={() => {
             setDrawerOpen(false);
             setEditingTourId(null);
@@ -191,6 +216,8 @@ export function ToursPage() {
               createMutation.mutate(values as TourCreateRequest);
             }
           }}
+          onRagSync={editingTourId ? () => ragSyncTourMutation.mutate(editingTourId) : undefined}
+          ragSyncPending={ragSyncTourMutation.isPending}
           isSubmitting={createMutation.isPending || updateMutation.isPending}
         />
       )}
@@ -203,6 +230,8 @@ export function ToursPage() {
             setSpotDrawerOpen(false);
             setSelectedTourId(null);
           }}
+          onRagSync={() => ragSyncTourMutation.mutate(selectedTourId)}
+          ragSyncPending={ragSyncTourMutation.isPending}
         />
       )}
 
@@ -240,13 +269,19 @@ type TourFormValues = TourCreateRequest | { titleEn: string; descriptionEn?: str
 
 function TourFormDrawer({
   tour,
+  editingTourId,
   onClose,
   onSubmit,
+  onRagSync,
+  ragSyncPending,
   isSubmitting,
 }: {
   tour?: TourAdminResponse;
+  editingTourId: number | null;
   onClose: () => void;
   onSubmit: (v: TourFormValues) => void;
+  onRagSync?: () => void;
+  ragSyncPending?: boolean;
   isSubmitting: boolean;
 }) {
   const [externalKey, setExternalKey] = useState(tour?.externalKey ?? '');
@@ -303,6 +338,16 @@ function TourFormDrawer({
             <Button type="button" variant="secondary" onClick={onClose}>
               취소
             </Button>
+            {editingTourId && onRagSync && (
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={onRagSync}
+                disabled={ragSyncPending}
+              >
+                {ragSyncPending ? '동기화 중...' : '지식 동기화'}
+              </Button>
+            )}
             <Button type="submit" disabled={isSubmitting}>
               {tour ? '수정' : '생성'}
             </Button>
@@ -657,10 +702,14 @@ function SpotsDrawer({
   tourId,
   spots,
   onClose,
+  onRagSync,
+  ragSyncPending,
 }: {
   tourId: number;
   spots: SpotAdminResponse[];
   onClose: () => void;
+  onRagSync?: () => void;
+  ragSyncPending?: boolean;
 }) {
   const [formOpen, setFormOpen] = useState(false);
   const [editingSpot, setEditingSpot] = useState<SpotAdminResponse | null>(null);
@@ -769,7 +818,18 @@ function SpotsDrawer({
     <div className={styles.drawer}>
       <div className={styles.drawerBackdrop} onClick={onClose} />
       <div className={styles.drawerPanel}>
-        <h2>Spots</h2>
+        <div className={styles.spotsDrawerHeader}>
+          <h2>Spots</h2>
+          {onRagSync && (
+            <Button
+              variant="ghost"
+              onClick={onRagSync}
+              disabled={ragSyncPending}
+            >
+              {ragSyncPending ? '동기화 중...' : '지식 동기화'}
+            </Button>
+          )}
+        </div>
         {editingGuideSpot ? (
           <GuideEditor
             tourId={tourId}

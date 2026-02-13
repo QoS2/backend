@@ -1208,6 +1208,52 @@ GET /api/v1/admin/enums/{enumName}
 
 ---
 
+### 4.5 RAG (벡터 지식 동기화)
+
+투어·가이드 콘텐츠를 Pgvector에 임베딩하여 AI 가이드 RAG에 활용합니다. ai-server의 VectorRetriever가 이 데이터를 조회합니다.
+
+**Base Path:** `/api/v1/admin/rag`
+
+| 메서드 | 경로 | 설명 |
+|--------|------|------|
+| POST | `/sync` | 투어 지식 벡터 동기화 |
+| GET | `/search` | 벡터 유사도 검색 테스트 |
+
+**POST /api/v1/admin/rag/sync**
+
+Tour, TourSpot, SpotScriptLine(가이드) 콘텐츠를 OpenAI 임베딩 후 `tour_knowledge_embeddings` 테이블에 저장.
+**요구사항:** Backend `OPENAI_API_KEY` 환경변수 설정 필요. 미설정 시 동기화 스킵.
+
+| Query | 타입 | 설명 |
+|-------|------|------|
+| tourId | long | (선택) 특정 투어만 동기화. 없으면 전체 동기화 |
+
+**Response 200**
+```json
+{
+  "embeddingsCount": 42
+}
+```
+
+**GET /api/v1/admin/rag/search**
+
+유사도 검색 테스트. 질문을 임베딩 후 Pgvector에서 유사 문서 검색.
+
+| Query | 타입 | 설명 |
+|-------|------|------|
+| q | string | 검색할 질문 |
+| limit | int | (기본 5) 반환 개수, 최대 20 |
+
+**Response 200**
+```json
+[
+  "투어: 경복궁...",
+  "[광화문] 광화문은 조선시대..."
+]
+```
+
+---
+
 ## Swagger UI
 
 개발 환경에서 API 문서 확인:

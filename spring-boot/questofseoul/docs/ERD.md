@@ -13,6 +13,7 @@
 3. **스팟 콘텐츠:** spot_content_steps, spot_script_lines, script_line_assets, missions, media_assets, spot_assets
 4. **진행 상태:** user_spot_progress, user_treasure_status, user_mission_attempts
 5. **채팅/AI:** chat_sessions, chat_turns, chat_turn_assets, ai_call_logs
+6. **RAG:** tour_knowledge_embeddings (Pgvector, Spring Boot ↔ ai-server 공유)
 
 ---
 
@@ -55,6 +56,8 @@ erDiagram
     chat_sessions ||--o{ chat_turns : "has"
     chat_turns ||--o{ chat_turn_assets : "has"
     chat_sessions ||--o{ ai_call_logs : "logs"
+
+    tours ||--o{ tour_knowledge_embeddings : "embeds"
 
     users {
         uuid id PK
@@ -286,6 +289,19 @@ erDiagram
         string error_code
         timestamp created_at
     }
+
+    tour_knowledge_embeddings {
+        long id PK
+        string source_type
+        long source_id
+        long tour_id
+        long spot_id
+        text content
+        string title
+        vector embedding
+        timestamp created_at
+        timestamp updated_at
+    }
 ```
 
 ---
@@ -314,6 +330,7 @@ erDiagram
 | chat_turns | 채팅 턴 (유저/AI 메시지) |
 | chat_turn_assets | 채팅 턴 첨부 미디어 |
 | ai_call_logs | AI 호출 로그 |
+| tour_knowledge_embeddings | RAG용 투어·가이드 지식 임베딩 (Pgvector, source_type: TOUR/SPOT/GUIDE_LINE) |
 
 ---
 

@@ -51,6 +51,18 @@
   margin: 0 0 16px;
 }
 
+.spotsDrawerHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  gap: 8px;
+}
+
+.spotsDrawerHeader h2 {
+  margin: 0;
+}
+
 .formRow {
   margin-bottom: 16px;
 }

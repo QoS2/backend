@@ -2,6 +2,7 @@
 import logging
 from app.services.rag.retrievers.weather_retriever import WeatherRetriever
 from app.services.rag.retrievers.knowledge_retriever import KnowledgeRetriever
+from app.services.rag.retrievers.vector_retriever import VectorRetriever
 
 logger = logging.getLogger(__name__)
 
@@ -9,14 +10,14 @@ logger = logging.getLogger(__name__)
 class RAGContextEnricher:
     """
     Enriches the context of the answer using RAG.
-    Retrieves weather, knowledge base, etc. information and returns it as a text.
-    Used to enrich the context of the answer.
+    Retrieves weather, knowledge base, vector (Pgvector), etc. and returns as text.
     """
 
     def __init__(self) -> None:
         self.retrievers = [
             WeatherRetriever(),
             KnowledgeRetriever(),
+            VectorRetriever(),
         ]
 
     def enrich(self, query: str, tour_context: str, history: list | None = None) -> str:
@@ -25,7 +26,7 @@ class RAGContextEnricher:
         Used to enrich the context of the answer.
         """
         parts: list[str] = []
-        # 마지막 사용자 메시지 추출 (history 우선, 없으면 tour_context 또는 query)
+        # Last user message extraction (history first, then tour_context or query)
         last_message = query or ""
         if history and len(history) > 0:
             for h in reversed(history):

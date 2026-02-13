@@ -58,13 +58,16 @@ SELECT t.id, 'PHOTO', '포토스팟: 향원정', '향원정은 감성샷이 잘 
 UPDATE tours t SET start_spot_id = (SELECT id FROM tour_spots WHERE tour_id = t.id ORDER BY order_index LIMIT 1), updated_at = CURRENT_TIMESTAMP WHERE t.external_key = 'gyeongbokgung';
 
 -- spot_content_steps + spot_script_lines (각 스팟별 가이드)
+-- 기존 데이터 있으면 스킵 (재시작 시 중복 방지)
 INSERT INTO spot_content_steps (spot_id, language, step_index, kind, title, is_published, created_at, updated_at)
 SELECT s.id, 'ko', 0, 'GUIDE', s.title, true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
-FROM tour_spots s JOIN tours t ON s.tour_id = t.id WHERE t.external_key = 'gyeongbokgung';
+FROM tour_spots s JOIN tours t ON s.tour_id = t.id WHERE t.external_key = 'gyeongbokgung'
+ON CONFLICT (spot_id, language, step_index) DO NOTHING;
 
 INSERT INTO spot_script_lines (step_id, seq, role, text, created_at)
 SELECT scs.id, 1, 'GUIDE', ts.description, CURRENT_TIMESTAMP
 FROM spot_content_steps scs
 JOIN tour_spots ts ON scs.spot_id = ts.id AND scs.title = ts.title
 JOIN tours t ON ts.tour_id = t.id
-WHERE t.external_key = 'gyeongbokgung';
+WHERE t.external_key = 'gyeongbokgung'
+ON CONFLICT (step_id, seq) DO NOTHING;

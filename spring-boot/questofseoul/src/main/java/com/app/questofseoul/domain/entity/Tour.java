@@ -82,10 +82,13 @@ public class Tour {
         return description != null && !description.isBlank() ? description : descriptionEn;
     }
 
+    public void setTitle(String title) { this.title = title; }
     public void setTitleEn(String titleEn) { this.titleEn = titleEn; }
+    public void setDescription(String description) { this.description = description; }
     public void setDescriptionEn(String descriptionEn) { this.descriptionEn = descriptionEn; }
     public void setInfoJson(Map<String, Object> infoJson) { this.infoJson = infoJson; }
     public void setGoodToKnowJson(Map<String, Object> goodToKnowJson) { this.goodToKnowJson = goodToKnowJson; }
+    public void setStartSpot(TourSpot startSpot) { this.startSpot = startSpot; }
 
     public static Tour create(String externalKey, String titleEn, String descriptionEn,
                              Map<String, Object> infoJson, Map<String, Object> goodToKnowJson) {

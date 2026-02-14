@@ -333,6 +333,12 @@ erDiagram
 | ai_call_logs | AI 호출 로그 |
 | tour_knowledge_embeddings | RAG용 투어·가이드 지식 임베딩 (Pgvector, source_type: TOUR/SPOT/GUIDE_LINE) |
 
+### 수집·포토 스팟 (추가 예정)
+
+| 테이블 | 설명 |
+|--------|------|
+| user_photo_submissions | 포토 스팟 유저 제출 (status: PENDING/APPROVED/REJECTED, mint_token, is_public) |
+
 ---
 
 ## 주요 Enum

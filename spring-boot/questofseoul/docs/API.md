@@ -16,6 +16,7 @@
 4. [투어 (Tour)](#3-투어-tour)
 5. [관리자 API](#4-관리자-api)
 6. [Swagger UI](#swagger-ui)
+7. [수집 API (Place·Treasure·Photo Spot)](./API_COLLECTIONS.md) — 별도 문서
 
 ---
 
@@ -1280,6 +1281,18 @@ Tour, TourSpot, SpotScriptLine(가이드) 콘텐츠를 OpenAI 임베딩 후 `tou
   "[광화문] 광화문은 조선시대..."
 ]
 ```
+
+---
+
+## 수집 API (Place·Treasure·Photo Spot)
+
+플레이스 도감, 트레저 도감, 포토 스팟 전용 API는 **[API_COLLECTIONS.md](./API_COLLECTIONS.md)**에서 상세 설계를 확인할 수 있습니다.
+
+| 영역 | 용도 |
+|------|------|
+| Place Collection | 방문한 MAIN/SUB 스팟 도감 |
+| Treasure Collection | 발견한 보물 스팟 도감 |
+| Photo Spot | 포토 스팟 목록·갤러리·유저 포토 제출→검증→민트→노출 |
 
 ---
 

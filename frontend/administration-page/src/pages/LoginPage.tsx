@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuth, AUTH_QUERY_KEY } from '../hooks/useAuth';
@@ -7,6 +7,7 @@ import { Input } from '../components/ui/Input';
 import {
   fetchLogin,
   fetchRegister,
+  setAccessToken,
   type LoginRequest,
   type RegisterRequest,
 } from '../api/auth';
@@ -21,6 +22,7 @@ export function LoginPage() {
 
   const from = searchParams.get('from') ?? '/';
   const oauthError = searchParams.get('error') === 'oauth_failed';
+  const oauthToken = searchParams.get('token');
 
   const [mode, setMode] = useState<'login' | 'register'>('login');
   const [email, setEmail] = useState('');
@@ -68,6 +70,19 @@ export function LoginPage() {
   const handleGoogleLogin = () => {
     window.location.href = OAUTH_GOOGLE_URL;
   };
+
+  // OAuth2 완료: URL의 token 파라미터를 저장하고 대시보드로 이동
+  useEffect(() => {
+    if (oauthToken) {
+      setAccessToken(oauthToken);
+      queryClient.invalidateQueries({ queryKey: AUTH_QUERY_KEY });
+      navigate(from, { replace: true });
+    }
+  }, [oauthToken, from, queryClient, navigate]);
+
+  if (oauthToken) {
+    return null;
+  }
 
   if (!isLoading && !isError && data) {
     return null;
@@ -172,18 +187,22 @@ export function LoginPage() {
           </form>
         )}
 
-        <div className={styles.divider}>
-          <span>또는</span>
-        </div>
+        {mode === 'login' && (
+          <>
+            <div className={styles.divider}>
+              <span>또는</span>
+            </div>
 
-        <Button
-          type="button"
-          variant="secondary"
-          className={styles.button}
-          onClick={handleGoogleLogin}
-        >
-          Google 로그인
-        </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              className={styles.button}
+              onClick={handleGoogleLogin}
+            >
+              Google 로그인
+            </Button>
+          </>
+        )}
 
         {oauthError && (
           <p className={styles.error}>

@@ -1,14 +1,17 @@
 package com.app.questofseoul.config;
 
 import com.app.questofseoul.security.CustomOAuth2UserService;
+import com.app.questofseoul.security.CustomOidcUserService;
 import com.app.questofseoul.security.JwtAuthenticationFilter;
 import com.app.questofseoul.security.OAuth2PrincipalFilter;
+import com.app.questofseoul.security.OAuth2SuccessHandler;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.SimpleUrlAuthenticationFailureHandler;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 import org.springframework.web.cors.CorsConfiguration;
@@ -29,8 +32,10 @@ public class SecurityConfig {
     private String frontendUrl;
 
     private final CustomOAuth2UserService customOAuth2UserService;
+    private final CustomOidcUserService customOidcUserService;
     private final OAuth2PrincipalFilter oAuth2PrincipalFilter;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final OAuth2SuccessHandler oAuth2SuccessHandler;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -54,7 +59,10 @@ public class SecurityConfig {
             .oauth2Login(oauth2 -> oauth2
                 .userInfoEndpoint(userInfo -> userInfo
                     .userService(customOAuth2UserService)
+                    .oidcUserService(customOidcUserService)
                 )
+                .successHandler(oAuth2SuccessHandler)
+                .failureHandler(oauth2FailureHandler())
             )
             .logout(logout -> logout
                 .logoutRequestMatcher(new AntPathRequestMatcher("/logout", "GET"))
@@ -64,6 +72,10 @@ public class SecurityConfig {
             .addFilterAfter(oAuth2PrincipalFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
+    }
+
+    private SimpleUrlAuthenticationFailureHandler oauth2FailureHandler() {
+        return new SimpleUrlAuthenticationFailureHandler(frontendUrl + "/login?error=oauth_failed");
     }
 
     @Bean

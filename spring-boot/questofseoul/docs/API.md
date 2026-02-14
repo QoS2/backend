@@ -386,11 +386,32 @@ GET /api/v1/tours/{tourId}
 | access | object | status: LOCKED \| UNLOCKED, hasAccess |
 | currentRun | object | IN_PROGRESS인 Run (없으면 null) |
 | actions | object | 버튼 액션 정보 |
+| mainQuestPath | array | Main Quest Path (스팟별 게임 목록) |
+
+**mainQuestPath** 각 항목: `spotId`, `spotTitle`, `orderIndex`, `games` (stepId, missionId, title)
 
 **actions 규칙**
 - `primaryButton`: `UNLOCK` (미접근) \| `START` (접근, Run 없음) \| `CONTINUE` (접근, Run 있음)
 - `secondaryButton`: `GPS_TO_START`
 - `moreActions`: `["RESTART"]` (Run 있으면)
+
+**tours.info_json 스키마** (입장료·운영시간·예상소요시간 등)
+
+```json
+{
+  "entrance_fee": { "adult": 3000, "child": 1500 },
+  "available_hours": [{ "day": "weekday", "open": "09:00", "close": "18:00" }],
+  "estimated_duration_min": 90
+}
+```
+
+**tours.good_to_know_json 스키마** (팁 목록)
+
+```json
+{
+  "tips": ["한복 입장 무료", "편한 신발 추천", "화요일 휴궁"]
+}
+```
 
 ---
 
@@ -414,14 +435,14 @@ GET /api/v1/tours/{tourId}/markers
 |------|------|------|------|
 | filter | MarkerType | X | `STEP` \| `WAYPOINT` \| `PHOTO_SPOT` \| `TREASURE` — 미지정 시 전체 |
 
-**MarkerType**
+**MarkerType** (API 용어) ↔ **SpotType** (DB `tour_spots.type`)
 
-| 값 | 설명 |
-|----|------|
-| STEP | 퀘스트 핵심 장소 (Place) |
-| WAYPOINT | 서브 장소 (이동 경로) |
-| PHOTO_SPOT | 포토 스팟 |
-| TREASURE | 보물 찾기 |
+| MarkerType | SpotType | 설명 |
+|------------|----------|------|
+| STEP | MAIN | 퀘스트 핵심 장소 (Place) |
+| WAYPOINT | SUB | 서브 장소 (이동 경로) |
+| PHOTO_SPOT | PHOTO | 포토 스팟 |
+| TREASURE | TREASURE | 보물 찾기 |
 
 **Response 200**
 
@@ -612,11 +633,15 @@ Content-Type: application/json
       "assets": [
         { "id": 1, "type": "IMAGE", "url": "https://s3.../image.jpg", "meta": null }
       ],
-      "action": { "type": "OPEN_SPOT_PAGE", "label": "자세히 보기", "stepId": 1 }
+      "action": { "type": "NEXT", "label": "다음", "stepId": 1 }
     }
   ]
 }
 ```
+
+**action.type 규칙** (spot_content_steps.next_action 기반)
+- 중간 턴: `NEXT` (다음 세그먼트)
+- 마지막 턴: `NEXT` (다음 컨텐츠) \| `MISSION_CHOICE` (게임 시작/스킵, stepId는 MISSION 스텝 ID)
 
 **Response 204** — 근접 스팟 없음
 
@@ -745,7 +770,7 @@ Content-Type: application/json
 GET /api/v1/spots/{spotId}/guide
 ```
 
-스팟 페이지용 가이드 세그먼트(설명 + 이미지) 조회. **인증 불필요.**
+스팟 페이지용 가이드 세그먼트(설명 + 이미지) 조회. **인증 필요** (투어 진행 중 스크립트 제공 목적).
 
 **Path Parameters**
 
@@ -765,6 +790,7 @@ GET /api/v1/spots/{spotId}/guide
 {
   "stepId": 1,
   "stepTitle": "광화문",
+  "nextAction": "NEXT",
   "segments": [
     {
       "id": 10,
@@ -783,6 +809,7 @@ GET /api/v1/spots/{spotId}/guide
 |------|------|
 | stepId | 스팟 ID (spotId와 동일) |
 | stepTitle | 스팟 제목 |
+| nextAction | `NEXT` \| `MISSION_CHOICE` (마지막 GUIDE 스텝 기준, null 가능) |
 | segments[].id | 스크립트 라인 ID |
 | segments[].segIdx | 세그먼트 순서 |
 | segments[].textEn | 가이드 문장 (역할: 텍스트) |
@@ -1130,6 +1157,7 @@ Content-Type: application/json
 {
   "language": "ko",
   "stepTitle": "광화문",
+  "nextAction": "NEXT",
   "lines": [
     {
       "text": "광화문에 오신 것을 환영합니다.",
@@ -1154,6 +1182,7 @@ Content-Type: application/json
 |------|------|------|------|
 | language | string | O | 언어 (`ko`, `en`, `jp`, `cn`) |
 | stepTitle | string | X | 스텝 제목 (없으면 스팟 제목 사용) |
+| nextAction | string | X | `NEXT`(다음 컨텐츠) \| `MISSION_CHOICE`(게임 스타트/스킵) |
 | lines | array | O | 가이드 문장 목록 (최소 1개) |
 
 **GuideLineRequest**

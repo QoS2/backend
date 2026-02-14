@@ -170,6 +170,30 @@ public class TourDetailService {
                 .moreActions(moreActions.isEmpty() ? null : moreActions)
                 .build();
 
+        // Main Quest Path (MAIN 스팟별 MISSION 스텝)
+        List<TourDetailResponse.MainQuestPathItemDto> mainQuestPath = new ArrayList<>();
+        int orderIdx = 1;
+        for (TourSpot ms : mainSpots) {
+            List<SpotContentStep> missionSteps = spotContentStepRepository
+                    .findBySpot_IdAndKindAndLanguageOrderByStepIndexAsc(ms.getId(), StepKind.MISSION, "ko");
+            List<TourDetailResponse.QuestGameDto> games = new ArrayList<>();
+            int gameIdx = 1;
+            for (SpotContentStep s : missionSteps) {
+                games.add(TourDetailResponse.QuestGameDto.builder()
+                        .stepId(s.getId())
+                        .missionId(s.getMission() != null ? s.getMission().getId() : null)
+                        .title(s.getTitle() != null && !s.getTitle().isBlank() ? s.getTitle() : "Game " + gameIdx)
+                        .build());
+                gameIdx++;
+            }
+            mainQuestPath.add(TourDetailResponse.MainQuestPathItemDto.builder()
+                    .spotId(ms.getId())
+                    .spotTitle(ms.getTitle())
+                    .orderIndex(orderIdx++)
+                    .games(games)
+                    .build());
+        }
+
         return TourDetailResponse.builder()
                 .tourId(tour.getId())
                 .title(tour.getDisplayTitle())
@@ -186,6 +210,7 @@ public class TourDetailService {
                         .build())
                 .currentRun(currentRun)
                 .actions(actions)
+                .mainQuestPath(mainQuestPath.isEmpty() ? null : mainQuestPath)
                 .build();
     }
 }

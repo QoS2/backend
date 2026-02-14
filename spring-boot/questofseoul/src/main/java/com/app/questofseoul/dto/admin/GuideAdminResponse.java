@@ -9,5 +9,6 @@ public record GuideAdminResponse(
     Long stepId,
     String language,
     String stepTitle,
+    String nextAction,
     List<GuideLineResponse> lines
 ) {}

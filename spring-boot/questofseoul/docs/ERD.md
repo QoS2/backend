@@ -198,6 +198,7 @@ erDiagram
         string kind
         string title
         long mission_id FK
+        string next_action
         boolean is_published
         timestamp created_at
         timestamp updated_at
@@ -322,12 +323,12 @@ erDiagram
 | user_spot_progress | Run별 스팟 진행 상태 |
 | user_treasure_status | Run별 보물 스팟 상태 |
 | missions | 미션 정의 (QUIZ, INPUT, PHOTO_CHECK 등) |
-| spot_content_steps | 스팟별 콘텐츠 스텝 (GUIDE, MISSION) |
+| spot_content_steps | 스팟별 콘텐츠 스텝 (GUIDE, MISSION). next_action: NEXT \| MISSION_CHOICE |
 | spot_script_lines | 가이드 스텝의 문장 |
 | script_line_assets | 문장-미디어 매핑 |
 | user_mission_attempts | Run별 미션 제출 이력 |
 | chat_sessions | Run+스팟별 AI 채팅 세션 |
-| chat_turns | 채팅 턴 (유저/AI 메시지) |
+| chat_turns | 채팅 턴 (유저/AI 메시지). **action**(action_json): UI 동작(NEXT/MISSION_START/SKIP). **mission**(mission_id): 게임·미션 정의 참조 |
 | chat_turn_assets | 채팅 턴 첨부 미디어 |
 | ai_call_logs | AI 호출 로그 |
 | tour_knowledge_embeddings | RAG용 투어·가이드 지식 임베딩 (Pgvector, source_type: TOUR/SPOT/GUIDE_LINE) |
@@ -339,10 +340,18 @@ erDiagram
 - **SpotType:** MAIN, SUB, PHOTO, TREASURE
 - **MarkerType:** STEP, WAYPOINT, PHOTO_SPOT, TREASURE
 - **StepKind:** GUIDE, MISSION
+- **StepNextAction:** NEXT, MISSION_CHOICE
 - **Language:** ko, en, ja
 - **TourAccessStatus:** LOCKED, UNLOCKED
 - **TourRunStatus:** IN_PROGRESS, COMPLETED, ABANDONED
 - **ChatRole:** USER, ASSISTANT
 - **ChatSource:** USER, GUIDE, AI
 - **MissionAttemptStatus:** STARTED, SUBMITTED, CORRECT, INCORRECT
+
+### chat_turns 용어 정리 (action vs mission)
+
+| 용어 | 필드 | 설명 |
+|------|------|------|
+| **action** | action_json | UI에서 사용자에게 제공하는 동작. `type`: `NEXT`(다음 컨텐츠), `MISSION_START`(게임 시작), `SKIP`(미션 스킵) |
+| **mission** | mission_id | 게임/미션 정의 FK. action이 MISSION_START일 때 연결되는 missions 레코드 |
 - **MissionType:** QUIZ, INPUT, PHOTO_CHECK

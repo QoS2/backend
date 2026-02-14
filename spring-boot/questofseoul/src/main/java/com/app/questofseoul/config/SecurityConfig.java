@@ -42,6 +42,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/v1/auth/login", "/api/v1/auth/register").permitAll()
                 .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/v1/tours/**").permitAll()
                 .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/v1/steps/**").permitAll()
+                .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/v1/spots/*/guide").authenticated()
                 .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/v1/spots/**").permitAll()
                 .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll()
                 .requestMatchers("/api/v1/tour-runs/**").authenticated()

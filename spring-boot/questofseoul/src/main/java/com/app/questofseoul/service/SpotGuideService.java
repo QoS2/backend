@@ -1,9 +1,9 @@
 package com.app.questofseoul.service;
 
-import com.app.questofseoul.domain.entity.ScriptLineAsset;
 import com.app.questofseoul.domain.entity.SpotContentStep;
 import com.app.questofseoul.domain.entity.TourSpot;
 import com.app.questofseoul.domain.enums.StepKind;
+import com.app.questofseoul.domain.enums.StepNextAction;
 import com.app.questofseoul.dto.tour.GuideSegmentResponse;
 import com.app.questofseoul.exception.ResourceNotFoundException;
 import com.app.questofseoul.repository.ScriptLineAssetRepository;
@@ -38,7 +38,9 @@ public class SpotGuideService {
 
         List<GuideSegmentResponse.SegmentItem> segments = new ArrayList<>();
         int segIdx = 1;
+        StepNextAction lastNextAction = null;
         for (SpotContentStep step : guideSteps) {
+            lastNextAction = step.getNextAction();
             var lines = spotScriptLineRepository.findByStep_IdOrderBySeqAsc(step.getId());
             for (var line : lines) {
                 List<GuideSegmentResponse.AssetItem> media = scriptLineAssetRepository
@@ -54,6 +56,7 @@ public class SpotGuideService {
             }
         }
 
-        return new GuideSegmentResponse(spotId, spot.getTitle(), segments);
+        String nextActionStr = lastNextAction != null ? lastNextAction.name() : null;
+        return new GuideSegmentResponse(spotId, spot.getTitle(), nextActionStr, segments);
     }
 }

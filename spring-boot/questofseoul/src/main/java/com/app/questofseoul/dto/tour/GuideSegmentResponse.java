@@ -5,6 +5,7 @@ import java.util.List;
 public record GuideSegmentResponse(
     Long stepId,
     String stepTitle,
+    String nextAction,
     List<SegmentItem> segments
 ) {
     public record SegmentItem(

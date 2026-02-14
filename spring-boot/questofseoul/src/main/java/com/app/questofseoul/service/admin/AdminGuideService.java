@@ -8,6 +8,7 @@ import com.app.questofseoul.domain.entity.TourSpot;
 import com.app.questofseoul.domain.enums.AssetType;
 import com.app.questofseoul.domain.enums.LineAssetUsage;
 import com.app.questofseoul.domain.enums.StepKind;
+import com.app.questofseoul.domain.enums.StepNextAction;
 import com.app.questofseoul.dto.admin.*;
 import com.app.questofseoul.exception.ResourceNotFoundException;
 import com.app.questofseoul.repository.ChatTurnAssetRepository;
@@ -49,10 +50,11 @@ public class AdminGuideService {
                 .findBySpot_IdAndKindAndLanguageOrderByStepIndexAsc(spotId, StepKind.GUIDE, "ko");
 
         if (guideSteps.isEmpty()) {
-            return new GuideAdminResponse(null, "ko", spot.getTitle(), List.of());
+            return new GuideAdminResponse(null, "ko", spot.getTitle(), null, List.of());
         }
 
         SpotContentStep step = guideSteps.get(0);
+        String nextAction = step.getNextAction() != null ? step.getNextAction().name() : null;
         List<SpotScriptLine> lines = spotScriptLineRepository.findByStep_IdOrderBySeqAsc(step.getId());
         List<GuideLineResponse> lineResponses = new ArrayList<>();
         int seq = 1;
@@ -67,7 +69,7 @@ public class AdminGuideService {
                     .toList();
             lineResponses.add(new GuideLineResponse(line.getId(), seq++, line.getText(), assetResponses));
         }
-        return new GuideAdminResponse(step.getId(), "ko", step.getTitle(), lineResponses);
+        return new GuideAdminResponse(step.getId(), "ko", step.getTitle(), nextAction, lineResponses);
     }
 
     @Transactional
@@ -83,12 +85,14 @@ public class AdminGuideService {
         if (existing.isEmpty()) {
             step = SpotContentStep.create(spot, StepKind.GUIDE, 0);
             step.setTitle(req.stepTitle() != null ? req.stepTitle() : spot.getTitle());
+            step.setNextAction(parseNextAction(req.nextAction()));
             step = spotContentStepRepository.save(step);
         } else {
             step = existing.get(0);
             if (req.stepTitle() != null) {
                 step.setTitle(req.stepTitle());
             }
+            step.setNextAction(parseNextAction(req.nextAction()));
             step = spotContentStepRepository.save(step);
             List<SpotScriptLine> oldLines = spotScriptLineRepository.findByStep_IdOrderBySeqAsc(step.getId());
             Set<Long> assetIdsToCheck = oldLines.stream()
@@ -118,6 +122,15 @@ public class AdminGuideService {
         }
 
         return getGuide(tourId, spotId);
+    }
+
+    private static StepNextAction parseNextAction(String s) {
+        if (s == null || s.isBlank()) return null;
+        try {
+            return StepNextAction.valueOf(s.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
     }
 
     private static String inferMimeType(AssetType type, String url) {

@@ -1,6 +1,7 @@
 package com.app.questofseoul.domain.entity;
 
 import com.app.questofseoul.domain.enums.StepKind;
+import com.app.questofseoul.domain.enums.StepNextAction;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -44,6 +45,10 @@ public class SpotContentStep {
     @Column(name = "is_published", nullable = false)
     private Boolean isPublished = true;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "next_action")
+    private StepNextAction nextAction;
+
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
@@ -63,6 +68,10 @@ public class SpotContentStep {
 
     public void setTitle(String title) {
         this.title = title;
+    }
+
+    public void setNextAction(StepNextAction nextAction) {
+        this.nextAction = nextAction;
     }
 
     public static SpotContentStep create(TourSpot spot, StepKind kind, int stepIndex) {

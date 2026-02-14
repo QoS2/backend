@@ -4,6 +4,7 @@ import com.app.questofseoul.domain.entity.*;
 import com.app.questofseoul.domain.enums.ChatRole;
 import com.app.questofseoul.domain.enums.ChatSource;
 import com.app.questofseoul.domain.enums.StepKind;
+import com.app.questofseoul.domain.enums.StepNextAction;
 import com.app.questofseoul.dto.tour.ProximityResponse;
 import com.app.questofseoul.exception.AuthorizationException;
 import com.app.questofseoul.exception.ResourceNotFoundException;
@@ -14,7 +15,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.*;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -62,21 +62,27 @@ public class ProximityService {
             List<ChatTurn> existingTurns = chatTurnRepository.findBySession_IdOrderByCreatedAtAsc(session.getId());
             long scriptCount = existingTurns.stream().filter(t -> t.getSource() == ChatSource.SCRIPT).count();
             if (scriptCount > 0) {
-                return buildProximityResponse(session, spot, existingTurns, "SPOT", spot.getId());
+                return buildProximityResponse(session, spot, existingTurns, "SPOT", spot.getId(), language);
             }
 
             // 스크립트 턴 생성 및 저장
+            int totalLines = guideSteps.stream()
+                    .mapToInt(s -> spotScriptLineRepository.findByStep_IdOrderBySeqAsc(s.getId()).size())
+                    .sum();
             List<ProximityResponse.ChatTurnDto> turnDtos = new ArrayList<>();
-            for (SpotContentStep step : guideSteps) {
-                List<SpotScriptLine> lines = spotScriptLineRepository.findByStep_IdOrderBySeqAsc(step.getId());
+            int lineIdx = 0;
+            SpotContentStep lastGuideStep = guideSteps.isEmpty() ? null : guideSteps.get(guideSteps.size() - 1);
+        for (SpotContentStep step : guideSteps) {
+            List<SpotScriptLine> lines = spotScriptLineRepository.findByStep_IdOrderBySeqAsc(step.getId());
                 for (SpotScriptLine line : lines) {
+                    lineIdx++;
+                    boolean isLastLine = (lineIdx == totalLines);
+                    ProximityResponse.ActionDto action = resolveAction(spot, lastGuideStep, isLastLine);
                     List<ProximityResponse.AssetDto> assets = scriptLineAssetRepository
                             .findByScriptLine_IdOrderBySortOrderAsc(line.getId()).stream()
                             .map(a -> new ProximityResponse.AssetDto(
                                     a.getAsset().getId(), "IMAGE", a.getAsset().getUrl(), a.getAsset().getMetadataJson()))
                             .toList();
-                    ProximityResponse.ActionDto action = new ProximityResponse.ActionDto(
-                            "OPEN_SPOT_PAGE", "자세히 보기", spot.getId());
                     ChatTurn turn = ChatTurn.create(session, ChatSource.SCRIPT, ChatRole.GUIDE, line.getText());
                     turn = chatTurnRepository.save(turn);
                     turnDtos.add(new ProximityResponse.ChatTurnDto(
@@ -89,14 +95,41 @@ public class ProximityService {
         return null;
     }
 
+    private ProximityResponse.ActionDto resolveAction(TourSpot spot,
+                                                     SpotContentStep lastGuideStep, boolean isLastLine) {
+        if (!isLastLine || lastGuideStep == null) {
+            return new ProximityResponse.ActionDto("NEXT", "다음", spot.getId());
+        }
+        StepNextAction nextAction = lastGuideStep.getNextAction();
+        if (nextAction == StepNextAction.MISSION_CHOICE) {
+            List<SpotContentStep> missionSteps = spotContentStepRepository
+                    .findBySpot_IdAndKindAndLanguageOrderByStepIndexAsc(spot.getId(), StepKind.MISSION, "ko");
+            Long missionStepId = missionSteps.isEmpty() ? spot.getId() : missionSteps.get(0).getId();
+            return new ProximityResponse.ActionDto("MISSION_CHOICE", "게임 시작", missionStepId);
+        }
+        return new ProximityResponse.ActionDto("NEXT", "다음", spot.getId());
+    }
+
     private ProximityResponse buildProximityResponse(ChatSession session, TourSpot spot,
-                                                     List<ChatTurn> turns, String refType, Long refId) {
-        List<ProximityResponse.ChatTurnDto> dtos = turns.stream()
-                .filter(t -> t.getSource() == ChatSource.SCRIPT)
-                .map(t -> new ProximityResponse.ChatTurnDto(
-                        t.getId(), t.getRole().name(), t.getSource().name(), t.getText(),
-                        List.of(), new ProximityResponse.ActionDto("OPEN_SPOT_PAGE", "자세히 보기", spot.getId())))
-                .toList();
+                                                     List<ChatTurn> turns, String refType, Long refId, String language) {
+        List<SpotContentStep> guideSteps = spotContentStepRepository
+                .findBySpotIdAndLanguageOrderByStepIndexAsc(spot.getId(), language)
+                .stream().filter(s -> s.getKind() == StepKind.GUIDE).toList();
+        SpotContentStep lastGuideStep = guideSteps.isEmpty() ? null : guideSteps.get(guideSteps.size() - 1);
+        List<ChatTurn> scriptTurns = turns.stream().filter(t -> t.getSource() == ChatSource.SCRIPT).toList();
+        int totalScript = scriptTurns.size();
+
+        List<ProximityResponse.ChatTurnDto> dtos = new ArrayList<>();
+        for (int i = 0; i < scriptTurns.size(); i++) {
+            ChatTurn t = scriptTurns.get(i);
+            boolean isLast = (i == totalScript - 1);
+            ProximityResponse.ActionDto action = isLast && lastGuideStep != null
+                    ? resolveAction(spot, lastGuideStep, true)
+                    : new ProximityResponse.ActionDto("NEXT", "다음", spot.getId());
+            dtos.add(new ProximityResponse.ChatTurnDto(
+                    t.getId(), t.getRole().name(), t.getSource().name(), t.getText(),
+                    List.of(), action));
+        }
         return new ProximityResponse("PROXIMITY", "GUIDE", session.getId(),
                 new ProximityResponse.ProximityContext(refType, refId, spot.getTitle()), dtos);
     }

@@ -14,6 +14,12 @@ export type TourDetailResponse = {
   access: { status: string; hasAccess: boolean };
   currentRun: { runId: number; status: string; startedAt: string; progress: { completedSpots: number; totalSpots: number } } | null;
   actions: { primaryButton: string; secondaryButton: string | null; moreActions: string[] };
+  mainQuestPath?: Array<{
+    spotId: number;
+    spotTitle: string;
+    orderIndex: number;
+    games: Array<{ stepId: number; missionId: number | null; title: string }>;
+  }>;
 };
 
 export type MarkerResponse = {
@@ -30,6 +36,7 @@ export type MarkerResponse = {
 export type SpotGuideResponse = {
   stepId: number;
   stepTitle: string;
+  nextAction?: string | null;
   segments: Array<{
     id: number;
     segIdx: number;
@@ -184,6 +191,7 @@ export type GuideLineRequest = {
 export type GuideSaveRequest = {
   language: string;
   stepTitle?: string;
+  nextAction?: string;
   lines: GuideLineRequest[];
 };
 
@@ -205,6 +213,7 @@ export type GuideAdminResponse = {
   stepId: number | null;
   language: string;
   stepTitle: string;
+  nextAction?: string | null;
   lines: GuideLineResponse[];
 };
 

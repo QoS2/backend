@@ -24,6 +24,7 @@ public class TourDetailResponse {
     private AccessDto access;
     private CurrentRunDto currentRun;
     private ActionsDto actions;
+    private List<MainQuestPathItemDto> mainQuestPath;
 
     @Data
     @Builder
@@ -100,5 +101,22 @@ public class TourDetailResponse {
         private String primaryButton;
         private String secondaryButton;
         private List<String> moreActions;
+    }
+
+    @Data
+    @Builder
+    public static class MainQuestPathItemDto {
+        private Long spotId;
+        private String spotTitle;
+        private int orderIndex;
+        private List<QuestGameDto> games;
+    }
+
+    @Data
+    @Builder
+    public static class QuestGameDto {
+        private Long stepId;
+        private Long missionId;
+        private String title;
     }
 }

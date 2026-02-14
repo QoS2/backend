@@ -34,6 +34,7 @@ import { Table } from '../components/ui/Table';
 import { Button } from '../components/ui/Button';
 import { Modal } from '../components/ui/Modal';
 import { Input } from '../components/ui/Input';
+import { Select } from '../components/ui/Select';
 import { Textarea } from '../components/ui/Textarea';
 import { FileUploadInput } from '../components/ui/FileUploadInput';
 import { MapPicker } from '../components/Map/MapPicker';
@@ -584,6 +585,7 @@ function GuideEditor({
   const { showSuccess, showError } = useToast();
 
   const [stepTitle, setStepTitle] = useState('');
+  const [nextAction, setNextAction] = useState<string>('');
   const [lines, setLines] = useState<GuideLineRequest[]>([]);
   const [forceCreateMode, setForceCreateMode] = useState(false);
   const [assetUploading, setAssetUploading] = useState(false);
@@ -593,6 +595,7 @@ function GuideEditor({
   useEffect(() => {
     if (!guide && !isError) return;
     setStepTitle(guide?.stepTitle || spotTitle);
+    setNextAction(guide?.nextAction || '');
     setLines(
       guide && guide.lines.length > 0
         ? guide.lines.map((l) => ({
@@ -674,6 +677,7 @@ function GuideEditor({
     saveMutation.mutate({
       language: 'ko',
       stepTitle: stepTitle.trim() || spotTitle,
+      nextAction: nextAction.trim() || undefined,
       lines: validLines.map((l) => ({
         text: l.text.trim(),
         assets: l.assets.filter((a) => a.url.trim()),
@@ -730,6 +734,16 @@ function GuideEditor({
           value={stepTitle}
           onChange={(e) => setStepTitle(e.target.value)}
           placeholder={spotTitle}
+        />
+        <Select
+          label="컨텐츠 후 버튼"
+          value={nextAction}
+          onChange={(e) => setNextAction(e.target.value)}
+          options={[
+            { value: '', label: '(선택 안 함)' },
+            { value: 'NEXT', label: 'NEXT - 다음 컨텐츠' },
+            { value: 'MISSION_CHOICE', label: 'MISSION_CHOICE - 게임 스타트/스킵' },
+          ]}
         />
         <input
           ref={assetFileInputRef}

@@ -12,5 +12,6 @@ import java.util.List;
 public record GuideSaveRequest(
     @NotNull String language,
     String stepTitle,
+    String nextAction,
     @NotEmpty @Valid List<GuideLineRequest> lines
 ) {}

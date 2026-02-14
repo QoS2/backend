@@ -24,7 +24,7 @@ public class TourDetailResponse {
     private AccessDto access;
     private CurrentRunDto currentRun;
     private ActionsDto actions;
-    private List<MainQuestPathItemDto> mainQuestPath;
+    private List<MainMissionPathItemDto> mainMissionPath;
 
     @Data
     @Builder
@@ -105,16 +105,16 @@ public class TourDetailResponse {
 
     @Data
     @Builder
-    public static class MainQuestPathItemDto {
+    public static class MainMissionPathItemDto {
         private Long spotId;
         private String spotTitle;
         private int orderIndex;
-        private List<QuestGameDto> games;
+        private List<MissionItemDto> missions;
     }
 
     @Data
     @Builder
-    public static class QuestGameDto {
+    public static class MissionItemDto {
         private Long stepId;
         private Long missionId;
         private String title;

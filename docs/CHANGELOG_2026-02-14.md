@@ -88,26 +88,26 @@
 
 ---
 
-## 5. TourDetailResponse.mainQuestPath 추가
+## 5. TourDetailResponse.mainMissionPath 추가
 
 ### 변경 사항
 
-- **TourDetailResponse**: `mainQuestPath` 필드 추가
-  - `MainQuestPathItemDto`: `spotId`, `spotTitle`, `orderIndex`, `games`
-  - `QuestGameDto`: `stepId`, `missionId`, `title`
-- **TourDetailService**: MAIN 스팟별 MISSION 스텝을 조회해 `mainQuestPath` 구성
+- **TourDetailResponse**: `mainMissionPath` 필드 추가 (mission 용어 통일)
+  - `MainMissionPathItemDto`: `spotId`, `spotTitle`, `orderIndex`, `missions`
+  - `MissionItemDto`: `stepId`, `missionId`, `title`
+- **TourDetailService**: MAIN 스팟별 MISSION 스텝을 조회해 `mainMissionPath` 구성
 
 ### 응답 예시
 
 ```json
-"mainQuestPath": [
+"mainMissionPath": [
   {
     "spotId": 1,
     "spotTitle": "Gwanghwamun Gate",
     "orderIndex": 1,
-    "games": [
-      { "stepId": 101, "missionId": 1, "title": "Game 1" },
-      { "stepId": 102, "missionId": 2, "title": "Game 2" }
+    "missions": [
+      { "stepId": 101, "missionId": 1, "title": "Mission 1" },
+      { "stepId": 102, "missionId": 2, "title": "Mission 2" }
     ]
   }
 ]
@@ -184,4 +184,4 @@
 
 1. **GET /spots/{id}/guide**: 현재 미리보기용으로만 사용하는지 재확인 후, 공개용 경로가 필요하면 별도 엔드포인트 검토
 2. **관리자 MISSION 스텝 관리**: 현재 GUIDE 스텝만 관리. MISSION 스텝 CRUD/순서 관리 UI 확장 검토
-3. **mainQuestPath 다국어**: 현재 `"ko"` 고정. `lang` 파라미터 기반 다국어 지원 검토
+3. **mainMissionPath 다국어**: 현재 `"ko"` 고정. `lang` 파라미터 기반 다국어 지원 검토

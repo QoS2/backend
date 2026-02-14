@@ -386,9 +386,9 @@ GET /api/v1/tours/{tourId}
 | access | object | status: LOCKED \| UNLOCKED, hasAccess |
 | currentRun | object | IN_PROGRESS인 Run (없으면 null) |
 | actions | object | 버튼 액션 정보 |
-| mainQuestPath | array | Main Quest Path (스팟별 게임 목록) |
+| mainMissionPath | array | Main Mission Path (스팟별 미션 목록) |
 
-**mainQuestPath** 각 항목: `spotId`, `spotTitle`, `orderIndex`, `games` (stepId, missionId, title)
+**mainMissionPath** 각 항목: `spotId`, `spotTitle`, `orderIndex`, `missions` (stepId, missionId, title)
 
 **actions 규칙**
 - `primaryButton`: `UNLOCK` (미접근) \| `START` (접근, Run 없음) \| `CONTINUE` (접근, Run 있음)

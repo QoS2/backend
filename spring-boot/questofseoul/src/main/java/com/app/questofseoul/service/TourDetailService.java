@@ -170,27 +170,27 @@ public class TourDetailService {
                 .moreActions(moreActions.isEmpty() ? null : moreActions)
                 .build();
 
-        // Main Quest Path (MAIN 스팟별 MISSION 스텝)
-        List<TourDetailResponse.MainQuestPathItemDto> mainQuestPath = new ArrayList<>();
+        // Main Mission Path (MAIN 스팟별 MISSION 스텝)
+        List<TourDetailResponse.MainMissionPathItemDto> mainMissionPath = new ArrayList<>();
         int orderIdx = 1;
         for (TourSpot ms : mainSpots) {
             List<SpotContentStep> missionSteps = spotContentStepRepository
                     .findBySpot_IdAndKindAndLanguageOrderByStepIndexAsc(ms.getId(), StepKind.MISSION, "ko");
-            List<TourDetailResponse.QuestGameDto> games = new ArrayList<>();
-            int gameIdx = 1;
+            List<TourDetailResponse.MissionItemDto> missions = new ArrayList<>();
+            int missionIdx = 1;
             for (SpotContentStep s : missionSteps) {
-                games.add(TourDetailResponse.QuestGameDto.builder()
+                missions.add(TourDetailResponse.MissionItemDto.builder()
                         .stepId(s.getId())
                         .missionId(s.getMission() != null ? s.getMission().getId() : null)
-                        .title(s.getTitle() != null && !s.getTitle().isBlank() ? s.getTitle() : "Game " + gameIdx)
+                        .title(s.getTitle() != null && !s.getTitle().isBlank() ? s.getTitle() : "Mission " + missionIdx)
                         .build());
-                gameIdx++;
+                missionIdx++;
             }
-            mainQuestPath.add(TourDetailResponse.MainQuestPathItemDto.builder()
+            mainMissionPath.add(TourDetailResponse.MainMissionPathItemDto.builder()
                     .spotId(ms.getId())
                     .spotTitle(ms.getTitle())
                     .orderIndex(orderIdx++)
-                    .games(games)
+                    .missions(missions)
                     .build());
         }
 
@@ -210,7 +210,7 @@ public class TourDetailService {
                         .build())
                 .currentRun(currentRun)
                 .actions(actions)
-                .mainQuestPath(mainQuestPath.isEmpty() ? null : mainQuestPath)
+                .mainMissionPath(mainMissionPath.isEmpty() ? null : mainMissionPath)
                 .build();
     }
 }

@@ -14,11 +14,11 @@ export type TourDetailResponse = {
   access: { status: string; hasAccess: boolean };
   currentRun: { runId: number; status: string; startedAt: string; progress: { completedSpots: number; totalSpots: number } } | null;
   actions: { primaryButton: string; secondaryButton: string | null; moreActions: string[] };
-  mainQuestPath?: Array<{
+  mainMissionPath?: Array<{
     spotId: number;
     spotTitle: string;
     orderIndex: number;
-    games: Array<{ stepId: number; missionId: number | null; title: string }>;
+    missions: Array<{ stepId: number; missionId: number | null; title: string }>;
   }>;
 };
 

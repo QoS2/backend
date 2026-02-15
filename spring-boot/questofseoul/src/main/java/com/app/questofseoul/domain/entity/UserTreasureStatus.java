@@ -46,4 +46,18 @@ public class UserTreasureStatus {
         s.treasureSpot = treasureSpot;
         return s;
     }
+
+    /** 50m 근접 시 잠금 해제 (발견) */
+    public void unlock() {
+        if (this.status == TreasureStatus.LOCKED) {
+            this.status = TreasureStatus.UNLOCKED;
+            this.unlockedAt = LocalDateTime.now();
+        }
+    }
+
+    /** Collect Treasure 클릭 시 수집 완료 */
+    public void collect() {
+        this.status = TreasureStatus.GET;
+        this.gotAt = LocalDateTime.now();
+    }
 }

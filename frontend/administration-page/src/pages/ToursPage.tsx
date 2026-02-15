@@ -839,7 +839,10 @@ function SpotsDrawer({
   const [type, setType] = useState<string>('MAIN');
   const [orderIndex, setOrderIndex] = useState(spots.length + 1);
   const [title, setTitle] = useState('');
+  const [titleKr, setTitleKr] = useState('');
   const [description, setDescription] = useState('');
+  const [pronunciationUrl, setPronunciationUrl] = useState('');
+  const [address, setAddress] = useState('');
   const [latitude, setLatitude] = useState('');
   const [longitude, setLongitude] = useState('');
   const [radiusM, setRadiusM] = useState('60');
@@ -891,7 +894,10 @@ function SpotsDrawer({
     setType('MAIN');
     setOrderIndex((spots?.length ?? 0) + 1);
     setTitle('');
+    setTitleKr('');
     setDescription('');
+    setPronunciationUrl('');
+    setAddress('');
     setLatitude('');
     setLongitude('');
     setRadiusM('60');
@@ -906,7 +912,10 @@ function SpotsDrawer({
   const handleEditSpot = (spot: SpotAdminResponse) => {
     setEditingSpot(spot);
     setTitle(spot.title ?? '');
+    setTitleKr(spot.titleKr ?? '');
     setDescription(spot.description ?? '');
+    setPronunciationUrl(spot.pronunciationUrl ?? '');
+    setAddress(spot.address ?? '');
     setOrderIndex(spot.orderIndex);
     setLatitude(spot.latitude?.toString() ?? '');
     setLongitude(spot.longitude?.toString() ?? '');
@@ -926,6 +935,9 @@ function SpotsDrawer({
         setGeocodeResult(result);
         if (!editingSpot && !title.trim()) {
           setTitle(result.name);
+        }
+        if (!editingSpot && !address.trim()) {
+          setAddress(result.displayName);
         }
         if (result.suggestedRadiusM != null && !editingSpot) {
           setRadiusM(String(result.suggestedRadiusM));
@@ -967,7 +979,10 @@ function SpotsDrawer({
         spotId: editingSpot.id,
         body: {
           title: title.trim(),
+          titleKr: titleKr.trim() || undefined,
           description: description.trim() || undefined,
+          pronunciationUrl: pronunciationUrl.trim() || undefined,
+          address: address.trim() || undefined,
           orderIndex,
           latitude: latitude ? parseFloat(latitude) : undefined,
           longitude: longitude ? parseFloat(longitude) : undefined,
@@ -978,7 +993,10 @@ function SpotsDrawer({
       createMutation.mutate({
         type,
         title: title.trim(),
+        titleKr: titleKr.trim() || undefined,
         description: description.trim() || undefined,
+        pronunciationUrl: pronunciationUrl.trim() || undefined,
+        address: address.trim() || undefined,
         orderIndex,
         latitude: latitude ? parseFloat(latitude) : undefined,
         longitude: longitude ? parseFloat(longitude) : undefined,
@@ -1047,7 +1065,10 @@ function SpotsDrawer({
             {editingSpot && <p className={styles.formHint}>Type: {editingSpot.type} (수정 불가)</p>}
             <Input label="Order" type="number" value={String(orderIndex)} onChange={(e) => setOrderIndex(parseInt(e.target.value, 10) || 1)} />
             <Input label="제목" value={title} onChange={(e) => setTitle(e.target.value)} required placeholder="지도에서 클릭 시 자동 입력" />
+            <Input label="한글 제목" value={titleKr} onChange={(e) => setTitleKr(e.target.value)} placeholder="예: 광화문" />
             <Input label="설명" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="가이드에서 안내할 내용" />
+            <Input label="발음 URL" value={pronunciationUrl} onChange={(e) => setPronunciationUrl(e.target.value)} placeholder="https://..." />
+            <Input label="주소" value={address} onChange={(e) => setAddress(e.target.value)} placeholder="지도 클릭 시 자동 입력" />
             <div className={styles.formSection}>
               <label className={styles.formSectionLabel}>위치 (지도에서 클릭하여 설정)</label>
               <MapPicker

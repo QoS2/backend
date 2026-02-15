@@ -43,7 +43,12 @@ public class AdminTourSpotService {
         TourSpot spot = TourSpot.create(tour, SpotType.valueOf(req.type()), req.title(),
                 req.latitude(), req.longitude(), req.orderIndex());
         if (req.description() != null) spot.setDescription(req.description());
+        if (req.titleKr() != null) spot.setTitleKr(req.titleKr());
+        if (req.pronunciationUrl() != null) spot.setPronunciationUrl(req.pronunciationUrl());
+        if (req.address() != null) spot.setAddress(req.address());
         if (req.radiusM() != null) spot.setRadiusM(req.radiusM());
+        if (req.latitude() != null) spot.setLatitude(req.latitude());
+        if (req.longitude() != null) spot.setLongitude(req.longitude());
         spot = tourSpotRepository.save(spot);
         return toResponse(spot);
     }
@@ -53,8 +58,14 @@ public class AdminTourSpotService {
         TourSpot spot = tourSpotRepository.findByIdAndTourId(spotId, tourId)
                 .orElseThrow(() -> new ResourceNotFoundException("Spot not found"));
         if (req.title() != null) spot.setTitle(req.title());
+        if (req.titleKr() != null) spot.setTitleKr(req.titleKr());
         if (req.description() != null) spot.setDescription(req.description());
+        if (req.pronunciationUrl() != null) spot.setPronunciationUrl(req.pronunciationUrl());
+        if (req.address() != null) spot.setAddress(req.address());
         if (req.orderIndex() != null) spot.setOrderIndex(req.orderIndex());
+        if (req.latitude() != null) spot.setLatitude(req.latitude());
+        if (req.longitude() != null) spot.setLongitude(req.longitude());
+        if (req.radiusM() != null) spot.setRadiusM(req.radiusM());
         spot = tourSpotRepository.save(spot);
         return toResponse(spot);
     }
@@ -68,6 +79,7 @@ public class AdminTourSpotService {
 
     private SpotAdminResponse toResponse(TourSpot s) {
         return new SpotAdminResponse(s.getId(), s.getTour().getId(), s.getType().name(), s.getTitle(),
-                s.getDescription(), s.getLatitude(), s.getLongitude(), s.getRadiusM(), s.getOrderIndex());
+                s.getTitleKr(), s.getDescription(), s.getPronunciationUrl(), s.getAddress(),
+                s.getLatitude(), s.getLongitude(), s.getRadiusM(), s.getOrderIndex());
     }
 }

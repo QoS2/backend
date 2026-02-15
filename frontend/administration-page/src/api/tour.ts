@@ -99,7 +99,10 @@ export type SpotAdminResponse = {
   tourId: number;
   type: string;
   title: string;
+  titleKr: string | null;
   description: string | null;
+  pronunciationUrl: string | null;
+  address: string | null;
   latitude: number | null;
   longitude: number | null;
   radiusM: number | null;
@@ -109,7 +112,10 @@ export type SpotAdminResponse = {
 export type SpotCreateRequest = {
   type: string;
   title: string;
+  titleKr?: string;
   description?: string;
+  pronunciationUrl?: string;
+  address?: string;
   latitude?: number;
   longitude?: number;
   orderIndex: number;
@@ -118,7 +124,10 @@ export type SpotCreateRequest = {
 
 export type SpotUpdateRequest = {
   title?: string;
+  titleKr?: string;
   description?: string;
+  pronunciationUrl?: string;
+  address?: string;
   orderIndex?: number;
   latitude?: number;
   longitude?: number;

@@ -16,7 +16,7 @@
 4. [투어 (Tour)](#3-투어-tour)
 5. [관리자 API](#4-관리자-api)
 6. [Swagger UI](#swagger-ui)
-7. [수집 API (Place·Treasure·Photo Spot)](./API_COLLECTIONS.md) — 별도 문서
+7. [수집 API (Place·Treasure·Photo Spot)](#수집-api-placetreasurephoto-spot)
 
 ---
 
@@ -585,7 +585,10 @@ Authorization: Bearer <accessToken>
 Content-Type: application/json
 ```
 
-현재 위치가 스팟 반경(radiusM, 기본 50m) 안에 들어오면 가이드 스크립트를 반환합니다.
+현재 위치가 스팟 반경(radiusM, 기본 50m) 안에 들어오면 해당 스팟 유형별 이벤트를 반환합니다.
+- **Main/Sub Place**: 가이드 스크립트 + `UserSpotProgress` unlock
+- **Treasure**: 첫 발견 시 `TREASURE_FOUND` 알람 + `UserTreasureStatus` unlock
+- **Photo Spot**: `PHOTO_SPOT_FOUND` 알람
 
 **Path Parameters**
 
@@ -644,15 +647,52 @@ Content-Type: application/json
 - 중간 턴: `NEXT` (다음 세그먼트)
 - 마지막 턴: `NEXT` (다음 컨텐츠) \| `MISSION_CHOICE` (게임 시작/스킵, stepId는 MISSION 스텝 ID)
 
+**Response 200** — Treasure 근접 (첫 발견 시)
+
+```json
+{
+  "event": "TREASURE_FOUND",
+  "contentType": "TREASURE_ALARM",
+  "sessionId": null,
+  "context": { "refType": "SPOT", "refId": 9, "placeName": "풍기대", "spotType": "TREASURE" },
+  "messages": []
+}
+```
+
+**Response 200** — Photo Spot 근접
+
+```json
+{
+  "event": "PHOTO_SPOT_FOUND",
+  "contentType": "PHOTO_ALARM",
+  "sessionId": null,
+  "context": { "refType": "SPOT", "refId": 5, "placeName": "근정전 앞 광장", "spotType": "PHOTO" },
+  "messages": []
+}
+```
+
 **Response 204** — 근접 스팟 없음
 
 | 필드 | 설명 |
 |------|------|
-| event | `PROXIMITY` |
-| contentType | `GUIDE` |
-| sessionId | 채팅 세션 ID |
-| context | refType, refId, placeName |
-| messages | 가이드 턴 목록 (text, assets, action) |
+| event | `PROXIMITY` \| `TREASURE_FOUND` \| `PHOTO_SPOT_FOUND` |
+| contentType | `GUIDE` \| `TREASURE_ALARM` \| `PHOTO_ALARM` |
+| sessionId | 채팅 세션 ID (GUIDE만 해당, Treasure/Photo는 null) |
+| context | refType, refId, placeName, spotType |
+| messages | 가이드 턴 목록 (GUIDE만, Treasure/Photo는 빈 배열) |
+
+---
+
+### 3.6.1 Collect Treasure
+
+```
+POST /api/v1/tour-runs/{runId}/treasures/{spotId}/collect
+Authorization: Bearer <accessToken>
+```
+
+Treasure 50m 근접 후 상세 확인 → "Collect Treasure" 클릭 시 도감에 추가.
+
+**Response 200** — 빈 본문
 
 ---
 
@@ -765,7 +805,34 @@ Content-Type: application/json
 
 ---
 
-### 3.10 스팟 가이드
+### 3.10 스팟 (상세·가이드)
+
+#### 3.10.1 스팟 상세 (Place/Treasure 더블모달)
+
+```
+GET /api/v1/spots/{spotId}
+```
+
+Place/Treasure/Photo Spot 공통 상세 정보. `titleKr`, `pronunciationUrl`, `address` 포함.
+
+**Response 200**
+
+```json
+{
+  "spotId": 1,
+  "type": "MAIN",
+  "title": "광화문",
+  "titleKr": "광화문",
+  "description": "...",
+  "pronunciationUrl": "https://s3.../audio.mp3",
+  "thumbnailUrl": "https://s3.../image.jpg",
+  "latitude": 37.576,
+  "longitude": 126.977,
+  "address": "161 Sajik-ro, Jongno-gu, Seoul"
+}
+```
+
+#### 3.10.2 스팟 가이드 (가이드 세그먼트)
 
 ```
 GET /api/v1/spots/{spotId}/guide
@@ -1286,13 +1353,353 @@ Tour, TourSpot, SpotScriptLine(가이드) 콘텐츠를 OpenAI 임베딩 후 `tou
 
 ## 수집 API (Place·Treasure·Photo Spot)
 
-플레이스 도감, 트레저 도감, 포토 스팟 전용 API는 **[API_COLLECTIONS.md](./API_COLLECTIONS.md)**에서 상세 설계를 확인할 수 있습니다.
+플레이스 도감, 트레저 도감, 포토 스팟 전용 API.
 
-| 영역 | 용도 |
+### 개요
+
+| 영역 | 용도 | 핵심 기능 |
+|------|------|-----------|
+| **Place Collection** | 플레이스 도감 | 방문한 MAIN/SUB 스팟 모아보기 |
+| **Treasure Collection** | 트레저 도감 | 발견한 보물 스팟 모아보기 |
+| **Photo Spot** | 포토 스팟 | 사진 찍기 좋은 장소 + 유저 포토 제출 → 검증 → 민트 → 노출 |
+
+---
+
+### 5.1 Place Collection (플레이스 도감)
+
+MAIN, SUB 타입 스팟을 도감처럼 수집. `user_spot_progress`(unlocked) 기반.
+
+#### 5.1.1 내 Place 컬렉션 조회
+
+```
+GET /api/v1/collections/places
+Authorization: Bearer <accessToken>
+```
+
+| Query | 타입 | 필수 | 설명 |
+|-------|------|------|------|
+| tourId | long | X | 투어 ID — 미지정 시 전체 |
+| lang | string | X | ko, en, jp, cn — 기본 ko |
+
+**Response 200**
+
+```json
+{
+  "totalCollected": 12,
+  "totalAvailable": 20,
+  "items": [
+    {
+      "spotId": 1,
+      "tourId": 1,
+      "tourTitle": "경복궁 조선의 왕의 날",
+      "type": "MAIN",
+      "title": "광화문",
+      "description": "...",
+      "thumbnailUrl": "https://s3.../gwanggwamun.jpg",
+      "collectedAt": "2026-02-14T10:30:00",
+      "orderIndex": 1,
+      "collected": true
+    }
+  ]
+}
+```
+
+#### 5.1.2 Place 컬렉션 요약
+
+```
+GET /api/v1/collections/places/summary
+Authorization: Bearer <accessToken>
+```
+
+**Response 200**
+
+```json
+{
+  "byTour": [
+    { "tourId": 1, "tourTitle": "경복궁...", "collected": 4, "total": 8 }
+  ],
+  "totalCollected": 12,
+  "totalAvailable": 20
+}
+```
+
+---
+
+### 5.2 Treasure Collection (트레저 도감)
+
+TREASURE 타입 스팟 수집. `user_treasure_status`(status: GET) 기반.
+
+#### 5.2.1 내 Treasure 컬렉션 조회
+
+```
+GET /api/v1/collections/treasures
+Authorization: Bearer <accessToken>
+```
+
+| Query | 타입 | 필수 | 설명 |
+|-------|------|------|------|
+| tourId | long | X | 투어 ID |
+| lang | string | X | ko, en, jp, cn |
+
+**Response 200**
+
+```json
+{
+  "totalCollected": 2,
+  "totalAvailable": 2,
+  "items": [
+    {
+      "spotId": 9,
+      "tourId": 1,
+      "tourTitle": "경복궁 조선의 왕의 날",
+      "title": "비밀의 문",
+      "description": "...",
+      "thumbnailUrl": "https://s3.../treasure1.jpg",
+      "gotAt": "2026-02-14T11:00:00",
+      "orderIndex": 1,
+      "collected": true
+    }
+  ]
+}
+```
+
+#### 5.2.2 Treasure 컬렉션 요약
+
+```
+GET /api/v1/collections/treasures/summary
+Authorization: Bearer <accessToken>
+```
+
+#### 5.2.3 Collect Treasure (보물 수집)
+
+```
+POST /api/v1/tour-runs/{runId}/treasures/{spotId}/collect
+Authorization: Bearer <accessToken>
+```
+
+50m 근접 후 "See Treasure now" → 상세 확인 → "Collect Treasure" 클릭 시 호출.
+
+**Response 200** — 빈 본문 (이미 수집된 경우에도 200)
+
+---
+
+### 5.3 Photo Spot API (포토 스팟)
+
+#### user_photo_submissions 테이블
+
+| 컬럼 | 설명 |
 |------|------|
-| Place Collection | 방문한 MAIN/SUB 스팟 도감 |
-| Treasure Collection | 발견한 보물 스팟 도감 |
-| Photo Spot | 포토 스팟 목록·갤러리·유저 포토 제출→검증→민트→노출 |
+| status | PENDING, APPROVED, REJECTED |
+| reject_reason | 거절 사유 |
+| verified_at | 검증 시각 |
+| mint_token | 민트 식별자 (선택) |
+| is_public | 노출 여부 |
+
+#### 5.3.1 포토 스팟 목록
+
+```
+GET /api/v1/photo-spots
+```
+
+**인증:** 불필요
+
+| Query | 타입 | 설명 |
+|-------|------|------|
+| tourId | long | X | 투어 ID |
+| lang | string | X | ko, en, jp, cn |
+
+**Response 200** — 배열
+
+```json
+[
+  {
+    "spotId": 5,
+    "tourId": 1,
+    "tourTitle": "경복궁 조선의 왕의 날",
+    "title": "근정전 앞 광장",
+    "description": "경복궁 대표 포토 스팟",
+    "thumbnailUrl": "https://s3.../photo_spot_1.jpg",
+    "latitude": 37.5796,
+    "longitude": 126.9769,
+    "userPhotoCount": 8,
+    "samplePhotos": [
+      { "id": 1, "url": "...", "submittedBy": "user1", "mintedAt": "2026-02-10" }
+    ]
+  }
+]
+```
+
+#### 5.3.2 포토 제출
+
+```
+POST /api/v1/photo-spots/{spotId}/submissions
+Authorization: Bearer <accessToken>
+Content-Type: application/json
+```
+
+**Request Body**
+
+```json
+{
+  "photoUrl": "https://s3.../uploaded_photo.jpg"
+}
+```
+
+**Response 201**
+
+```json
+{
+  "submissionId": 102,
+  "status": "PENDING",
+  "message": "검증 후 승인되면 민트 및 갤러리 노출됩니다."
+}
+```
+
+#### 5.3.3 내 포토 제출 목록
+
+```
+GET /api/v1/photo-spots/my-submissions
+Authorization: Bearer <accessToken>
+```
+
+| Query | 타입 | 설명 |
+|-------|------|------|
+| status | string | X | PENDING, APPROVED, REJECTED |
+| spotId | long | X | 포토 스팟 ID |
+
+**Response 200** — 배열 직접 반환
+
+```json
+[
+  {
+    "submissionId": 102,
+    "spotId": 5,
+    "spotTitle": "근정전 앞 광장",
+    "photoUrl": "...",
+    "status": "PENDING",
+    "submittedAt": "2026-02-14T12:00:00",
+    "rejectReason": null,
+    "mintedAt": null
+  }
+]
+```
+
+#### 5.3.4 포토 스팟 상세
+
+```
+GET /api/v1/photo-spots/{spotId}
+```
+
+**인증:** 불필요
+
+**Response 200**
+
+```json
+{
+  "spotId": 5,
+  "tourId": 1,
+  "tourTitle": "경복궁 조선의 왕의 날",
+  "title": "근정전 앞 광장",
+  "description": "...",
+  "thumbnailUrl": "...",
+  "latitude": 37.5796,
+  "longitude": 126.9769,
+  "address": "161 Sajik-ro, Jongno-gu, Seoul",
+  "officialPhotos": [
+    { "id": 1, "url": "...", "caption": null }
+  ],
+  "userPhotos": [
+    {
+      "submissionId": 101,
+      "url": "...",
+      "submittedBy": "여행자A",
+      "mintedAt": "2026-02-10T14:00:00"
+    }
+  ]
+}
+```
+
+---
+
+### 5.4 관리자 API (포토 검증)
+
+#### 5.4.1 검증 대기 목록
+
+```
+GET /api/v1/admin/photo-submissions?status=PENDING
+```
+
+#### 5.4.2 포토 승인/거절
+
+```
+PATCH /api/v1/admin/photo-submissions/{submissionId}
+```
+
+**Request Body**
+
+```json
+{ "action": "APPROVE" }
+```
+또는
+```json
+{ "action": "REJECT", "rejectReason": "포토 스팟과 무관한 이미지입니다." }
+```
+
+#### 5.4.3 민트 처리
+
+승인 시 `is_public = true` 설정 및 `mint_token` 자동 생성·저장 (`MINT-{submissionId}-{uuid8}`).
+
+---
+
+### 5.5 스팟 상세 (Place/Treasure 더블모달)
+
+```
+GET /api/v1/spots/{spotId}
+```
+
+**인증:** 불필요
+
+**Response 200**
+
+```json
+{
+  "spotId": 1,
+  "type": "MAIN",
+  "title": "광화문",
+  "titleKr": "광화문",
+  "description": "...",
+  "pronunciationUrl": "https://s3.../audio.mp3",
+  "thumbnailUrl": "https://s3.../image.jpg",
+  "latitude": 37.576,
+  "longitude": 126.977,
+  "address": "161 Sajik-ro, Jongno-gu, Seoul"
+}
+```
+
+---
+
+### 5.6 Proximity API 확장 (근접 알람)
+
+`POST /api/v1/tour-runs/{runId}/proximity` 이벤트 타입:
+
+| event | contentType | 설명 |
+|-------|-------------|------|
+| PROXIMITY | GUIDE | Main/Sub Place 50m 진입, 가이드 스크립트 |
+| TREASURE_FOUND | TREASURE_ALARM | Treasure 50m 진입 (첫 발견) |
+| PHOTO_SPOT_FOUND | PHOTO_ALARM | Photo Spot 50m 진입 |
+
+---
+
+### 5.7 인증 정리
+
+| API | 인증 |
+|-----|------|
+| GET /collections/places | 필수 |
+| GET /collections/treasures | 필수 |
+| GET /photo-spots | 불필요 |
+| POST /photo-spots/{id}/submissions | 필수 |
+| GET /photo-spots/my-submissions | 필수 |
+| GET,PATCH /admin/photo-submissions | 세션(관리자) |
 
 ---
 

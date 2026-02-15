@@ -6,7 +6,10 @@ import jakarta.validation.constraints.NotNull;
 public record SpotCreateRequest(
     @NotBlank String type,
     @NotBlank String title,
+    String titleKr,
     String description,
+    String pronunciationUrl,
+    String address,
     Double latitude,
     Double longitude,
     @NotNull Integer orderIndex,

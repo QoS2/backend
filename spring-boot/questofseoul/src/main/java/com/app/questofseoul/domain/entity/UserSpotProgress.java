@@ -56,4 +56,12 @@ public class UserSpotProgress {
         p.spot = spot;
         return p;
     }
+
+    /** 50m 근접 시 잠금 해제 */
+    public void unlock() {
+        if (this.lockState == SpotLockState.LOCKED) {
+            this.lockState = SpotLockState.UNLOCKED;
+            this.unlockedAt = LocalDateTime.now();
+        }
+    }
 }

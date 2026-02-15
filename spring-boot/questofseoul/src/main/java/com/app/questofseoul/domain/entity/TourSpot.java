@@ -38,6 +38,15 @@ public class TourSpot {
     @Column(name = "description")
     private String description;
 
+    @Column(name = "title_kr")
+    private String titleKr;
+
+    @Column(name = "pronunciation_url", columnDefinition = "TEXT")
+    private String pronunciationUrl;
+
+    @Column(name = "address", columnDefinition = "TEXT")
+    private String address;
+
     @Column(name = "latitude")
     private Double latitude;
 
@@ -78,8 +87,13 @@ public class TourSpot {
 
     public void setDescription(String description) { this.description = description; }
     public void setTitle(String title) { this.title = title; }
+    public void setTitleKr(String titleKr) { this.titleKr = titleKr; }
+    public void setPronunciationUrl(String pronunciationUrl) { this.pronunciationUrl = pronunciationUrl; }
+    public void setAddress(String address) { this.address = address; }
     public void setOrderIndex(Integer orderIndex) { this.orderIndex = orderIndex; }
     public void setRadiusM(Integer radiusM) { this.radiusM = radiusM != null ? radiusM : 50; }
+    public void setLatitude(Double latitude) { this.latitude = latitude; }
+    public void setLongitude(Double longitude) { this.longitude = longitude; }
 
     public static TourSpot create(Tour tour, SpotType type, String title, Double lat, Double lng, Integer orderIndex) {
         TourSpot s = new TourSpot();

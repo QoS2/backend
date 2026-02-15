@@ -59,6 +59,10 @@ erDiagram
 
     tours ||--o{ tour_knowledge_embeddings : "embeds"
 
+    users ||--o{ user_photo_submissions : "submits"
+    tour_spots ||--o{ user_photo_submissions : "at"
+    user_photo_submissions }o--|| media_assets : "photo"
+
     users {
         uuid id PK
         string google_sub UK
@@ -98,7 +102,10 @@ erDiagram
         string type
         long parent_spot_id FK
         string title
+        string title_kr
         string description
+        text pronunciation_url
+        text address
         double latitude
         double longitude
         int radius_m
@@ -303,6 +310,22 @@ erDiagram
         timestamp created_at
         timestamp updated_at
     }
+
+    user_photo_submissions {
+        long id PK
+        uuid user_id FK
+        long spot_id FK
+        long asset_id FK
+        string status
+        text reject_reason
+        timestamp submitted_at
+        timestamp verified_at
+        uuid verified_by
+        string mint_token
+        boolean is_public
+        timestamp created_at
+        timestamp updated_at
+    }
 ```
 
 ---
@@ -333,7 +356,7 @@ erDiagram
 | ai_call_logs | AI 호출 로그 |
 | tour_knowledge_embeddings | RAG용 투어·가이드 지식 임베딩 (Pgvector, source_type: TOUR/SPOT/GUIDE_LINE) |
 
-### 수집·포토 스팟 (추가 예정)
+### 수집·포토 스팟
 
 | 테이블 | 설명 |
 |--------|------|
@@ -344,6 +367,8 @@ erDiagram
 ## 주요 Enum
 
 - **SpotType:** MAIN, SUB, PHOTO, TREASURE
+- **TreasureStatus:** LOCKED, UNLOCKED, GET
+- **PhotoSubmissionStatus:** PENDING, APPROVED, REJECTED
 - **MarkerType:** STEP, WAYPOINT, PHOTO_SPOT, TREASURE
 - **StepKind:** GUIDE, MISSION
 - **StepNextAction:** NEXT, MISSION_CHOICE

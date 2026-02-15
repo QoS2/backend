@@ -1,6 +1,7 @@
 package com.app.questofseoul.controller;
 
 import com.app.questofseoul.dto.tour.GuideSegmentResponse;
+import com.app.questofseoul.dto.tour.SpotDetailResponse;
 import com.app.questofseoul.service.SpotGuideService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -23,5 +24,11 @@ public class SpotController {
             @PathVariable Long spotId,
             @RequestParam(required = false) @Parameter(description = "ko, en, jp, cn") String lang) {
         return ResponseEntity.ok(spotGuideService.getSpotGuide(spotId, lang));
+    }
+
+    @Operation(summary = "스팟 상세", description = "Place/Treasure 더블모달용 상세 정보")
+    @GetMapping("/spots/{spotId}")
+    public ResponseEntity<SpotDetailResponse> getSpotDetail(@PathVariable Long spotId) {
+        return ResponseEntity.ok(spotGuideService.getSpotDetail(spotId));
     }
 }

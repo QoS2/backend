@@ -14,4 +14,6 @@ public class S3Properties {
     private String bucket;
     private String region = "ap-northeast-2";
     private boolean enabled = false;
+    private String accessKeyId;
+    private String secretAccessKey;
 }

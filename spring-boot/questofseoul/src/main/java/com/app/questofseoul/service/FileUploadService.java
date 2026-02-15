@@ -8,7 +8,6 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import software.amazon.awssdk.services.s3.S3Client;
-import software.amazon.awssdk.services.s3.model.ObjectCannedACL;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
 import java.io.IOException;
@@ -75,12 +74,13 @@ public class FileUploadService {
         String objectKey = folder + "/" + UUID.randomUUID() + (extension != null ? "." + extension : "");
 
         try {
+            // ACL 제거: "Bucket owner enforced" 모드는 객체별 ACL을 지원하지 않음.
+            // 퍼블릭 읽기는 버킷 정책(Bucket Policy)으로 설정.
             PutObjectRequest request = PutObjectRequest.builder()
                 .bucket(bucket)
                 .key(objectKey)
                 .contentType(file.getContentType())
                 .contentLength(file.getSize())
-                .acl(ObjectCannedACL.PUBLIC_READ)
                 .build();
 
             s3Client.putObject(request,

@@ -23,6 +23,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import jakarta.persistence.EntityManager;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -33,6 +35,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class AdminGuideService {
 
+    private final EntityManager entityManager;
     private final TourSpotRepository tourSpotRepository;
     private final SpotContentStepRepository spotContentStepRepository;
     private final SpotScriptLineRepository spotScriptLineRepository;
@@ -100,6 +103,7 @@ public class AdminGuideService {
                     .map(sla -> sla.getAsset().getId())
                     .collect(Collectors.toSet());
             spotScriptLineRepository.deleteAll(oldLines);
+            entityManager.flush(); // DELETE를 DB에 즉시 반영 후 INSERT 진행 (unique 제약 위반 방지)
             deleteOrphanedMediaAssets(assetIdsToCheck);
         }
 

@@ -45,3 +45,27 @@ export async function uploadFile(
   const data = (await res.json()) as UploadResponse;
   return data.url;
 }
+
+/** S3에 업로드된 파일을 URL로 삭제. 본 서비스 버킷 URL만 삭제 가능 */
+export async function deleteUploadedFile(url: string): Promise<void> {
+  const trimmed = url?.trim();
+  if (!trimmed) return;
+  // S3 URL이 아닌 경우(직접 입력 URL 등) 삭제 시도하지 않음
+  if (!trimmed.includes('amazonaws.com') && !trimmed.includes('s3.')) return;
+
+  const token = getAccessToken();
+  const params = new URLSearchParams({ url: trimmed });
+  const headers: HeadersInit = {};
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+
+  const res = await fetch(`${UPLOAD_URL}?${params.toString()}`, {
+    method: 'DELETE',
+    credentials: 'include',
+    headers,
+  });
+
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { message?: string };
+    throw new Error(err?.message ?? `삭제 실패: ${res.status}`);
+  }
+}

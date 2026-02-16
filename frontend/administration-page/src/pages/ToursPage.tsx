@@ -3,9 +3,9 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { DndContext, closestCenter, type DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, useSortable, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { MapPin, Camera, Gem, Circle, GripVertical, ImageIcon } from 'lucide-react';
+import { MapPin, GripVertical, X } from 'lucide-react';
 import { syncRag } from '../api/rag';
-import { uploadFile } from '../api/upload';
+import { uploadFile, deleteUploadedFile } from '../api/upload';
 import {
   fetchTours,
   fetchTour,
@@ -19,8 +19,8 @@ import {
   fetchTourDetail,
   fetchMarkers,
   fetchSpotGuide,
-  fetchGuide,
-  saveGuide,
+  fetchGuideSteps,
+  saveGuideSteps,
   fetchTourAssets,
   addTourAsset,
   deleteTourAsset,
@@ -36,7 +36,8 @@ import {
   type SpotAdminResponse,
   type SpotCreateRequest,
   type SpotUpdateRequest,
-  type GuideSaveRequest,
+  type GuideStepsSaveRequest,
+  type GuideStepSaveRequest,
   type GuideLineRequest,
   type GuideAssetRequest,
   type TourAssetRequest,
@@ -161,7 +162,6 @@ export function ToursPage() {
   return (
     <div className={styles.page}>
       <div className={styles.header}>
-        <h1>Tours</h1>
         <div className={styles.actions}>
           <Button
             variant="secondary"
@@ -202,18 +202,39 @@ export function ToursPage() {
               key: 'actions',
               label: '작업',
               render: (row: TourAdminResponse) => (
-                <div className={styles.actions}>
-                  <Button onClick={() => handleEdit(row)}>수정</Button>
-                  <Button variant="secondary" onClick={() => handleOpenSpots(row)}>
+                <div className={styles.rowActions}>
+                  <Button
+                    variant="secondary"
+                    className={styles.rowPrimaryAction}
+                    onClick={() => handleEdit(row)}
+                  >
+                    투어 수정
+                  </Button>
+                  <Button
+                    className={styles.rowPrimaryAction}
+                    onClick={() => handleOpenSpots(row)}
+                  >
                     Spots
                   </Button>
-                  <Button variant="ghost" onClick={() => handleOpenTourAssets(row)} title="투어 썸네일/이미지">
-                    <ImageIcon size={18} />
+                  <Button
+                    variant="ghost"
+                    className={styles.rowPrimaryAction}
+                    onClick={() => handleOpenTourAssets(row)}
+                  >
+                    이미지
                   </Button>
-                  <Button variant="ghost" onClick={() => handlePreview(row)}>
+                  <Button
+                    variant="ghost"
+                    className={styles.rowPrimaryAction}
+                    onClick={() => handlePreview(row)}
+                  >
                     미리보기
                   </Button>
-                  <Button variant="danger" onClick={() => handleDelete(row)}>
+                  <Button
+                    variant="danger"
+                    className={styles.rowPrimaryAction}
+                    onClick={() => handleDelete(row)}
+                  >
                     삭제
                   </Button>
                 </div>
@@ -242,8 +263,8 @@ export function ToursPage() {
 
       {drawerOpen && (
         <TourFormDrawer
+          key={`${editingTourId ?? 'new'}-${tourDetail?.id ?? 'pending'}`}
           tour={editingTourId ? tourDetail ?? undefined : undefined}
-          editingTourId={editingTourId}
           onClose={() => {
             setDrawerOpen(false);
             setEditingTourId(null);
@@ -322,7 +343,6 @@ type TourFormValues = TourCreateRequest | { titleEn: string; descriptionEn?: str
 
 function TourFormDrawer({
   tour,
-  editingTourId,
   onClose,
   onSubmit,
   onRagSync,
@@ -330,7 +350,6 @@ function TourFormDrawer({
   isSubmitting,
 }: {
   tour?: TourAdminResponse;
-  editingTourId: number | null;
   onClose: () => void;
   onSubmit: (v: TourFormValues) => void;
   onRagSync?: () => void;
@@ -340,14 +359,6 @@ function TourFormDrawer({
   const [externalKey, setExternalKey] = useState(tour?.externalKey ?? '');
   const [titleEn, setTitleEn] = useState(tour?.titleEn ?? '');
   const [descriptionEn, setDescriptionEn] = useState(tour?.descriptionEn ?? '');
-
-  useEffect(() => {
-    if (tour) {
-      setExternalKey(tour.externalKey ?? '');
-      setTitleEn(tour.titleEn ?? '');
-      setDescriptionEn(tour.descriptionEn ?? '');
-    }
-  }, [tour]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -367,7 +378,7 @@ function TourFormDrawer({
       <div className={styles.drawerBackdrop} onClick={onClose} />
       <div className={styles.drawerPanel}>
         <h2>{tour ? '투어 수정' : '투어 추가'}</h2>
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} className={styles.tourForm}>
           <Input
             label="External Key"
             value={externalKey}
@@ -387,11 +398,11 @@ function TourFormDrawer({
             onChange={(e) => setDescriptionEn(e.target.value)}
             rows={4}
           />
-          <div className={styles.formActions}>
+          <div className={`${styles.formActions} ${styles.tourFormActions}`}>
             <Button type="button" variant="secondary" onClick={onClose}>
               취소
             </Button>
-            {editingTourId && onRagSync && (
+            {tour && onRagSync && (
               <Button
                 type="button"
                 variant="ghost"
@@ -475,6 +486,15 @@ const SPOT_ASSET_USAGES = [
   { value: 'HERO_IMAGE', label: '히어로 이미지' },
   { value: 'GALLERY_IMAGE', label: '갤러리 이미지' },
 ] as const;
+
+const AUDIO_URL_PATTERN = /\.(mp3|wav|ogg|m4a|aac|flac)(?:[?#].*)?$/i;
+
+function isAudioUrl(url: string): boolean {
+  const trimmed = url.trim();
+  if (!trimmed) return false;
+  if (trimmed.toLowerCase().startsWith('data:audio/')) return true;
+  return AUDIO_URL_PATTERN.test(trimmed);
+}
 
 function SpotAssetsDrawer({
   tourId,
@@ -586,7 +606,11 @@ function SpotAssetsDrawer({
           <div className={styles.tourAssetsList}>
             {assets.map((a) => (
               <div key={a.id} className={styles.tourAssetItem}>
-                <img src={a.url} alt={a.caption ?? a.usage} className={styles.tourAssetThumb} referrerPolicy="no-referrer" />
+                {isAudioUrl(a.url) ? (
+                  <audio controls src={a.url} className={styles.tourAssetAudio} />
+                ) : (
+                  <img src={a.url} alt={a.caption ?? a.usage} className={styles.tourAssetThumb} referrerPolicy="no-referrer" />
+                )}
                 <div className={styles.tourAssetMeta}>
                   <span className={styles.tourAssetUsage}>{a.usage}</span>
                   {a.caption && <span className={styles.tourAssetCaption}>{a.caption}</span>}
@@ -720,7 +744,11 @@ function TourAssetsDrawer({
           <div className={styles.tourAssetsList}>
             {assets.map((a) => (
               <div key={a.id} className={styles.tourAssetItem}>
-                <img src={a.url} alt={a.caption ?? a.usage} className={styles.tourAssetThumb} referrerPolicy="no-referrer" />
+                {isAudioUrl(a.url) ? (
+                  <audio controls src={a.url} className={styles.tourAssetAudio} />
+                ) : (
+                  <img src={a.url} alt={a.caption ?? a.usage} className={styles.tourAssetThumb} referrerPolicy="no-referrer" />
+                )}
                 <div className={styles.tourAssetMeta}>
                   <span className={styles.tourAssetUsage}>{a.usage}</span>
                   {a.caption && <span className={styles.tourAssetCaption}>{a.caption}</span>}
@@ -749,13 +777,6 @@ function TourAssetsDrawer({
 }
 
 const SPOT_TYPES = ['MAIN', 'SUB', 'PHOTO', 'TREASURE'] as const;
-
-const SPOT_TYPE_CONFIG: Record<string, { Icon: typeof MapPin; label: string; color: string }> = {
-  MAIN: { Icon: MapPin, label: 'MAIN', color: 'var(--color-accent)' },
-  SUB: { Icon: Circle, label: 'SUB', color: '#22c55e' },
-  PHOTO: { Icon: Camera, label: 'PHOTO', color: '#f59e0b' },
-  TREASURE: { Icon: Gem, label: 'TREASURE', color: '#a855f7' },
-};
 
 function SortableSpotItem({
   spot,
@@ -827,68 +848,47 @@ function SpotItemContent({
   onEditSpotAssets: () => void;
   onDelete: () => void;
 }) {
-  const [guideOpen, setGuideOpen] = useState(false);
-  const { data: guide, isLoading, isFetching } = useQuery({
-    queryKey: ['api', 'spot', spot.id, 'guide'],
-    queryFn: () => fetchSpotGuide(spot.id),
-    enabled: guideOpen,
-  });
-
-  const cfg = SPOT_TYPE_CONFIG[spot.type] ?? { Icon: Circle, label: spot.type, color: 'var(--color-text-muted)' };
-  const SpotIcon = cfg.Icon;
   return (
     <div className={styles.spotContent}>
       <div className={styles.spotLabelRow}>
-        <span className={styles.spotLabel}>
-          <span
-            className={styles.spotTypeBadge}
-            style={{ '--spot-type-color': cfg.color } as React.CSSProperties}
-            title={cfg.label}
-          >
-            <SpotIcon size={12} strokeWidth={2.5} /> {cfg.label}
-          </span>
-          <span className={styles.spotTitle} title={spot.title}>
-            {spot.orderIndex}. {spot.title}
-          </span>
-          {spot.latitude != null && (
-            <span className={styles.spotCoords}>({spot.latitude}, {spot.longitude})</span>
-          )}
+        <span className={styles.spotTitle} title={spot.title}>
+          {spot.orderIndex}. {spot.title}
         </span>
-        <div className={styles.spotActions}>
-          <Button variant="ghost" onClick={() => setGuideOpen((v) => !v)}>
-            {guideOpen ? '가이드 접기' : '가이드'}
-          </Button>
-          <Button variant="ghost" onClick={onEditGuide}>가이드 편집</Button>
-          <Button variant="ghost" onClick={onEditMission}>미션</Button>
-          <Button variant="ghost" onClick={onEditSpotAssets} title="스팟 이미지 (mainPlaceThumbnails)">
-            <ImageIcon size={14} />
-          </Button>
-          <Button variant="secondary" onClick={onEdit}>수정</Button>
-          <Button variant="danger" onClick={onDelete}>삭제</Button>
+        <div className={styles.spotMeta}>
+          <span className={styles.spotTypeBadge}>{spot.type}</span>
+          {spot.latitude != null && (
+            <span className={styles.spotCoords}>
+              {spot.latitude}, {spot.longitude}
+            </span>
+          )}
         </div>
       </div>
-      {guideOpen && (
-        <div className={styles.guidePreview}>
-          {isLoading || isFetching ? (
-            <p>가이드 로딩 중...</p>
-          ) : guide?.segments?.length ? (
-            <div>
-              <p className={styles.guideTitle}>{guide.stepTitle}</p>
-              {guide.segments.map((seg) => (
-                <p key={seg.id} className={styles.guideSegment}>
-                  {seg.textEn}
-                  {seg.media?.length ? ` [미디어 ${seg.media.length}개]` : ''}
-                </p>
-              ))}
-            </div>
-          ) : (
-            <p className={styles.guideEmpty}>가이드 콘텐츠가 없습니다.</p>
-          )}
-        </div>
-      )}
+      <div className={styles.spotActions}>
+        <Button variant="ghost" onClick={onEdit}>
+          수정
+        </Button>
+        <Button variant="ghost" onClick={onEditGuide}>
+          컨텐츠
+        </Button>
+        <Button variant="ghost" onClick={onEditMission}>
+          미션
+        </Button>
+        <Button variant="ghost" onClick={onEditSpotAssets}>
+          이미지
+        </Button>
+        <Button variant="danger" onClick={onDelete}>
+          삭제
+        </Button>
+      </div>
     </div>
   );
 }
+
+type GuideStepForm = {
+  stepTitle: string;
+  nextAction: string;
+  lines: GuideLineRequest[];
+};
 
 function GuideEditor({
   tourId,
@@ -905,82 +905,131 @@ function GuideEditor({
 }) {
   const { data: guide, isLoading, isError, refetch } = useQuery({
     queryKey: ['admin', 'guide', tourId, spotId],
-    queryFn: () => fetchGuide(tourId, spotId),
+    queryFn: () => fetchGuideSteps(tourId, spotId),
   });
   const saveMutation = useMutation({
-    mutationFn: (body: GuideSaveRequest) => saveGuide(tourId, spotId, body),
+    mutationFn: (body: GuideStepsSaveRequest) => saveGuideSteps(tourId, spotId, body),
     onSuccess: () => {
-      showSuccess('가이드가 저장되었습니다.');
+      showSuccess('컨텐츠가 저장되었습니다.');
       onSuccess();
       onClose();
     },
   });
   const { showSuccess, showError } = useToast();
 
-  const [stepTitle, setStepTitle] = useState('');
-  const [nextAction, setNextAction] = useState<string>('');
-  const [lines, setLines] = useState<GuideLineRequest[]>([]);
+  const [steps, setSteps] = useState<GuideStepForm[]>([]);
   const [forceCreateMode, setForceCreateMode] = useState(false);
   const [assetUploading, setAssetUploading] = useState(false);
-  const [pendingAddLineIdx, setPendingAddLineIdx] = useState<number | null>(null);
+  const [pendingAddAsset, setPendingAddAsset] = useState<{ stepIdx: number; lineIdx: number } | null>(null);
+  const [previewOpen, setPreviewOpen] = useState(false);
   const assetFileInputRef = useRef<HTMLInputElement>(null);
+
+  const { data: spotGuidePreview } = useQuery({
+    queryKey: ['api', 'spot', spotId, 'guide'],
+    queryFn: () => fetchSpotGuide(spotId),
+    enabled: previewOpen && !!spotId,
+  });
 
   useEffect(() => {
     if (!guide && !isError) return;
-    setStepTitle(guide?.stepTitle || spotTitle);
-    setNextAction(guide?.nextAction || '');
-    setLines(
-      guide && guide.lines.length > 0
-        ? guide.lines.map((l) => ({
-            text: l.text,
-            assets: l.assets.map((a) => ({
-              url: a.url,
-              assetType: a.assetType as 'IMAGE' | 'AUDIO',
-              usage: a.usage as 'ILLUSTRATION' | 'SCRIPT_AUDIO',
-            })),
-          }))
-        : [{ text: '', assets: [] }]
-    );
+    const stepsArr = guide?.steps;
+    if (stepsArr && stepsArr.length > 0) {
+      setSteps(
+        stepsArr.map((s) => ({
+          stepTitle: s.stepTitle || spotTitle,
+          nextAction: s.nextAction ?? 'NEXT',
+          lines:
+            (s.lines?.length ?? 0) > 0
+              ? (s.lines ?? []).map((l) => ({
+                  text: l.text,
+                  assets: (l.assets ?? []).map((a) => ({
+                    url: a.url,
+                    assetType: a.assetType as 'IMAGE' | 'AUDIO',
+                    usage: a.usage as 'ILLUSTRATION' | 'SCRIPT_AUDIO',
+                  })),
+                }))
+              : [{ text: '', assets: [] }],
+        }))
+      );
+    } else {
+      setSteps([{ stepTitle: spotTitle, nextAction: 'NEXT', lines: [{ text: '', assets: [] }] }]);
+    }
   }, [guide, spotTitle, isError]);
 
-  const addLine = () => setLines((prev) => [...prev, { text: '', assets: [] }]);
-  const removeLine = (idx: number) => setLines((prev) => prev.filter((_, i) => i !== idx));
+  const addStep = () =>
+    setSteps((prev) => [...prev, { stepTitle: spotTitle, nextAction: 'NEXT', lines: [{ text: '', assets: [] }] }]);
+  const removeStep = (stepIdx: number) => setSteps((prev) => prev.filter((_, i) => i !== stepIdx));
+  const updateStep = (stepIdx: number, patch: Partial<GuideStepForm>) =>
+    setSteps((prev) => prev.map((s, i) => (i === stepIdx ? { ...s, ...patch } : s)));
 
-  const updateLineText = (idx: number, text: string) =>
-    setLines((prev) => prev.map((l, i) => (i === idx ? { ...l, text } : l)));
-
-  const addAsset = (lineIdx: number, asset: GuideAssetRequest) =>
-    setLines((prev) =>
-      prev.map((l, i) =>
-        i === lineIdx ? { ...l, assets: [...l.assets, asset] } : l
+  const addLine = (stepIdx: number) =>
+    setSteps((prev) =>
+      prev.map((s, i) =>
+        i === stepIdx ? { ...s, lines: [...s.lines, { text: '', assets: [] }] } : s
       )
     );
-  const updateAssetUrl = (lineIdx: number, assetIdx: number, url: string) =>
-    setLines((prev) =>
-      prev.map((l, i) =>
-        i === lineIdx
+  const removeLine = (stepIdx: number, lineIdx: number) =>
+    setSteps((prev) =>
+      prev.map((s, i) =>
+        i === stepIdx ? { ...s, lines: s.lines.filter((_, j) => j !== lineIdx) } : s
+      )
+    );
+  const updateLineText = (stepIdx: number, lineIdx: number, text: string) =>
+    setSteps((prev) =>
+      prev.map((s, i) =>
+        i === stepIdx
+          ? { ...s, lines: s.lines.map((l, j) => (j === lineIdx ? { ...l, text } : l)) }
+          : s
+      )
+    );
+  const addAsset = (stepIdx: number, lineIdx: number, asset: GuideAssetRequest) =>
+    setSteps((prev) =>
+      prev.map((s, i) =>
+        i === stepIdx
           ? {
-              ...l,
-              assets: l.assets.map((a, j) =>
-                j === assetIdx ? { ...a, url } : a
+              ...s,
+              lines: s.lines.map((l, j) =>
+                j === lineIdx ? { ...l, assets: [...l.assets, asset] } : l
               ),
             }
-          : l
+          : s
       )
     );
-  const removeAsset = (lineIdx: number, assetIdx: number) =>
-    setLines((prev) =>
-      prev.map((l, i) =>
-        i === lineIdx ? { ...l, assets: l.assets.filter((_, j) => j !== assetIdx) } : l
+  const updateAssetUrl = (stepIdx: number, lineIdx: number, assetIdx: number, url: string) =>
+    setSteps((prev) =>
+      prev.map((s, i) =>
+        i === stepIdx
+          ? {
+              ...s,
+              lines: s.lines.map((l, j) =>
+                j === lineIdx
+                  ? { ...l, assets: l.assets.map((a, k) => (k === assetIdx ? { ...a, url } : a)) }
+                  : l
+              ),
+            }
+          : s
+      )
+    );
+  const removeAsset = (stepIdx: number, lineIdx: number, assetIdx: number) =>
+    setSteps((prev) =>
+      prev.map((s, i) =>
+        i === stepIdx
+          ? {
+              ...s,
+              lines: s.lines.map((l, j) =>
+                j === lineIdx ? { ...l, assets: l.assets.filter((_, k) => k !== assetIdx) } : l
+              ),
+            }
+          : s
       )
     );
 
   const handleAddAssetFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    const lineIdx = pendingAddLineIdx;
+    const target = pendingAddAsset;
     e.target.value = '';
-    setPendingAddLineIdx(null);
-    if (!file || lineIdx === null) return;
+    setPendingAddAsset(null);
+    if (!file || target === null) return;
     const isImage = file.type.startsWith('image/');
     const isAudio = file.type.startsWith('audio/');
     if (!isImage && !isAudio) {
@@ -992,7 +1041,7 @@ function GuideEditor({
     setAssetUploading(true);
     try {
       const url = await uploadFile(file, isImage ? 'image' : 'audio');
-      addAsset(lineIdx, { url, assetType, usage });
+      addAsset(target.stepIdx, target.lineIdx, { url, assetType, usage });
     } catch (err) {
       showError(err instanceof Error ? err.message : '업로드 실패');
     } finally {
@@ -1002,20 +1051,23 @@ function GuideEditor({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const validLines = lines.filter((l) => l.text.trim());
-    if (validLines.length === 0) {
-      showError('최소 1개 문장이 필요합니다.');
-      return;
+    const stepsToSave: GuideStepSaveRequest[] = [];
+    for (const step of steps) {
+      const validLines = step.lines.filter((l) => l.text.trim());
+      if (validLines.length === 0) {
+        showError(`컨텐츠 ${stepsToSave.length + 1}: 최소 1개 문장이 필요합니다.`);
+        return;
+      }
+      stepsToSave.push({
+        stepTitle: step.stepTitle.trim() || spotTitle,
+        nextAction: step.nextAction?.trim() || 'NEXT',
+        lines: validLines.map((l) => ({
+          text: l.text.trim(),
+          assets: l.assets.filter((a) => a.url.trim()),
+        })),
+      });
     }
-    saveMutation.mutate({
-      language: 'ko',
-      stepTitle: stepTitle.trim() || spotTitle,
-      nextAction: nextAction.trim() || undefined,
-      lines: validLines.map((l) => ({
-        text: l.text.trim(),
-        assets: l.assets.filter((a) => a.url.trim()),
-      })),
-    });
+    saveMutation.mutate({ language: 'ko', steps: stepsToSave });
   };
 
   if (isLoading && !guide && !forceCreateMode) return <p>로딩 중...</p>;
@@ -1023,9 +1075,9 @@ function GuideEditor({
   if (isError && !forceCreateMode) {
     return (
       <div className={styles.guideEditor}>
-        <h3>가이드 편집: {spotTitle}</h3>
+        <h3>컨텐츠 편집: {spotTitle}</h3>
         <p className={styles.guideError}>
-          가이드를 불러오지 못했습니다. 처음부터 작성하시겠습니까?
+          컨텐츠를 불러오지 못했습니다. 처음부터 작성하시겠습니까?
         </p>
         <div className={styles.formActions}>
           <Button variant="secondary" onClick={onClose}>
@@ -1037,22 +1089,21 @@ function GuideEditor({
           <Button
             variant="primary"
             onClick={() => {
-              setStepTitle(spotTitle);
-              setLines([{ text: '', assets: [] }]);
+              setSteps([{ stepTitle: spotTitle, nextAction: 'NEXT', lines: [{ text: '', assets: [] }] }]);
               setForceCreateMode(true);
             }}
           >
-            처음부터 작성
+            컨텐츠 추가
           </Button>
         </div>
       </div>
     );
   }
 
-  if (lines.length === 0 && !forceCreateMode) {
+  if (steps.length === 0 && !forceCreateMode) {
     return (
       <div className={styles.guideEditor}>
-        <h3>가이드 편집: {spotTitle}</h3>
+        <h3>컨텐츠 편집: {spotTitle}</h3>
         <p>로딩 중...</p>
       </div>
     );
@@ -1060,24 +1111,69 @@ function GuideEditor({
 
   return (
     <div className={styles.guideEditor}>
-      <h3>가이드 편집: {spotTitle}</h3>
-      <form onSubmit={handleSubmit}>
-        <Input
-          label="Step 제목"
-          value={stepTitle}
-          onChange={(e) => setStepTitle(e.target.value)}
-          placeholder={spotTitle}
-        />
-        <Select
-          label="컨텐츠 후 버튼"
-          value={nextAction}
-          onChange={(e) => setNextAction(e.target.value)}
-          options={[
-            { value: '', label: '(선택 안 함)' },
-            { value: 'NEXT', label: 'NEXT - 다음 컨텐츠' },
-            { value: 'MISSION_CHOICE', label: 'MISSION_CHOICE - 게임 스타트/스킵' },
-          ]}
-        />
+      <div className={styles.guideEditorHeader}>
+        <h3>컨텐츠 편집: {spotTitle}</h3>
+        <div className={styles.guideEditorActions}>
+          <Button variant="ghost" onClick={() => setPreviewOpen((p) => !p)}>
+            {previewOpen ? '미리보기 숨기기' : '미리보기'}
+          </Button>
+        </div>
+      </div>
+      {previewOpen && (
+        <div className={styles.guidePreviewPanel}>
+          <h4>사용자 화면 미리보기</h4>
+          {spotGuidePreview ? (
+            <div className={styles.guidePreviewContent}>
+              {spotGuidePreview.segments?.map((seg) => (
+                <div key={seg.id} className={styles.guidePreviewSegment}>
+                  <p>{seg.textEn}</p>
+                  {seg.media?.length ? (
+                    <div className={styles.guidePreviewMedia}>
+                      {seg.media.map((m) =>
+                        m.url.match(/\.(mp3|wav|ogg|m4a)(\?|$)/i) ? (
+                          <audio key={m.id} controls src={m.url} className={styles.guidePreviewAudio} />
+                        ) : (
+                          <img key={m.id} src={m.url} alt="" className={styles.guidePreviewImg} referrerPolicy="no-referrer" />
+                        )
+                      )}
+                    </div>
+                  ) : null}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className={styles.guidePreviewHint}>
+              저장된 후 사용자 API에서 미리보기를 불러옵니다. 아직 저장하지 않았다면 아래 편집 폼 내용을 기준으로 확인하세요.
+            </p>
+          )}
+          {!spotGuidePreview && steps.length > 0 && (
+            <div className={styles.guidePreviewContent}>
+              {steps.map((step, si) => (
+                <div key={si} className={styles.guidePreviewSegment}>
+                  <strong>{step.stepTitle}</strong>
+                  {step.lines.map((line, li) => (
+                    <div key={li}>
+                      <p>{line.text}</p>
+                      {line.assets?.length ? (
+                        <div className={styles.guidePreviewMedia}>
+                          {line.assets.map((a, ai) =>
+                            a.assetType === 'AUDIO' ? (
+                              <audio key={ai} controls src={a.url} className={styles.guidePreviewAudio} />
+                            ) : (
+                              <img key={ai} src={a.url} alt="" className={styles.guidePreviewImg} referrerPolicy="no-referrer" />
+                            )
+                          )}
+                        </div>
+                      ) : null}
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+      <form onSubmit={handleSubmit} className={styles.guideForm}>
         <input
           ref={assetFileInputRef}
           type="file"
@@ -1085,61 +1181,114 @@ function GuideEditor({
           className={styles.hiddenFileInput}
           onChange={handleAddAssetFile}
         />
-        {lines.map((line, lineIdx) => (
-          <div key={lineIdx} className={styles.guideLine}>
-            <div className={styles.guideLineHeader}>
-              <span className={styles.guideLineNum}>{lineIdx + 1}</span>
+        {steps.map((step, stepIdx) => (
+          <div key={stepIdx} className={styles.guideStepBlock}>
+            <div className={styles.guideStepHeader}>
+              <h4 className={styles.guideStepTitle}>컨텐츠 {stepIdx + 1}</h4>
               <Button
                 type="button"
                 variant="ghost"
-                onClick={() => removeLine(lineIdx)}
-                disabled={lines.length <= 1}
+                onClick={() => removeStep(stepIdx)}
+                disabled={steps.length <= 1}
               >
-                삭제
+                컨텐츠 삭제
               </Button>
             </div>
-            <Textarea
-              value={line.text}
-              onChange={(e) => updateLineText(lineIdx, e.target.value)}
-              rows={2}
-              placeholder="가이드 문장"
+            <Input
+              label="컨텐츠 제목"
+              value={step.stepTitle}
+              onChange={(e) => updateStep(stepIdx, { stepTitle: e.target.value })}
+              placeholder={spotTitle}
             />
-            <div className={styles.guideAssets}>
-              {line.assets.map((asset, assetIdx) => (
-                <div key={assetIdx} className={styles.guideAssetRow}>
-                  <FileUploadInput
-                    type={asset.assetType.toLowerCase() as 'image' | 'audio'}
-                    value={asset.url}
-                    onChange={(url) => updateAssetUrl(lineIdx, assetIdx, url)}
-                    placeholder="URL 또는 파일 업로드"
+            <Select
+              label="컨텐츠 후 버튼"
+              value={step.nextAction}
+              onChange={(e) => updateStep(stepIdx, { nextAction: e.target.value })}
+              options={[
+                { value: 'NEXT', label: 'NEXT - 다음 컨텐츠' },
+                { value: 'MISSION_CHOICE', label: 'MISSION_CHOICE - 게임 스타트/스킵' },
+              ]}
+            />
+            <label className={styles.formSectionLabel}>컨텐츠 문장</label>
+            <div className={styles.guideLineList}>
+              {step.lines.map((line, lineIdx) => (
+                <div key={lineIdx} className={styles.guideLine}>
+                  <div className={styles.guideLineHeader}>
+                    <span className={styles.guideLineNum}>{lineIdx + 1}</span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={() => removeLine(stepIdx, lineIdx)}
+                      disabled={step.lines.length <= 1}
+                    >
+                      삭제
+                    </Button>
+                  </div>
+                  <Textarea
+                    value={line.text}
+                    onChange={(e) => updateLineText(stepIdx, lineIdx, e.target.value)}
+                    rows={2}
+                    placeholder="컨텐츠 문장 입력"
                   />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    onClick={() => removeAsset(lineIdx, assetIdx)}
-                  >
-                    ×
-                  </Button>
+                  <div className={styles.guideAssets}>
+                    {line.assets.map((asset, assetIdx) => (
+                      <div key={assetIdx} className={styles.guideAssetRow}>
+                        <FileUploadInput
+                          type={asset.assetType.toLowerCase() as 'image' | 'audio'}
+                          value={asset.url}
+                          onChange={(url) => updateAssetUrl(stepIdx, lineIdx, assetIdx, url)}
+                          onClear={deleteUploadedFile}
+                          placeholder="URL 또는 파일 업로드"
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          onClick={async () => {
+                            const url = line.assets[assetIdx]?.url;
+                            if (url?.trim()) {
+                              try {
+                                await deleteUploadedFile(url);
+                              } catch (e) {
+                                showError(e instanceof Error ? e.message : 'S3 삭제 실패');
+                                return;
+                              }
+                            }
+                            removeAsset(stepIdx, lineIdx, assetIdx);
+                          }}
+                        >
+                          ×
+                        </Button>
+                      </div>
+                    ))}
+                    <div className={styles.guideAssetAdd}>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        disabled={assetUploading}
+                        onClick={() => {
+                          setPendingAddAsset({ stepIdx, lineIdx });
+                          assetFileInputRef.current?.click();
+                        }}
+                      >
+                        {assetUploading ? '업로드 중…' : '+ 에셋 추가'}
+                      </Button>
+                    </div>
+                  </div>
                 </div>
               ))}
-              <div className={styles.guideAssetAdd}>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  disabled={assetUploading}
-                  onClick={() => {
-                    setPendingAddLineIdx(lineIdx);
-                    assetFileInputRef.current?.click();
-                  }}
-                >
-                  {assetUploading ? '업로드 중…' : '+ 에셋 추가'}
-                </Button>
-              </div>
             </div>
+            <Button
+              type="button"
+              variant="secondary"
+              className={styles.guideAddLineButton}
+              onClick={() => addLine(stepIdx)}
+            >
+              + 문장 추가
+            </Button>
           </div>
         ))}
-        <Button type="button" variant="secondary" onClick={addLine}>
-          문장 추가
+        <Button type="button" variant="secondary" className={styles.guideAddStepButton} onClick={addStep}>
+          + 컨텐츠 추가
         </Button>
         <div className={styles.formActions}>
           <Button type="button" variant="secondary" onClick={onClose}>
@@ -1225,14 +1374,41 @@ function MissionEditor({
     onError: (e: Error) => showError(e.message),
   });
 
+  const [previewOpen, setPreviewOpen] = useState(false);
+
   return (
     <div className={styles.guideEditor}>
       <div className={styles.guideEditorHeader}>
         <h3>미션 관리: {spotTitle}</h3>
-        <Button variant="ghost" onClick={onClose}>
-          닫기
-        </Button>
+        <div className={styles.guideEditorActions}>
+          <Button variant="ghost" onClick={() => setPreviewOpen((p) => !p)}>
+            {previewOpen ? '미리보기 숨기기' : '미리보기'}
+          </Button>
+          <Button variant="ghost" onClick={onClose}>
+            닫기
+          </Button>
+        </div>
       </div>
+      {previewOpen && (steps ?? []).length > 0 && (
+        <div className={styles.missionPreviewPanel}>
+          <h4>미션 미리보기</h4>
+          <div className={styles.missionPreviewList}>
+            {(steps ?? []).map((s) => (
+              <div key={s.stepId} className={styles.missionPreviewCard}>
+                <strong>{s.stepIndex}. {s.title || '(제목 없음)'}</strong> — {s.missionType}
+                <p>{s.prompt}</p>
+                {s.optionsJson?.choices && Array.isArray(s.optionsJson.choices) && (
+                  <ul>
+                    {(s.optionsJson.choices as Array<{ id: string; text: string }>).map((c) => (
+                      <li key={String(c.id)}>{String(c.id)}: {String(c.text)}</li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
       {isLoading ? (
         <p>로딩 중...</p>
       ) : (
@@ -1272,6 +1448,7 @@ function MissionEditor({
           {!addFormOpen ? (
             <Button
               variant="secondary"
+              className={styles.missionAddButton}
               onClick={() => setAddFormOpen(true)}
             >
               + 미션 추가
@@ -1330,6 +1507,30 @@ function MissionEditor({
   );
 }
 
+type QuizChoice = { id: string; text: string; imageUrl: string };
+
+function parseQuizOptions(json: Record<string, unknown>): {
+  questionImageUrl: string;
+  choices: QuizChoice[];
+} {
+  const choices: QuizChoice[] = [];
+  if (Array.isArray(json.choices)) {
+    for (const c of json.choices) {
+      if (c && typeof c === 'object' && 'id' in c && 'text' in c) {
+        choices.push({
+          id: String((c as { id: unknown }).id ?? ''),
+          text: String((c as { text: unknown }).text ?? ''),
+          imageUrl: String((c as { imageUrl?: unknown }).imageUrl ?? ''),
+        });
+      }
+    }
+  }
+  return {
+    questionImageUrl: typeof json.questionImageUrl === 'string' ? json.questionImageUrl : '',
+    choices: choices.length > 0 ? choices : [{ id: 'a', text: '', imageUrl: '' }],
+  };
+}
+
 function MissionStepForm({
   missionType,
   prompt,
@@ -1356,18 +1557,61 @@ function MissionStepForm({
   const [mt, setMt] = useState(missionType);
   const [pr, setPr] = useState(prompt);
   const [tl, setTl] = useState(title);
-  const [optStr, setOptStr] = useState(() =>
-    JSON.stringify(optionsJson, null, 2)
-  );
-  const [ansStr, setAnsStr] = useState(() =>
-    JSON.stringify(answerJson, null, 2)
-  );
-  const [optErr, setOptErr] = useState<string | null>(null);
-  const [ansErr, setAnsErr] = useState<string | null>(null);
   const [optUploading, setOptUploading] = useState(false);
   const [optUploadTarget, setOptUploadTarget] = useState<'question' | number | null>(null);
   const missionFileInputRef = useRef<HTMLInputElement>(null);
   const { showSuccess, showError } = useToast();
+
+  // QUIZ: 보기 목록 + 문제 이미지
+  const [quizQuestionImage, setQuizQuestionImage] = useState(() =>
+    typeof optionsJson?.questionImageUrl === 'string' ? optionsJson.questionImageUrl : ''
+  );
+  const [quizChoices, setQuizChoices] = useState<QuizChoice[]>(() => {
+    if (mt !== 'QUIZ') return [];
+    return parseQuizOptions(optionsJson || {}).choices;
+  });
+  const [quizAnswer, setQuizAnswer] = useState(() =>
+    String(answerJson?.answer ?? answerJson?.value ?? '')
+  );
+
+  // INPUT
+  const [inputPlaceholder, setInputPlaceholder] = useState(() =>
+    typeof optionsJson?.placeholder === 'string' ? optionsJson.placeholder : ''
+  );
+  const [inputHintImage, setInputHintImage] = useState(() =>
+    typeof optionsJson?.hintImageUrl === 'string' ? optionsJson.hintImageUrl : ''
+  );
+
+  // PHOTO_CHECK
+  const [photoExampleImage, setPhotoExampleImage] = useState(() =>
+    typeof optionsJson?.exampleImageUrl === 'string' ? optionsJson.exampleImageUrl : ''
+  );
+  const [photoInstruction, setPhotoInstruction] = useState(() =>
+    typeof optionsJson?.instruction === 'string' ? optionsJson.instruction : ''
+  );
+
+  // missionType 변경 시 choices 초기화
+  useEffect(() => {
+    if (mt === 'QUIZ' && quizChoices.length === 0) {
+      setQuizChoices([{ id: 'a', text: '', imageUrl: '' }]);
+    }
+  }, [mt, quizChoices.length]);
+
+  // 외부 optionsJson/answerJson 변경 시 폼 동기화 (수정 모드)
+  useEffect(() => {
+    if (mt === 'QUIZ') {
+      const parsed = parseQuizOptions(optionsJson || {});
+      setQuizQuestionImage(parsed.questionImageUrl);
+      setQuizChoices(parsed.choices.length > 0 ? parsed.choices : [{ id: 'a', text: '', imageUrl: '' }]);
+      setQuizAnswer(String(answerJson?.answer ?? answerJson?.value ?? ''));
+    } else if (mt === 'INPUT') {
+      setInputPlaceholder(typeof optionsJson?.placeholder === 'string' ? optionsJson.placeholder : '');
+      setInputHintImage(typeof optionsJson?.hintImageUrl === 'string' ? optionsJson.hintImageUrl : '');
+    } else if (mt === 'PHOTO_CHECK') {
+      setPhotoExampleImage(typeof optionsJson?.exampleImageUrl === 'string' ? optionsJson.exampleImageUrl : '');
+      setPhotoInstruction(typeof optionsJson?.instruction === 'string' ? optionsJson.instruction : '');
+    }
+  }, [mt, optionsJson, answerJson]);
 
   const handleMissionImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -1378,32 +1622,22 @@ function MissionStepForm({
     setOptUploading(true);
     try {
       const url = await uploadFile(file, 'image', 'mission');
-      let obj: Record<string, unknown> = {};
-      if (optStr.trim()) {
-        try {
-          obj = JSON.parse(optStr) as Record<string, unknown>;
-        } catch {
-          showError('options_json이 올바른 JSON이 아닙니다.');
-          return;
-        }
-      }
       if (target === 'question') {
-        obj.questionImageUrl = url;
-        showSuccess('문제 이미지 URL이 삽입되었습니다.');
+        if (mt === 'QUIZ') setQuizQuestionImage(url);
+        else if (mt === 'INPUT') setInputHintImage(url);
+        else if (mt === 'PHOTO_CHECK') setPhotoExampleImage(url);
+        showSuccess('이미지 URL이 삽입되었습니다.');
       } else {
-        let choices = (obj.choices as unknown[]) ?? [];
-        if (!Array.isArray(choices)) choices = [];
-        while (choices.length <= target) {
-          choices.push({ id: String.fromCharCode(97 + choices.length), text: '', imageUrl: '' });
-        }
-        const choice = choices[target] as Record<string, unknown>;
-        if (!choice || typeof choice !== 'object') choices[target] = { id: String.fromCharCode(97 + target), text: '', imageUrl: url };
-        else { (choices[target] as Record<string, unknown>).imageUrl = url; }
-        obj.choices = choices;
-        showSuccess(`보기 ${target + 1} 이미지 URL이 삽입되었습니다.`);
+        setQuizChoices((prev) => {
+          const next = [...prev];
+          while (next.length <= target) {
+            next.push({ id: String.fromCharCode(97 + next.length), text: '', imageUrl: '' });
+          }
+          next[target] = { ...next[target], imageUrl: url };
+          return next;
+        });
+        showSuccess(`보기 ${target + 1} 이미지가 업로드되었습니다.`);
       }
-      setOptStr(JSON.stringify(obj, null, 2));
-      setOptErr(null);
     } catch (err) {
       showError(err instanceof Error ? err.message : '업로드 실패');
     } finally {
@@ -1412,39 +1646,82 @@ function MissionStepForm({
     }
   };
 
+  const addChoice = () =>
+    setQuizChoices((prev) => [
+      ...prev,
+      { id: String.fromCharCode(97 + prev.length), text: '', imageUrl: '' },
+    ]);
+  const removeChoice = (idx: number) =>
+    setQuizChoices((prev) => prev.filter((_, i) => i !== idx));
+  const updateChoice = (idx: number, patch: Partial<QuizChoice>) =>
+    setQuizChoices((prev) => prev.map((c, i) => (i === idx ? { ...c, ...patch } : c)));
+
+  const buildOptionsAndAnswer = (): {
+    optionsJson: Record<string, unknown> | undefined;
+    answerJson: Record<string, unknown> | undefined;
+  } => {
+    if (mt === 'QUIZ') {
+      const choices = quizChoices
+        .filter((c) => c.text.trim())
+        .map((c) => ({ id: c.id.trim() || 'a', text: c.text.trim(), imageUrl: c.imageUrl.trim() || undefined }));
+      const optionsJson: Record<string, unknown> = {
+        choices: choices.map((c) => ({ ...c, imageUrl: c.imageUrl ?? '' })),
+      };
+      if (quizQuestionImage.trim()) optionsJson.questionImageUrl = quizQuestionImage.trim();
+      const answerJson = quizAnswer.trim() ? { answer: quizAnswer.trim() } : undefined;
+      return { optionsJson: choices.length > 0 ? optionsJson : undefined, answerJson };
+    }
+    if (mt === 'INPUT') {
+      const o: Record<string, unknown> = {};
+      if (inputPlaceholder.trim()) o.placeholder = inputPlaceholder.trim();
+      if (inputHintImage.trim()) o.hintImageUrl = inputHintImage.trim();
+      return { optionsJson: Object.keys(o).length ? o : undefined, answerJson: undefined };
+    }
+    if (mt === 'PHOTO_CHECK') {
+      const o: Record<string, unknown> = {};
+      if (photoExampleImage.trim()) o.exampleImageUrl = photoExampleImage.trim();
+      if (photoInstruction.trim()) o.instruction = photoInstruction.trim();
+      return { optionsJson: Object.keys(o).length ? o : undefined, answerJson: undefined };
+    }
+    return { optionsJson: undefined, answerJson: undefined };
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    let optObj: Record<string, unknown> = {};
-    let ansObj: Record<string, unknown> = {};
-    if (optStr.trim()) {
-      try {
-        optObj = JSON.parse(optStr) as Record<string, unknown>;
-        setOptErr(null);
-      } catch {
-        setOptErr('올바른 JSON이 아닙니다.');
+    if (mt === 'QUIZ') {
+      const valid = quizChoices.filter((c) => c.text.trim());
+      if (valid.length === 0) {
+        showError('최소 1개의 보기를 입력해주세요.');
+        return;
+      }
+      if (!quizAnswer.trim()) {
+        showError('정답을 선택해주세요.');
+        return;
+      }
+      if (!valid.some((c) => c.id === quizAnswer.trim())) {
+        showError(`정답은 보기 ID(a, b, c...) 중 하나여야 합니다.`);
         return;
       }
     }
-    if (ansStr.trim()) {
-      try {
-        ansObj = JSON.parse(ansStr) as Record<string, unknown>;
-        setAnsErr(null);
-      } catch {
-        setAnsErr('올바른 JSON이 아닙니다.');
-        return;
-      }
-    }
+    const { optionsJson: opt, answerJson: ans } = buildOptionsAndAnswer();
     onSubmit({
       missionType: mt,
       prompt: pr.trim(),
       title: tl.trim() || undefined,
-      optionsJson: Object.keys(optObj).length ? optObj : undefined,
-      answerJson: Object.keys(ansObj).length ? ansObj : undefined,
+      optionsJson: opt,
+      answerJson: ans,
     });
   };
 
   return (
     <form onSubmit={handleSubmit} className={styles.missionStepForm}>
+      <input
+        ref={missionFileInputRef}
+        type="file"
+        accept="image/*"
+        className={styles.hiddenFileInput}
+        onChange={handleMissionImageUpload}
+      />
       {!isEdit && (
         <Select
           label="미션 유형"
@@ -1469,76 +1746,257 @@ function MissionStepForm({
         rows={2}
         placeholder="질문 또는 지시문"
       />
-      <div className={styles.missionImageUpload}>
-        <label className={styles.formSectionLabel}>미션 이미지 (S3 업로드 후 URL 자동 삽입)</label>
-        <div className={styles.missionImageUploadBtns}>
-          <input
-            ref={missionFileInputRef}
-            type="file"
-            accept="image/*"
-            className={styles.hiddenFileInput}
-            onChange={handleMissionImageUpload}
-          />
-          <Button
-            type="button"
-            variant="ghost"
-            disabled={optUploading}
-            onClick={() => {
-              setOptUploadTarget('question');
-              missionFileInputRef.current?.click();
-            }}
-          >
-            {optUploading && optUploadTarget === 'question' ? '업로드 중…' : '문제 이미지 업로드'}
-          </Button>
-          {(() => {
-            let choices: unknown[] = [];
-            try {
-              const obj = optStr.trim() ? (JSON.parse(optStr) as Record<string, unknown>) : {};
-              choices = Array.isArray(obj.choices) ? obj.choices : [];
-            } catch {
-              /* ignore */
-            }
-            const showChoiceBtns = mt === 'QUIZ';
-            const choiceCount = showChoiceBtns ? Math.max(1, choices.length) : choices.length;
-            return Array.from({ length: choiceCount }, (_, i) => (
+
+      {/* QUIZ: 보기 + 정답 */}
+      {mt === 'QUIZ' && (
+        <>
+          <div className={styles.missionImageUpload}>
+            <label className={styles.formSectionLabel}>문제 이미지</label>
+            <div className={styles.missionImageUploadBtns}>
               <Button
-                key={i}
                 type="button"
                 variant="ghost"
                 disabled={optUploading}
                 onClick={() => {
-                  setOptUploadTarget(i);
+                  setOptUploadTarget('question');
                   missionFileInputRef.current?.click();
                 }}
               >
-                {optUploading && optUploadTarget === i ? '업로드 중…' : `보기 ${i + 1} 이미지`}
+                {optUploading && optUploadTarget === 'question' ? '업로드 중…' : '문제 이미지 업로드'}
               </Button>
-            ));
-          })()}
+            </div>
+            {quizQuestionImage && (
+              <div className={styles.missionImagePreview} style={{ marginTop: 8 }}>
+                <div className={styles.missionImagePreviewItem}>
+                  <span className={styles.missionImagePreviewLabel}>문제 이미지</span>
+                  <img
+                    src={quizQuestionImage}
+                    alt="문제 이미지"
+                    className={styles.missionImagePreviewThumb}
+                    referrerPolicy="no-referrer"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className={styles.missionImageRemove}
+                    onClick={async () => {
+                      if (quizQuestionImage.trim()) {
+                        try {
+                          await deleteUploadedFile(quizQuestionImage);
+                        } catch (e) {
+                          showError(e instanceof Error ? e.message : 'S3 삭제 실패');
+                          return;
+                        }
+                        setQuizQuestionImage('');
+                      }
+                    }}
+                  >
+                    삭제
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+          <div className={styles.missionOptionsSection}>
+            <label className={styles.formSectionLabel}>보기</label>
+            {quizChoices.map((choice, idx) => (
+              <div key={idx} className={styles.quizChoiceRow}>
+                <Input
+                  label=""
+                  value={choice.id}
+                  onChange={(e) => updateChoice(idx, { id: e.target.value })}
+                  placeholder="a"
+                  className={styles.quizChoiceId}
+                />
+                <Input
+                  label=""
+                  value={choice.text}
+                  onChange={(e) => updateChoice(idx, { text: e.target.value })}
+                  placeholder="보기 텍스트"
+                  className={styles.quizChoiceText}
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  disabled={optUploading}
+                  onClick={() => {
+                    setOptUploadTarget(idx);
+                    missionFileInputRef.current?.click();
+                  }}
+                >
+                  {optUploading && optUploadTarget === idx ? '업로드…' : '이미지'}
+                </Button>
+                {choice.imageUrl && (
+                  <>
+                    <img
+                      src={choice.imageUrl}
+                      alt={`보기 ${idx + 1}`}
+                      className={styles.quizChoiceThumb}
+                      referrerPolicy="no-referrer"
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      className={styles.missionImageRemoveSmall}
+                      onClick={async () => {
+                        if (choice.imageUrl.trim()) {
+                          try {
+                            await deleteUploadedFile(choice.imageUrl);
+                          } catch (e) {
+                            showError(e instanceof Error ? e.message : 'S3 삭제 실패');
+                            return;
+                          }
+                          updateChoice(idx, { imageUrl: '' });
+                        }
+                      }}
+                    >
+                      ×
+                    </Button>
+                  </>
+                )}
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => removeChoice(idx)}
+                  disabled={quizChoices.length <= 1}
+                >
+                  삭제
+                </Button>
+              </div>
+            ))}
+            <Button type="button" variant="secondary" onClick={addChoice}>
+              + 보기 추가
+            </Button>
+            <div className={styles.missionAnswerSelect}>
+              <Select
+                label="정답"
+                value={quizAnswer}
+                onChange={(e) => setQuizAnswer(e.target.value)}
+                options={[
+                  { value: '', label: '(선택)' },
+                  ...quizChoices
+                    .filter((c) => c.id.trim())
+                    .map((c) => ({ value: c.id, label: `${c.id}: ${c.text.slice(0, 20)}${c.text.length > 20 ? '…' : ''}` })),
+                ]}
+              />
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* INPUT */}
+      {mt === 'INPUT' && (
+        <div className={styles.missionOptionsSection}>
+          <Input
+            label="placeholder"
+            value={inputPlaceholder}
+            onChange={(e) => setInputPlaceholder(e.target.value)}
+            placeholder="답을 입력하세요"
+          />
+          <div className={styles.missionImageUpload}>
+            <label className={styles.formSectionLabel}>힌트 이미지</label>
+            <div className={styles.missionImageUploadBtns}>
+            <Button
+              type="button"
+              variant="ghost"
+              disabled={optUploading}
+              onClick={() => {
+                setOptUploadTarget('question');
+                missionFileInputRef.current?.click();
+              }}
+            >
+              {optUploading ? '업로드 중…' : '이미지 업로드'}
+            </Button>
+            {inputHintImage && (
+              <span className={styles.missionImageWithRemove}>
+                <img
+                  src={inputHintImage}
+                  alt="힌트"
+                  className={styles.quizChoiceThumb}
+                  referrerPolicy="no-referrer"
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className={styles.missionImageRemoveSmall}
+                  onClick={async () => {
+                    if (inputHintImage.trim()) {
+                      try {
+                        await deleteUploadedFile(inputHintImage);
+                      } catch (e) {
+                        showError(e instanceof Error ? e.message : 'S3 삭제 실패');
+                        return;
+                      }
+                      setInputHintImage('');
+                    }
+                  }}
+                >
+                  ×
+                </Button>
+              </span>
+            )}
+            </div>
+          </div>
         </div>
-      </div>
-      <Textarea
-        label="options_json (JSON)"
-        value={optStr}
-        onChange={(e) => {
-          setOptStr(e.target.value);
-          setOptErr(null);
-        }}
-        rows={4}
-        placeholder='{"choices": [...], "questionImageUrl": "..."}'
-      />
-      {optErr && <p className={styles.formError}>{optErr}</p>}
-      <Textarea
-        label="answer_json (JSON)"
-        value={ansStr}
-        onChange={(e) => {
-          setAnsStr(e.target.value);
-          setAnsErr(null);
-        }}
-        rows={2}
-        placeholder='{"answer": "a"}'
-      />
-      {ansErr && <p className={styles.formError}>{ansErr}</p>}
+      )}
+
+      {/* PHOTO_CHECK */}
+      {mt === 'PHOTO_CHECK' && (
+        <div className={styles.missionOptionsSection}>
+          <Textarea
+            label="instruction"
+            value={photoInstruction}
+            onChange={(e) => setPhotoInstruction(e.target.value)}
+            rows={2}
+            placeholder="이 장소를 찍어주세요"
+          />
+          <div className={styles.missionImageUpload}>
+            <label className={styles.formSectionLabel}>예시 이미지</label>
+            <div className={styles.missionImageUploadBtns}>
+            <Button
+              type="button"
+              variant="ghost"
+              disabled={optUploading}
+              onClick={() => {
+                setOptUploadTarget('question');
+                missionFileInputRef.current?.click();
+              }}
+            >
+              {optUploading ? '업로드 중…' : '이미지 업로드'}
+            </Button>
+            {photoExampleImage && (
+              <span className={styles.missionImageWithRemove}>
+                <img
+                  src={photoExampleImage}
+                  alt="예시"
+                  className={styles.quizChoiceThumb}
+                  referrerPolicy="no-referrer"
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className={styles.missionImageRemoveSmall}
+                  onClick={async () => {
+                    if (photoExampleImage.trim()) {
+                      try {
+                        await deleteUploadedFile(photoExampleImage);
+                      } catch (e) {
+                        showError(e instanceof Error ? e.message : 'S3 삭제 실패');
+                        return;
+                      }
+                      setPhotoExampleImage('');
+                    }
+                  }}
+                >
+                  ×
+                </Button>
+              </span>
+            )}
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className={styles.formActions}>
         <Button type="button" variant="secondary" onClick={onCancel}>
           취소
@@ -1564,6 +2022,7 @@ function SpotsDrawer({
   onRagSync?: () => void;
   ragSyncPending?: boolean;
 }) {
+  const [mapOpen, setMapOpen] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
   const [editingSpot, setEditingSpot] = useState<SpotAdminResponse | null>(null);
   const [type, setType] = useState<string>('MAIN');
@@ -1739,12 +2198,20 @@ function SpotsDrawer({
     }
   };
 
+  const inSpotListMode =
+    spots.length > 0 &&
+    !editingGuideSpot &&
+    !editingMissionSpot &&
+    !spotAssetsSpot &&
+    !formOpen;
+  const showMapSection = inSpotListMode && mapOpen;
+
   return (
     <div className={styles.drawer}>
       <div className={styles.drawerBackdrop} onClick={onClose} />
         <div
           className={
-            spots.length > 0 && !editingGuideSpot && !editingMissionSpot && !spotAssetsSpot && !formOpen
+            showMapSection
               ? `${styles.spotsDrawerPanel} ${styles.spotsDrawerPanelWithMap}`
               : styles.spotsDrawerPanel
           }
@@ -1752,15 +2219,32 @@ function SpotsDrawer({
         <div className={styles.spotsDrawerMain}>
           <div className={styles.spotsDrawerHeader}>
             <h2>Spots</h2>
-            {onRagSync && (
+            <div className={styles.spotsHeaderActions}>
+              {onRagSync && (
+                <Button
+                  variant="ghost"
+                  onClick={onRagSync}
+                  disabled={ragSyncPending}
+                >
+                  {ragSyncPending ? '동기화 중...' : '지식 동기화'}
+                </Button>
+              )}
+              {inSpotListMode && (
+                <Button variant="secondary" onClick={() => setMapOpen((prev) => !prev)}>
+                  {mapOpen ? '지도 숨기기' : '지도 보기'}
+                </Button>
+              )}
+              {inSpotListMode && <Button onClick={handleAddSpot}>Spot 추가</Button>}
               <Button
                 variant="ghost"
-                onClick={onRagSync}
-                disabled={ragSyncPending}
+                className={styles.spotsHeaderClose}
+                onClick={onClose}
+                aria-label="닫기"
+                title="닫기"
               >
-                {ragSyncPending ? '동기화 중...' : '지식 동기화'}
+                <X size={16} />
               </Button>
-            )}
+            </div>
           </div>
         {editingGuideSpot ? (
           <GuideEditor
@@ -1798,11 +2282,9 @@ function SpotsDrawer({
               <p>아래 버튼으로 이 투어의 첫 번째 Spot을 추가하세요.</p>
               <Button onClick={handleAddSpot}>Spot 추가</Button>
             </div>
-          ) : (
-            <Button onClick={handleAddSpot}>Spot 추가</Button>
-          )
+          ) : null
         ) : (
-          <form onSubmit={handleSubmitSpot}>
+          <form onSubmit={handleSubmitSpot} className={styles.spotForm}>
             {!editingSpot && (
               <div className={styles.formRow}>
                 <label>Type</label>
@@ -1819,6 +2301,11 @@ function SpotsDrawer({
             <Input label="한글 제목" value={titleKr} onChange={(e) => setTitleKr(e.target.value)} placeholder="예: 광화문" />
             <Input label="설명" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="가이드에서 안내할 내용" />
             <Input label="발음 URL" value={pronunciationUrl} onChange={(e) => setPronunciationUrl(e.target.value)} placeholder="https://..." />
+            {pronunciationUrl.trim() && (
+              <div className={styles.pronunciationPreview}>
+                <audio controls src={pronunciationUrl.trim()} className={styles.pronunciationAudio} />
+              </div>
+            )}
             <Input label="주소" value={address} onChange={(e) => setAddress(e.target.value)} placeholder="지도 클릭 시 자동 입력" />
             <div className={styles.formSection}>
               <label className={styles.formSectionLabel}>위치 (지도에서 클릭하여 설정)</label>
@@ -1913,9 +2400,8 @@ function SpotsDrawer({
           </DndContext>
           </>
         )}
-        <Button variant="secondary" onClick={onClose}>닫기</Button>
         </div>
-        {spots.length > 0 && !editingGuideSpot && !editingMissionSpot && !spotAssetsSpot && !formOpen && (
+        {showMapSection && (
           <div className={styles.spotsDrawerMap}>
             <h3 className={styles.mapSectionTitle}>위치 미리보기</h3>
             <SpotsMap spots={spots} />

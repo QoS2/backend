@@ -15,16 +15,19 @@ export function AdminLayout() {
         open={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
       />
+
       <div className={styles.main}>
         <Header
           darkMode={darkMode}
           onDarkModeToggle={() => setDarkMode((v) => !v)}
           onMenuClick={() => setSidebarOpen(true)}
         />
+
         <main className={styles.content}>
           <Outlet />
         </main>
       </div>
+
       {sidebarOpen && (
         <div
           className={styles.sidebarBackdrop}

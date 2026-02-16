@@ -8,9 +8,13 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
 import java.io.IOException;
+import java.net.URI;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.util.Set;
 import java.util.UUID;
 
@@ -141,5 +145,61 @@ public class FileUploadService {
         String region = s3Properties.getRegion();
         String bucket = s3Properties.getBucket();
         return String.format("https://%s.s3.%s.amazonaws.com/%s", bucket, region, objectKey);
+    }
+
+    /**
+     * S3에 업로드된 파일을 URL로 삭제합니다.
+     * URL이 본 서비스 버킷이 아니면 예외를 던집니다.
+     */
+    public void deleteByUrl(String url) {
+        String bucket = s3Properties.getBucket();
+        if (bucket == null || bucket.isBlank()) {
+            throw new BusinessException("S3 버킷이 설정되지 않았습니다.");
+        }
+
+        String objectKey = parseObjectKeyFromUrl(url);
+        if (objectKey == null || objectKey.isBlank()) {
+            throw new BusinessException("유효한 S3 URL이 아닙니다.");
+        }
+
+        if (!isOwnBucketUrl(url)) {
+            throw new BusinessException("본 서비스 S3 버킷의 URL만 삭제할 수 있습니다.");
+        }
+
+        try {
+            s3Client.deleteObject(DeleteObjectRequest.builder()
+                .bucket(bucket)
+                .key(objectKey)
+                .build());
+            log.info("Deleted file from S3: {}", objectKey);
+        } catch (Exception e) {
+            log.error("S3 delete failed for url: {}", url, e);
+            throw new BusinessException("파일 삭제에 실패했습니다.");
+        }
+    }
+
+    private String parseObjectKeyFromUrl(String url) {
+        if (url == null || url.isBlank()) return null;
+        try {
+            URI uri = URI.create(url.trim());
+            String path = uri.getPath();
+            if (path == null || path.isEmpty() || "/".equals(path)) return null;
+            String key = path.startsWith("/") ? path.substring(1) : path;
+            return URLDecoder.decode(key, StandardCharsets.UTF_8);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private boolean isOwnBucketUrl(String url) {
+        String bucket = s3Properties.getBucket();
+        if (url == null || bucket == null || bucket.isBlank()) return false;
+        try {
+            URI uri = URI.create(url.trim());
+            String host = uri.getHost();
+            return host != null && host.startsWith(bucket + ".s3.");
+        } catch (Exception e) {
+            return false;
+        }
     }
 }

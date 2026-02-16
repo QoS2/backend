@@ -1,9 +1,8 @@
 .overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: var(--color-overlay);
   z-index: 1000;
-  animation: fadeIn 0.3s ease-out;
 }
 
 .drawer {
@@ -11,71 +10,61 @@
   top: 0;
   right: 0;
   bottom: 0;
-  width: min(480px, 100vw);
-  background: var(--color-bg-elevated);
+  width: min(500px, 100vw);
   border-left: 1px solid var(--color-border);
+  background: var(--color-bg-elevated);
+  box-shadow: var(--shadow-lg);
   z-index: 1001;
   display: flex;
   flex-direction: column;
-  box-shadow: -4px 0 24px rgba(0, 0, 0, 0.2);
-  animation: slideIn 0.3s ease-out;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-@keyframes slideIn {
-  from { transform: translateX(100%); }
-  to { transform: translateX(0); }
 }
 
 .header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--space-md) var(--space-lg);
+  padding: 14px 18px;
   border-bottom: 1px solid var(--color-border);
+  background: var(--color-bg-subtle);
 }
 
 .title {
   margin: 0;
-  font-size: 18px;
-  font-weight: 600;
-  color: var(--color-text);
+  font-size: 16px;
+  font-weight: 800;
 }
 
 .closeBtn {
   width: 32px;
   height: 32px;
-  padding: 0;
-  border: none;
+  border-radius: 9px;
+  border: 1px solid transparent;
   background: transparent;
   color: var(--color-text-muted);
-  font-size: 24px;
+  font-size: 22px;
   line-height: 1;
-  cursor: pointer;
-  border-radius: var(--radius-sm);
-  transition: background 0.15s, color 0.15s;
+  display: grid;
+  place-items: center;
+  transition: background 130ms ease, color 130ms ease, border-color 130ms ease;
 }
 
 .closeBtn:hover {
-  background: var(--color-bg-hover);
   color: var(--color-text);
+  border-color: var(--color-border);
+  background: var(--color-bg-hover);
 }
 
 .body {
   flex: 1;
-  overflow-y: auto;
-  padding: var(--space-lg);
+  overflow: auto;
+  padding: 18px;
 }
 
 .footer {
-  padding: var(--space-md) var(--space-lg);
   border-top: 1px solid var(--color-border);
-  background: var(--color-bg);
+  background: var(--color-bg-subtle);
+  padding: 12px 18px;
   display: flex;
   justify-content: flex-end;
-  gap: var(--space-sm);
+  gap: var(--space-xs);
 }

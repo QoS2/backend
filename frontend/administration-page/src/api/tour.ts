@@ -184,7 +184,7 @@ export async function deleteSpot(tourId: number, spotId: number) {
   return deleteNoContent(`${TOURS_BASE}/${tourId}/spots/${spotId}`);
 }
 
-// --- 가이드 (Guide) API ---
+// --- 가이드 (Guide) API - N개 컨텐츠 블록 ---
 
 export type GuideAssetRequest = {
   url: string;
@@ -197,11 +197,15 @@ export type GuideLineRequest = {
   assets: GuideAssetRequest[];
 };
 
-export type GuideSaveRequest = {
-  language: string;
+export type GuideStepSaveRequest = {
   stepTitle?: string;
   nextAction?: string;
   lines: GuideLineRequest[];
+};
+
+export type GuideStepsSaveRequest = {
+  language: string;
+  steps: GuideStepSaveRequest[];
 };
 
 export type GuideAssetResponse = {
@@ -218,24 +222,29 @@ export type GuideLineResponse = {
   assets: GuideAssetResponse[];
 };
 
-export type GuideAdminResponse = {
-  stepId: number | null;
-  language: string;
+export type GuideStepAdminResponse = {
+  stepId: number;
+  stepIndex: number;
   stepTitle: string;
   nextAction?: string | null;
   lines: GuideLineResponse[];
 };
 
-export async function fetchGuide(tourId: number, spotId: number) {
-  return getJson<GuideAdminResponse>(`${TOURS_BASE}/${tourId}/spots/${spotId}/guide`);
+export type GuideStepsAdminResponse = {
+  language: string;
+  steps: GuideStepAdminResponse[];
+};
+
+export async function fetchGuideSteps(tourId: number, spotId: number) {
+  return getJson<GuideStepsAdminResponse>(`${TOURS_BASE}/${tourId}/spots/${spotId}/guide`);
 }
 
-export async function saveGuide(
+export async function saveGuideSteps(
   tourId: number,
   spotId: number,
-  body: GuideSaveRequest
+  body: GuideStepsSaveRequest
 ) {
-  return putJson<GuideAdminResponse, GuideSaveRequest>(
+  return putJson<GuideStepsAdminResponse, GuideStepsSaveRequest>(
     `${TOURS_BASE}/${tourId}/spots/${spotId}/guide`,
     body
   );

@@ -1,88 +1,102 @@
 import { useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import { Menu } from 'lucide-react';
+import { LogOut, Menu, MoonStar, SunMedium } from 'lucide-react';
 import { clearAccessToken } from '../../api/auth';
 import { AUTH_QUERY_KEY } from '../../hooks/useAuth';
 import { LOGOUT_URL } from '../../config/constants';
 import styles from './Header.module.css';
 
 interface HeaderProps {
-  searchPlaceholder?: string;
-  onSearch?: (value: string) => void;
   darkMode: boolean;
   onDarkModeToggle: () => void;
   onMenuClick?: () => void;
 }
 
+const PAGE_META: Record<string, { title: string; subtitle: string }> = {
+  '/tours': {
+    title: '투어 관리',
+    subtitle: '투어, 스팟, 미션, 가이드를 편집합니다.',
+  },
+  '/photo-submissions': {
+    title: '포토 제출 검수',
+    subtitle: 'PHOTO 스팟 제출 사진을 승인/거절합니다.',
+  },
+  '/enums': {
+    title: 'Enum 사전',
+    subtitle: '클라이언트 폼에서 사용하는 enum 값을 조회합니다.',
+  },
+};
+
 export function Header({
-  searchPlaceholder = 'Search...',
-  onSearch,
   darkMode,
   onDarkModeToggle,
   onMenuClick,
 }: HeaderProps) {
+  const location = useLocation();
   const queryClient = useQueryClient();
-  const [searchValue, setSearchValue] = useState('');
+  const [loggingOut, setLoggingOut] = useState(false);
+
+  const pageMeta = PAGE_META[location.pathname] ?? {
+    title: 'Tour Administrator',
+    subtitle: '운영 데이터를 관리합니다.',
+  };
 
   const handleLogout = async (e: React.MouseEvent) => {
     e.preventDefault();
+    if (loggingOut) return;
+
+    setLoggingOut(true);
     clearAccessToken();
     queryClient.removeQueries({ queryKey: AUTH_QUERY_KEY });
+
     try {
       await fetch(LOGOUT_URL, { method: 'GET', credentials: 'include' });
     } finally {
-      // 전체 페이지 이동으로 확실히 로그인 페이지로
       window.location.replace('/login');
     }
   };
 
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setSearchValue(value);
-    onSearch?.(value);
-  };
-
   return (
     <header className={styles.header}>
-      <button
-        type="button"
-        className={styles.menuButton}
-        onClick={onMenuClick}
-        aria-label="메뉴 열기"
-      >
-        <Menu size={22} />
-      </button>
-      {onSearch ? (
-        <input
-          type="search"
-          className={styles.search}
-          placeholder={searchPlaceholder}
-          value={searchValue}
-          onChange={handleSearchChange}
-          aria-label="Search"
-        />
-      ) : (
-        <div className={styles.searchPlaceholder} />
-      )}
+      <div className={styles.left}>
+        <button
+          type="button"
+          className={styles.menuButton}
+          onClick={onMenuClick}
+          aria-label="메뉴 열기"
+        >
+          <Menu size={18} />
+        </button>
+
+        <div className={styles.titleWrap}>
+          <h1>{pageMeta.title}</h1>
+          <p className={styles.subtitle}>{pageMeta.subtitle}</p>
+        </div>
+      </div>
+
       <div className={styles.actions}>
         <button
           type="button"
           className={styles.iconButton}
           onClick={onDarkModeToggle}
-          aria-label={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
-          title={darkMode ? 'Light mode' : 'Dark mode'}
+          aria-label={darkMode ? '라이트 모드 전환' : '다크 모드 전환'}
+          title={darkMode ? '라이트 모드' : '다크 모드'}
         >
-          {darkMode ? '☀️' : '🌙'}
+          {darkMode ? <SunMedium size={16} /> : <MoonStar size={16} />}
         </button>
-        <a
-          href="/login"
-          className={styles.logoutLink}
-          onClick={handleLogout}
-        >
-          로그아웃
-        </a>
-        <div className={styles.profile}>
-          <span className={styles.profileLabel}>Admin</span>
+
+        <div className={styles.profilePill}>
+          <span className={styles.profileName}>ADMIN</span>
+          <button
+            type="button"
+            className={styles.logoutButton}
+            onClick={handleLogout}
+            disabled={loggingOut}
+          >
+            <LogOut size={15} />
+            <span>{loggingOut ? '종료 중...' : '로그아웃'}</span>
+          </button>
         </div>
       </div>
     </header>

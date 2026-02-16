@@ -31,29 +31,31 @@ export function Table<T extends object>({
   }
 
   return (
-    <table className={styles.table}>
-      <thead>
-        <tr>
-          {columns.map((col) => (
-            <th key={String(col.key)} className={styles.th}>
-              {col.label}
-            </th>
-          ))}
-        </tr>
-      </thead>
-      <tbody>
-        {data.map((row) => (
-          <tr key={keyExtractor(row)} className={styles.tr}>
+    <div className={styles.tableShell}>
+      <table className={styles.table}>
+        <thead>
+          <tr>
             {columns.map((col) => (
-              <td key={String(col.key)} className={styles.td}>
-                {col.render
-                  ? col.render(row)
-                  : String((row as Record<string, unknown>)[col.key as string] ?? '')}
-              </td>
+              <th key={String(col.key)} className={styles.th}>
+                {col.label}
+              </th>
             ))}
           </tr>
-        ))}
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          {data.map((row) => (
+            <tr key={keyExtractor(row)} className={styles.tr}>
+              {columns.map((col) => (
+                <td key={String(col.key)} className={styles.td}>
+                  {col.render
+                    ? col.render(row)
+                    : String((row as Record<string, unknown>)[col.key as string] ?? '')}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }

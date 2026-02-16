@@ -60,4 +60,24 @@ public class FileUploadController {
 
         return ResponseEntity.ok(Map.of("url", url));
     }
+
+    @Operation(summary = "업로드된 파일 삭제",
+        description = "S3에 업로드된 파일을 URL로 삭제합니다. 본 서비스 버킷의 URL만 삭제 가능합니다.")
+    @SecurityRequirement(name = "bearerAuth")
+    @SecurityRequirement(name = "sessionAuth")
+    @DeleteMapping
+    public ResponseEntity<Void> deleteFile(
+            Authentication authentication,
+            @Parameter(description = "삭제할 파일의 S3 URL", required = true)
+            @RequestParam("url") String url) {
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return ResponseEntity.status(401).build();
+        }
+
+        FileUploadService service = fileUploadService.orElseThrow(() ->
+            new BusinessException("파일 업로드가 비활성화되어 있습니다. AWS S3 설정을 확인하세요."));
+
+        service.deleteByUrl(url);
+        return ResponseEntity.noContent().build();
+    }
 }

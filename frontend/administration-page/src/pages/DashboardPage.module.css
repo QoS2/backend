@@ -1,49 +1,144 @@
 .page {
-  max-width: 800px;
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
 }
 
-.title {
-  margin: 0 0 var(--space-sm);
-  font-size: 24px;
-  font-weight: 600;
-  color: var(--color-text);
+.hero {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background:
+    radial-gradient(circle at 90% -20%, color-mix(in srgb, var(--color-accent-soft) 70%, transparent 30%) 0%, transparent 56%),
+    var(--color-bg-elevated);
+  padding: clamp(var(--space-md), 2.2vw, var(--space-xl));
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-md);
+  box-shadow: var(--shadow-sm);
 }
 
-.subtitle {
-  margin: 0 0 var(--space-lg);
+.eyebrow {
+  margin: 0 0 6px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
   color: var(--color-text-muted);
 }
 
-.cards {
+.hero h2 {
+  margin: 0;
+  font-size: clamp(24px, 2.4vw, 30px);
+  line-height: 1.2;
+}
+
+.subtitle {
+  margin: var(--space-sm) 0 0;
+  max-width: 620px;
+  color: var(--color-text-muted);
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  padding: 8px 12px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--color-success) 40%, var(--color-border) 60%);
+  background: color-mix(in srgb, var(--color-success) 12%, var(--color-bg-elevated) 88%);
+  font-size: 12px;
+  font-weight: 700;
+  color: color-mix(in srgb, var(--color-success) 85%, #133d28 15%);
+}
+
+.grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
   gap: var(--space-md);
 }
 
 .card {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-xs);
-  padding: var(--space-lg);
-  background: var(--color-bg-elevated);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  text-decoration: none;
-  color: inherit;
-  transition: border-color 0.15s, box-shadow 0.15s;
+  border-radius: var(--radius-lg);
+  background: var(--color-bg-elevated);
+  padding: var(--space-md);
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-sm);
+  min-height: 156px;
+  transition: all 170ms ease;
+  box-shadow: var(--shadow-sm);
 }
 
 .card:hover {
-  border-color: var(--color-accent);
-  box-shadow: 0 0 0 1px var(--color-accent);
+  border-color: color-mix(in srgb, var(--color-accent) 42%, var(--color-border) 58%);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
 }
 
-.cardTitle {
-  font-weight: 600;
-  color: var(--color-text);
+.cardIcon {
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  border: 1px solid var(--color-border);
+  display: grid;
+  place-items: center;
+  color: var(--color-accent);
+  background: var(--color-bg-subtle);
+  flex-shrink: 0;
 }
 
-.cardDesc {
-  font-size: 13px;
+.cardBody {
+  min-width: 0;
+  flex: 1;
+}
+
+.cardBody strong {
+  font-size: 15px;
+}
+
+.cardBody p {
+  margin: var(--space-xs) 0 0;
   color: var(--color-text-muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.cardArrow {
+  color: var(--color-text-muted);
+  margin-top: 2px;
+}
+
+.principles {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg-elevated);
+  padding: var(--space-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+.principles h3 {
+  margin: 0 0 var(--space-sm);
+  font-size: 17px;
+}
+
+.principles ul {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--color-text-muted);
+  display: grid;
+  gap: 8px;
+}
+
+@media (max-width: 760px) {
+  .hero {
+    flex-direction: column;
+  }
+
+  .badge {
+    align-self: flex-start;
+  }
 }

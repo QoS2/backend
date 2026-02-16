@@ -232,6 +232,7 @@ Cookie: JSESSIONID=...
 | 메서드 | 경로 | 설명 |
 |--------|------|------|
 | POST | `/` | multipart/form-data로 S3 업로드 후 URL 반환 |
+| DELETE | `/?url=...` | S3에 업로드된 파일 URL로 삭제 (본 서비스 버킷만 가능) |
 
 ---
 
@@ -265,6 +266,29 @@ Content-Type: multipart/form-data
 
 **Response 401** — 인증 필요  
 **Response 500** — S3 비활성화 등 (예: "파일 업로드가 비활성화되어 있습니다.")
+
+---
+
+### 2.2 업로드 파일 삭제
+
+```
+DELETE /api/v1/upload?url=<S3_URL>
+Authorization: Bearer <accessToken>
+```
+
+**Query Parameters**
+
+| 필드 | 타입 | 필수 | 설명 |
+|------|------|------|------|
+| url | string | O | 삭제할 S3 파일의 전체 URL (인코딩 필요) |
+
+**제한:** 본 서비스 S3 버킷에 업로드된 URL만 삭제 가능. 외부 URL은 400 에러.
+
+**Response 204** — 삭제 성공 (No Content)
+
+**Response 400** — 유효하지 않은 URL 또는 외부 버킷 URL  
+**Response 401** — 인증 필요  
+**Response 500** — S3 삭제 실패
 
 ---
 
@@ -758,8 +782,8 @@ Authorization: Bearer <accessToken>
     },
     {
       "id": 502,
-      "role": "ASSISTANT",
-      "source": "AI",
+      "role": "GUIDE",
+      "source": "LLM",
       "text": "근정전은 1395년 태조에 의해 건축된 조선의 정전입니다...",
       "assets": null,
       "action": null,
@@ -771,8 +795,8 @@ Authorization: Bearer <accessToken>
 
 | 필드 | 설명 |
 |------|------|
-| role | USER \| ASSISTANT |
-| source | USER \| GUIDE \| AI \| SCRIPT |
+| role | USER \| GUIDE \| SYSTEM (ChatRole) |
+| source | USER \| SCRIPT \| LLM (ChatSource) |
 
 ---
 
@@ -819,6 +843,8 @@ Content-Type: application/json
 GET /api/v1/spots/{spotId}
 ```
 
+**인증:** 불필요 (공개)
+
 Place/Treasure/Photo Spot 공통 상세 정보. `titleKr`, `pronunciationUrl`, `address` 포함.
 
 **Response 200**
@@ -844,7 +870,7 @@ Place/Treasure/Photo Spot 공통 상세 정보. `titleKr`, `pronunciationUrl`, `
 GET /api/v1/spots/{spotId}/guide
 ```
 
-스팟 페이지용 가이드 세그먼트(설명 + 이미지) 조회. **인증 필요** (투어 진행 중 스크립트 제공 목적).
+스팟 페이지용 가이드 세그먼트(설명 + 이미지) 조회. **인증:** JWT 필수.
 
 **Path Parameters**
 
@@ -894,9 +920,12 @@ GET /api/v1/spots/{spotId}/guide
 
 ```
 GET /api/v1/content-steps/{stepId}/mission
+Authorization: Bearer <accessToken>
 ```
 
-Proximity 응답의 MISSION_CHOICE 후, 미션 UI용 prompt·optionsJson 조회. `options_json` 구조는 MISSION_SCHEMA.md 참조.
+**인증:** JWT 필수
+
+Proximity 응답의 MISSION_CHOICE 후, 미션 UI용 prompt·optionsJson 조회. `options_json` 구조는 동일 디렉터리 `MISSION_SCHEMA.md` 참조.
 
 **Path Parameters**
 
@@ -1157,7 +1186,10 @@ Content-Type: application/json
 |------|------|------|------|
 | type | string | O | `MAIN` \| `SUB` \| `PHOTO` \| `TREASURE` |
 | title | string | O | 스팟 제목 |
+| titleKr | string | X | 한국어 제목 |
 | description | string | X | 설명 |
+| pronunciationUrl | string | X | 발음 오디오 URL |
+| address | string | X | 주소 |
 | latitude | double | X | 위도 |
 | longitude | double | X | 경도 |
 | orderIndex | int | O | 순서 |
@@ -1185,13 +1217,26 @@ PATCH /api/v1/admin/tours/{tourId}/spots/{spotId}
 ```json
 {
   "title": "광화문 (수정)",
+  "titleKr": "광화문",
   "description": "경복궁의 정문입니다.",
+  "pronunciationUrl": "https://s3.../audio.mp3",
+  "address": "161 Sajik-ro, Jongno-gu, Seoul",
   "orderIndex": 2,
   "latitude": 37.576,
   "longitude": 126.977,
   "radiusM": 50
 }
 ```
+
+| 필드 | 타입 | 설명 |
+|------|------|------|
+| title, titleKr | string | 제목 |
+| description | string | 설명 |
+| pronunciationUrl | string | 발음 오디오 URL |
+| address | string | 주소 |
+| orderIndex | int | 순서 |
+| latitude, longitude | double | 위경도 |
+| radiusM | int | 근접 반경(m) |
 
 #### Spot 삭제
 
@@ -1220,36 +1265,58 @@ DELETE /api/v1/admin/tours/{tourId}/spots/{spotId}
 GET /api/v1/admin/tours/{tourId}/spots/{spotId}/guide
 ```
 
-**Response 200**
+**Response 200 (GuideStepsAdminResponse)**
+
+스팟 가이드는 N개 컨텐츠 블록(step)으로 구성됩니다. 각 step은 여러 문장(lines) + 미디어를 가집니다.
 
 ```json
 {
-  "stepId": 1,
   "language": "ko",
-  "stepTitle": "광화문",
-  "lines": [
+  "steps": [
     {
-      "id": 10,
-      "seq": 1,
-      "text": "광화문에 오신 것을 환영합니다.",
-      "assets": [
+      "stepId": 1,
+      "stepIndex": 0,
+      "stepTitle": "광화문",
+      "nextAction": "NEXT",
+      "lines": [
         {
-          "id": 1,
-          "url": "https://s3.../image.jpg",
-          "assetType": "IMAGE",
-          "usage": "ILLUSTRATION"
-        },
-        {
-          "id": 2,
-          "url": "https://s3.../audio.mp3",
-          "assetType": "AUDIO",
-          "usage": "SCRIPT_AUDIO"
+          "id": 10,
+          "seq": 1,
+          "text": "광화문에 오신 것을 환영합니다.",
+          "assets": [
+            {
+              "id": 1,
+              "url": "https://s3.../image.jpg",
+              "assetType": "IMAGE",
+              "usage": "ILLUSTRATION"
+            },
+            {
+              "id": 2,
+              "url": "https://s3.../audio.mp3",
+              "assetType": "AUDIO",
+              "usage": "SCRIPT_AUDIO"
+            }
+          ]
         }
       ]
     }
   ]
 }
 ```
+
+| 필드 | 타입 | 설명 |
+|------|------|------|
+| language | string | 조회 언어 |
+| steps | array | 가이드 스텝 목록 (컨텐츠 블록) |
+| steps[].stepId | long | spot_content_steps.id |
+| steps[].stepIndex | int | 스텝 순서 |
+| steps[].stepTitle | string | 스텝 제목 |
+| steps[].nextAction | string | NEXT \| MISSION_CHOICE |
+| steps[].lines | array | 문장 + 미디어 목록 |
+| steps[].lines[].id | long | 스크립트 라인 ID |
+| steps[].lines[].seq | int | 문장 순서 |
+| steps[].lines[].text | string | 가이드 문장 |
+| steps[].lines[].assets | array | 미디어 (id, url, assetType, usage) |
 
 #### 가이드 저장 (덮어쓰기)
 
@@ -1258,26 +1325,32 @@ PUT /api/v1/admin/tours/{tourId}/spots/{spotId}/guide
 Content-Type: application/json
 ```
 
-**Request Body (GuideSaveRequest)**
+**Request Body (GuideStepsSaveRequest)**
+
+N개 컨텐츠 블록 전체를 덮어씁니다.
 
 ```json
 {
   "language": "ko",
-  "stepTitle": "광화문",
-  "nextAction": "NEXT",
-  "lines": [
+  "steps": [
     {
-      "text": "광화문에 오신 것을 환영합니다.",
-      "assets": [
+      "stepTitle": "광화문",
+      "nextAction": "NEXT",
+      "lines": [
         {
-          "url": "https://s3.../image.jpg",
-          "assetType": "IMAGE",
-          "usage": "ILLUSTRATION"
-        },
-        {
-          "url": "https://s3.../audio.mp3",
-          "assetType": "AUDIO",
-          "usage": "SCRIPT_AUDIO"
+          "text": "광화문에 오신 것을 환영합니다.",
+          "assets": [
+            {
+              "url": "https://s3.../image.jpg",
+              "assetType": "IMAGE",
+              "usage": "ILLUSTRATION"
+            },
+            {
+              "url": "https://s3.../audio.mp3",
+              "assetType": "AUDIO",
+              "usage": "SCRIPT_AUDIO"
+            }
+          ]
         }
       ]
     }
@@ -1288,9 +1361,15 @@ Content-Type: application/json
 | 필드 | 타입 | 필수 | 설명 |
 |------|------|------|------|
 | language | string | O | 언어 (`ko`, `en`, `jp`, `cn`) |
+| steps | array | O | 가이드 스텝 목록 (최소 1개) |
+
+**GuideStepSaveRequest**
+
+| 필드 | 타입 | 필수 | 설명 |
+|------|------|------|------|
 | stepTitle | string | X | 스텝 제목 (없으면 스팟 제목 사용) |
-| nextAction | string | X | `NEXT`(다음 컨텐츠) \| `MISSION_CHOICE`(게임 스타트/스킵) |
-| lines | array | O | 가이드 문장 목록 (최소 1개) |
+| nextAction | string | X | `NEXT` \| `MISSION_CHOICE` |
+| lines | array | O | 문장 목록 (최소 1개) |
 
 **GuideLineRequest**
 
@@ -1307,7 +1386,7 @@ Content-Type: application/json
 | assetType | string | O | `IMAGE` \| `AUDIO` |
 | usage | string | O | `ILLUSTRATION` \| `SCRIPT_AUDIO` |
 
-**Response 200** — GuideAdminResponse
+**Response 200** — GuideStepsAdminResponse (조회 응답과 동일 구조)
 
 ---
 
@@ -1706,7 +1785,7 @@ GET /api/v1/photo-spots
 | Query | 타입 | 설명 |
 |-------|------|------|
 | tourId | long | X | 투어 ID |
-| lang | string | X | ko, en, jp, cn |
+| lang | string | X | ko, en, jp, cn (현재 미사용) |
 
 **Response 200** — 배열
 
@@ -1894,12 +1973,24 @@ GET /api/v1/spots/{spotId}
 
 | API | 인증 |
 |-----|------|
-| GET /collections/places | 필수 |
-| GET /collections/treasures | 필수 |
-| GET /photo-spots | 불필요 |
-| POST /photo-spots/{id}/submissions | 필수 |
-| GET /photo-spots/my-submissions | 필수 |
-| GET,PATCH /admin/photo-submissions | 세션(관리자) |
+| GET /tours, /tours/{id}, /tours/{id}/markers | 불필요 |
+| GET /spots/{id} | 불필요 (스팟 상세) |
+| GET /spots/{id}/guide | **JWT 필수** |
+| GET /content-steps/{stepId}/mission | **JWT 필수** |
+| GET /photo-spots, /photo-spots/{id} | 불필요 |
+| POST /photo-spots/{id}/submissions | JWT 필수 |
+| GET /photo-spots/my-submissions | JWT 필수 |
+| GET /collections/places, /places/summary, /treasures, /treasures/summary | JWT 필수 |
+| POST /tours/{id}/access/unlock | JWT 필수 |
+| POST /tours/{id}/runs | JWT 필수 |
+| POST /tour-runs/{id}/proximity | JWT 필수 |
+| POST /tour-runs/{id}/treasures/{spotId}/collect | JWT 필수 |
+| GET /tour-runs/{id}/spots/{spotId}/chat-session | JWT 필수 |
+| GET /chat-sessions/{id}/turns | JWT 필수 |
+| POST /chat-sessions/{id}/messages | JWT 필수 |
+| POST /tour-runs/{id}/steps/{stepId}/missions/submit | JWT 필수 |
+| POST /upload, DELETE /upload | JWT 또는 세션 |
+| /admin/** | 세션(관리자) |
 
 ---
 

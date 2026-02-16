@@ -1,8 +1,8 @@
 .header {
-  height: var(--header-height);
-  padding: 0 var(--space-md);
-  background: var(--color-bg-elevated);
+  min-height: var(--header-height);
+  padding: var(--space-md) clamp(var(--space-md), 2vw, var(--space-xl));
   border-bottom: 1px solid var(--color-border);
+  background: color-mix(in srgb, var(--color-bg-elevated) 92%, transparent 8%);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -12,109 +12,140 @@
   z-index: 50;
 }
 
-@media (min-width: 768px) {
-  .header {
-    padding: 0 var(--space-lg);
-  }
+.left {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  min-width: 0;
 }
 
 .menuButton {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
-  padding: 0;
-  border: none;
-  border-radius: var(--radius-md);
-  background: transparent;
+  width: 38px;
+  height: 38px;
+  border-radius: 11px;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-elevated);
   color: var(--color-text);
-  cursor: pointer;
-  transition: background 0.15s;
+  display: grid;
+  place-items: center;
+  transition: background 140ms ease, border-color 140ms ease;
   flex-shrink: 0;
 }
 
 .menuButton:hover {
   background: var(--color-bg-hover);
+  border-color: var(--color-border-strong);
 }
 
-@media (min-width: 768px) {
+@media (min-width: 1024px) {
   .menuButton {
     display: none;
   }
 }
 
-.search {
-  flex: 1;
-  max-width: 320px;
-  height: 36px;
-  padding: 0 var(--space-md);
-  background: var(--color-bg);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  color: var(--color-text);
-  outline: none;
+.titleWrap {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
 }
 
-.search::placeholder {
+.titleWrap h1 {
+  margin: 0;
+  font-size: clamp(18px, 2vw, 24px);
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+}
+
+.subtitle {
+  margin: 0;
+  font-size: 12px;
   color: var(--color-text-muted);
-}
-
-.search:focus {
-  border-color: var(--color-accent);
-  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
-}
-
-.searchPlaceholder {
-  flex: 1;
 }
 
 .actions {
   display: flex;
   align-items: center;
   gap: var(--space-sm);
+  flex-shrink: 0;
 }
 
 .iconButton {
-  width: 36px;
-  height: 36px;
-  padding: 0;
-  border: none;
-  border-radius: var(--radius-md);
-  background: transparent;
+  width: 38px;
+  height: 38px;
+  border-radius: 11px;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-elevated);
   color: var(--color-text);
-  font-size: 18px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background 0.15s;
+  display: grid;
+  place-items: center;
+  transition: background 140ms ease, border-color 140ms ease;
 }
 
 .iconButton:hover {
   background: var(--color-bg-hover);
+  border-color: var(--color-border-strong);
 }
 
-.logoutLink {
-  padding: var(--space-xs) var(--space-sm);
-  font-size: 13px;
+.profilePill {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+  padding: 5px 6px 5px 10px;
+  background: var(--color-bg-elevated);
+}
+
+.profileName {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
   color: var(--color-text-muted);
-  text-decoration: none;
-  border-radius: var(--radius-sm);
-  transition: color 0.15s, background 0.15s;
 }
 
-.logoutLink:hover {
+.logoutButton {
+  height: 30px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  background: transparent;
   color: var(--color-text);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  transition: background 140ms ease, border-color 140ms ease, color 140ms ease;
+}
+
+.logoutButton:hover:not(:disabled) {
+  border-color: var(--color-border-strong);
   background: var(--color-bg-hover);
 }
 
-.profile {
-  padding: var(--space-xs) var(--space-sm);
-  color: var(--color-text-muted);
-  font-size: 13px;
+.logoutButton:disabled {
+  opacity: 0.7;
 }
 
-.profileLabel {
-  font-weight: 500;
-  color: var(--color-text);
+@media (max-width: 640px) {
+  .header {
+    align-items: flex-start;
+  }
+
+  .subtitle {
+    display: none;
+  }
+
+  .profileName {
+    display: none;
+  }
+
+  .logoutButton span {
+    display: none;
+  }
+
+  .logoutButton {
+    padding: 0 8px;
+  }
 }

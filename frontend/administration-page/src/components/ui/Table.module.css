@@ -1,31 +1,47 @@
+.tableShell {
+  overflow: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg-elevated);
+  box-shadow: var(--shadow-sm);
+}
+
 .table {
   width: 100%;
-  min-width: 600px;
-  border-collapse: collapse;
-  background: var(--color-bg-elevated);
-  border-radius: var(--radius-md);
-  overflow: hidden;
-  box-shadow: var(--shadow);
+  min-width: 680px;
+  border-collapse: separate;
+  border-spacing: 0;
 }
 
 .th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
   text-align: left;
-  padding: var(--space-sm) var(--space-md);
-  font-weight: 600;
-  font-size: 13px;
+  padding: 12px 14px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
   color: var(--color-text-muted);
-  background: var(--color-bg);
+  text-transform: uppercase;
+  background: color-mix(in srgb, var(--color-bg-subtle) 84%, var(--color-bg-elevated) 16%);
   border-bottom: 1px solid var(--color-border);
 }
 
 .td {
-  padding: var(--space-sm) var(--space-md);
-  border-bottom: 1px solid var(--color-border);
+  padding: 12px 14px;
+  font-size: 13px;
   color: var(--color-text);
+  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 65%, transparent 35%);
+  vertical-align: middle;
+}
+
+.tr {
+  transition: background 120ms ease;
 }
 
 .tr:hover {
-  background: var(--color-bg-hover);
+  background: color-mix(in srgb, var(--color-accent-soft) 38%, transparent 62%);
 }
 
 .tr:last-child .td {
@@ -33,32 +49,22 @@
 }
 
 .empty {
-  padding: var(--space-xl);
+  padding: var(--space-2xl) var(--space-lg);
+  border: 1px dashed var(--color-border-strong);
+  border-radius: var(--radius-lg);
   text-align: center;
   color: var(--color-text-muted);
   background: var(--color-bg-elevated);
-  border-radius: var(--radius-md);
 }
 
 .skeleton {
-  background: var(--color-bg-elevated);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
   overflow: hidden;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-elevated);
 }
 
 .skeletonRow {
-  height: 48px;
-  background: linear-gradient(
-    90deg,
-    var(--color-bg-hover) 25%,
-    var(--color-border) 50%,
-    var(--color-bg-hover) 75%
-  );
-  background-size: 200% 100%;
-  animation: skeleton 1.2s ease-in-out infinite;
-}
-
-@keyframes skeleton {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
+  height: 50px;
+  background: color-mix(in srgb, var(--color-bg-subtle) 82%, transparent 18%);
 }

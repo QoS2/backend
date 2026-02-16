@@ -45,38 +45,44 @@ public class AdminGuideService {
     private final ChatTurnAssetRepository chatTurnAssetRepository;
 
     @Transactional(readOnly = true)
-    public GuideAdminResponse getGuide(Long tourId, Long spotId) {
+    public GuideStepsAdminResponse getGuideSteps(Long tourId, Long spotId) {
         TourSpot spot = tourSpotRepository.findByIdAndTourId(spotId, tourId)
                 .orElseThrow(() -> new ResourceNotFoundException("Spot not found"));
 
         List<SpotContentStep> guideSteps = spotContentStepRepository
                 .findBySpot_IdAndKindAndLanguageOrderByStepIndexAsc(spotId, StepKind.GUIDE, "ko");
 
-        if (guideSteps.isEmpty()) {
-            return new GuideAdminResponse(null, "ko", spot.getTitle(), null, List.of());
+        List<GuideStepAdminResponse> stepResponses = new ArrayList<>();
+        for (int i = 0; i < guideSteps.size(); i++) {
+            SpotContentStep step = guideSteps.get(i);
+            String nextAction = step.getNextAction() != null ? step.getNextAction().name() : null;
+            List<SpotScriptLine> lines = spotScriptLineRepository.findByStep_IdOrderBySeqAsc(step.getId());
+            List<GuideLineResponse> lineResponses = new ArrayList<>();
+            int seq = 1;
+            for (SpotScriptLine line : lines) {
+                List<ScriptLineAsset> assets = scriptLineAssetRepository.findByScriptLine_IdOrderBySortOrderAsc(line.getId());
+                List<GuideAssetResponse> assetResponses = assets.stream()
+                        .map(a -> new GuideAssetResponse(
+                                a.getAsset().getId(),
+                                a.getAsset().getUrl(),
+                                a.getAsset().getAssetType().name(),
+                                a.getUsage().name()))
+                        .toList();
+                lineResponses.add(new GuideLineResponse(line.getId(), seq++, line.getText(), assetResponses));
+            }
+            stepResponses.add(new GuideStepAdminResponse(
+                    step.getId(),
+                    step.getStepIndex(),
+                    step.getTitle(),
+                    nextAction,
+                    lineResponses));
         }
 
-        SpotContentStep step = guideSteps.get(0);
-        String nextAction = step.getNextAction() != null ? step.getNextAction().name() : null;
-        List<SpotScriptLine> lines = spotScriptLineRepository.findByStep_IdOrderBySeqAsc(step.getId());
-        List<GuideLineResponse> lineResponses = new ArrayList<>();
-        int seq = 1;
-        for (SpotScriptLine line : lines) {
-            List<ScriptLineAsset> assets = scriptLineAssetRepository.findByScriptLine_IdOrderBySortOrderAsc(line.getId());
-            List<GuideAssetResponse> assetResponses = assets.stream()
-                    .map(a -> new GuideAssetResponse(
-                            a.getAsset().getId(),
-                            a.getAsset().getUrl(),
-                            a.getAsset().getAssetType().name(),
-                            a.getUsage().name()))
-                    .toList();
-            lineResponses.add(new GuideLineResponse(line.getId(), seq++, line.getText(), assetResponses));
-        }
-        return new GuideAdminResponse(step.getId(), "ko", step.getTitle(), nextAction, lineResponses);
+        return new GuideStepsAdminResponse("ko", stepResponses);
     }
 
     @Transactional
-    public GuideAdminResponse saveGuide(Long tourId, Long spotId, GuideSaveRequest req) {
+    public GuideStepsAdminResponse saveGuideSteps(Long tourId, Long spotId, GuideStepsSaveRequest req) {
         TourSpot spot = tourSpotRepository.findByIdAndTourId(spotId, tourId)
                 .orElseThrow(() -> new ResourceNotFoundException("Spot not found"));
 
@@ -84,48 +90,45 @@ public class AdminGuideService {
         List<SpotContentStep> existing = spotContentStepRepository
                 .findBySpot_IdAndKindAndLanguageOrderByStepIndexAsc(spotId, StepKind.GUIDE, lang);
 
-        SpotContentStep step;
-        if (existing.isEmpty()) {
-            step = SpotContentStep.create(spot, StepKind.GUIDE, 0);
-            step.setTitle(req.stepTitle() != null ? req.stepTitle() : spot.getTitle());
-            step.setNextAction(parseNextAction(req.nextAction()));
-            step = spotContentStepRepository.save(step);
-        } else {
-            step = existing.get(0);
-            if (req.stepTitle() != null) {
-                step.setTitle(req.stepTitle());
-            }
-            step.setNextAction(parseNextAction(req.nextAction()));
-            step = spotContentStepRepository.save(step);
-            List<SpotScriptLine> oldLines = spotScriptLineRepository.findByStep_IdOrderBySeqAsc(step.getId());
-            Set<Long> assetIdsToCheck = oldLines.stream()
-                    .flatMap(l -> scriptLineAssetRepository.findByScriptLine_IdOrderBySortOrderAsc(l.getId()).stream())
-                    .map(sla -> sla.getAsset().getId())
-                    .collect(Collectors.toSet());
-            spotScriptLineRepository.deleteAll(oldLines);
-            entityManager.flush(); // DELETE를 DB에 즉시 반영 후 INSERT 진행 (unique 제약 위반 방지)
-            deleteOrphanedMediaAssets(assetIdsToCheck);
-        }
+        Set<Long> assetIdsToCheck = existing.stream()
+                .flatMap(s -> spotScriptLineRepository.findByStep_IdOrderBySeqAsc(s.getId()).stream())
+                .flatMap(l -> scriptLineAssetRepository.findByScriptLine_IdOrderBySortOrderAsc(l.getId()).stream())
+                .map(sla -> sla.getAsset().getId())
+                .collect(Collectors.toSet());
 
-        int seq = 1;
-        for (GuideLineRequest lineReq : req.lines()) {
-            SpotScriptLine line = SpotScriptLine.create(step, seq++, lineReq.text());
-            line = spotScriptLineRepository.save(line);
+        spotContentStepRepository.deleteAll(existing);
+        entityManager.flush();
 
-            int sortOrder = 1;
-            for (GuideAssetRequest assetReq : lineReq.assets()) {
-                AssetType assetType = AssetType.valueOf(assetReq.assetType());
-                LineAssetUsage usage = LineAssetUsage.valueOf(assetReq.usage());
-                String mimeType = inferMimeType(assetType, assetReq.url());
-                MediaAsset asset = MediaAsset.create(assetType, assetReq.url(), mimeType);
-                asset = mediaAssetRepository.save(asset);
-                ScriptLineAsset sla = ScriptLineAsset.create(line, asset, usage);
-                sla.setSortOrder(sortOrder++);
-                scriptLineAssetRepository.save(sla);
+        for (int stepIndex = 0; stepIndex < req.steps().size(); stepIndex++) {
+            GuideStepSaveRequest stepReq = req.steps().get(stepIndex);
+            SpotContentStep step = SpotContentStep.create(spot, StepKind.GUIDE, stepIndex);
+            step.setTitle(stepReq.stepTitle() != null && !stepReq.stepTitle().isBlank()
+                    ? stepReq.stepTitle()
+                    : spot.getTitle());
+            step.setNextAction(parseNextAction(stepReq.nextAction()));
+            step = spotContentStepRepository.save(step);
+
+            int seq = 1;
+            for (GuideLineRequest lineReq : stepReq.lines()) {
+                SpotScriptLine line = SpotScriptLine.create(step, seq++, lineReq.text());
+                line = spotScriptLineRepository.save(line);
+
+                int sortOrder = 1;
+                for (GuideAssetRequest assetReq : lineReq.assets()) {
+                    AssetType assetType = AssetType.valueOf(assetReq.assetType());
+                    LineAssetUsage usage = LineAssetUsage.valueOf(assetReq.usage());
+                    String mimeType = inferMimeType(assetType, assetReq.url());
+                    MediaAsset asset = MediaAsset.create(assetType, assetReq.url(), mimeType);
+                    asset = mediaAssetRepository.save(asset);
+                    ScriptLineAsset sla = ScriptLineAsset.create(line, asset, usage);
+                    sla.setSortOrder(sortOrder++);
+                    scriptLineAssetRepository.save(sla);
+                }
             }
         }
 
-        return getGuide(tourId, spotId);
+        deleteOrphanedMediaAssets(assetIdsToCheck);
+        return getGuideSteps(tourId, spotId);
     }
 
     private static StepNextAction parseNextAction(String s) {
@@ -156,9 +159,6 @@ public class AdminGuideService {
         return "application/octet-stream";
     }
 
-    /**
-     * SpotAsset, ChatTurnAsset에서 참조하지 않는 MediaAsset 삭제 (고아 에셋 정리)
-     */
     private void deleteOrphanedMediaAssets(Set<Long> assetIds) {
         for (Long assetId : assetIds) {
             if (spotAssetRepository.existsByAsset_Id(assetId) || chatTurnAssetRepository.existsByAsset_Id(assetId)) {

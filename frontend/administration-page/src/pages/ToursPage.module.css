@@ -1,129 +1,177 @@
 .page {
-  padding: var(--space-md);
-  max-width: 1200px;
+  max-width: 1280px;
   margin: 0 auto;
-}
-
-@media (min-width: 768px) {
-  .page {
-    padding: var(--space-lg);
-  }
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
 }
 
 .header {
   display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  margin-bottom: var(--space-lg);
-  gap: var(--space-sm);
-}
-
-@media (min-width: 640px) {
-  .header {
-    flex-direction: row;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: var(--space-xl);
-    gap: var(--space-md);
-  }
-}
-
-.header h1 {
-  margin: 0;
-  font-size: 22px;
-  font-weight: 600;
-  letter-spacing: -0.02em;
-  color: var(--color-text);
-}
-
-@media (min-width: 768px) {
-  .header h1 {
-    font-size: 26px;
-  }
-}
-
-.actions {
-  display: flex;
+  align-items: center;
+  justify-content: flex-end;
   gap: var(--space-sm);
   flex-wrap: wrap;
 }
 
-.tableWrapper {
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  margin: 0 calc(-1 * var(--space-md));
+.actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
-@media (min-width: 768px) {
-  .tableWrapper {
-    margin: 0;
-  }
+.rowActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.rowPrimaryAction {
+  height: 32px;
+  padding: 0 11px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.tableWrapper {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg-elevated);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
 }
 
 .spotsCounts {
-  font-size: 13px;
-  line-height: 1.5;
-  white-space: normal;
+  display: inline-block;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--color-text-muted);
 }
 
 .pagination {
   display: flex;
   align-items: center;
-  gap: var(--space-md);
-  margin-top: var(--space-lg);
+  justify-content: center;
+  gap: var(--space-sm);
+  padding: var(--space-sm);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-bg-elevated);
+  width: fit-content;
+  box-shadow: var(--shadow-sm);
+}
+
+.pagination span {
+  min-width: 70px;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-text-muted);
 }
 
 .drawer {
   position: fixed;
   inset: 0;
-  z-index: 100;
+  z-index: 120;
   display: flex;
-  align-items: stretch;
+  justify-content: flex-end;
 }
 
 .drawerBackdrop {
   flex: 1;
-  min-width: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: var(--color-overlay);
 }
 
 .drawerPanel {
-  width: 100%;
-  max-width: 100vw;
+  width: min(560px, 100vw);
+  border-left: 1px solid var(--color-border);
   background: var(--color-bg-elevated);
+  box-shadow: var(--shadow-lg);
   padding: var(--space-md);
   overflow-y: auto;
 }
 
-@media (min-width: 480px) {
+@media (min-width: 640px) {
   .drawerPanel {
-    width: 440px;
-    max-width: 92vw;
     padding: var(--space-lg);
   }
 }
 
 .drawerPanel h2 {
-  margin: 0 0 16px;
+  margin: 0 0 var(--space-md);
+  font-size: 19px;
+  line-height: 1.25;
 }
 
-/* Spots Drawer: 넓은 2단 레이아웃 (리스트 + 지도) */
+.previewSection {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-subtle);
+  padding: var(--space-md);
+  margin-bottom: var(--space-md);
+}
+
+.previewSection h3 {
+  margin: 0 0 var(--space-xs);
+  font-size: 17px;
+}
+
+.previewSection p {
+  margin: 0 0 6px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.previewDesc {
+  color: var(--color-text-muted);
+}
+
+.previewCounts {
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.previewSubtitle {
+  margin: var(--space-sm) 0 6px;
+  font-size: 13px;
+  color: var(--color-text-muted);
+}
+
+.markerList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.markerList li {
+  font-size: 12px;
+  border-bottom: 1px dashed color-mix(in srgb, var(--color-border) 70%, transparent 30%);
+  padding-bottom: 4px;
+}
+
+.markerList li:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
 .spotsDrawerPanel {
+  width: min(1320px, 100vw);
+  background: var(--color-bg-elevated);
+  border-left: 1px solid var(--color-border);
+  box-shadow: var(--shadow-lg);
   display: flex;
   flex-direction: column;
-  width: 100%;
-  max-width: 100vw;
-  max-height: 100vh;
-  background: var(--color-bg-elevated);
-  box-shadow: 0 0 40px rgba(0, 0, 0, 0.5);
   overflow: hidden;
 }
 
-@media (min-width: 768px) {
+@media (min-width: 900px) {
   .spotsDrawerPanel {
     flex-direction: row;
-    width: min(95vw, 1200px);
-    max-width: 1200px;
   }
 }
 
@@ -131,104 +179,171 @@
   flex: 1;
   min-width: 0;
   padding: var(--space-md);
-  overflow-y: auto;
+  overflow: auto;
 }
 
-@media (min-width: 768px) {
+@media (min-width: 900px) {
   .spotsDrawerMain {
     padding: var(--space-lg);
-    min-width: 420px;
-    flex: 1 1 55%;
   }
 }
 
 .spotsDrawerPanelWithMap .spotsDrawerMain {
-  max-height: 45vh;
+  max-height: 56vh;
 }
 
-@media (min-width: 768px) {
+@media (min-width: 900px) {
   .spotsDrawerPanelWithMap .spotsDrawerMain {
-    flex: 1 1 55%;
-    min-width: 460px;
-    max-width: 620px;
     max-height: none;
+    flex-basis: 58%;
     border-right: 1px solid var(--color-border);
   }
 }
 
 .spotsDrawerMap {
-  flex: 0 0 auto;
   min-height: 240px;
+  border-top: 1px solid var(--color-border);
   padding: var(--space-md);
   display: flex;
   flex-direction: column;
   gap: var(--space-sm);
-  border-top: 1px solid var(--color-border);
 }
 
-@media (min-width: 768px) {
+@media (min-width: 900px) {
   .spotsDrawerMap {
-    flex: 1 1 45%;
-    min-width: 320px;
-    max-width: 540px;
-    min-height: 280px;
-    padding: var(--space-lg);
     border-top: none;
+    flex-basis: 42%;
+    min-height: 100%;
+    padding: var(--space-lg);
   }
 }
 
-.mapSectionTitle {
-  margin: 0;
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--color-text-muted);
-}
-
-.listSectionTitle {
-  margin: var(--space-md) 0 var(--space-sm);
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--color-text-muted);
-}
-
 .spotsDrawerHeader {
+  margin-bottom: var(--space-md);
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  margin-bottom: var(--space-lg);
-  gap: var(--space-sm);
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+}
+
+.spotsHeaderActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .spotsDrawerHeader h2 {
   margin: 0;
-  font-size: 20px;
-  font-weight: 600;
+  font-size: 19px;
+}
+
+.spotsHeaderClose {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border-radius: 10px;
+}
+
+.mapSectionTitle,
+.listSectionTitle {
+  margin: var(--space-sm) 0;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.formRow {
+  margin-bottom: var(--space-sm);
+}
+
+.formRow label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-text-muted);
+}
+
+.formRow select {
+  width: 100%;
+  height: 40px;
+  border-radius: 11px;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-elevated);
+  color: var(--color-text);
+  padding: 0 12px;
+}
+
+.spotForm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.spotForm .formRow {
+  margin-bottom: 0;
+}
+
+.spotForm .formSection {
+  margin-bottom: 0;
+}
+
+.spotForm .formActions {
+  margin-top: var(--space-sm);
 }
 
 .formSection {
-  margin: var(--space-lg) 0;
-  padding: var(--space-md);
-  background: var(--color-bg-hover);
-  border-radius: var(--radius-md);
   border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-subtle);
+  padding: var(--space-md);
+  margin-bottom: var(--space-md);
 }
 
 .formSectionLabel {
   display: block;
-  margin-bottom: var(--space-sm);
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--color-text);
+  margin: 0 0 10px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-text-muted);
+}
+
+.formHint {
+  margin: -4px 0 10px;
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.formActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: var(--space-md);
+}
+
+.tourForm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.tourFormActions {
+  margin-top: var(--space-sm);
 }
 
 .coordInputs {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--space-sm);
-  margin-top: var(--space-xl);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: var(--space-sm);
 }
 
-@media (max-width: 400px) {
+@media (max-width: 520px) {
   .coordInputs {
     grid-template-columns: 1fr;
   }
@@ -237,105 +352,54 @@
 .geocodeSection {
   margin-top: var(--space-md);
   padding-top: var(--space-md);
-  border-top: 1px solid var(--color-border);
+  border-top: 1px dashed var(--color-border-strong);
 }
 
 .geocodeHint {
   margin: 0;
   font-size: 12px;
   color: var(--color-text-muted);
-  line-height: 1.5;
 }
 
 .geocodeResult {
-  margin-top: var(--space-sm);
-  padding: var(--space-md);
-  background: var(--color-bg);
-  border-radius: var(--radius-sm);
+  margin-top: var(--space-xs);
   border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: var(--color-bg-elevated);
+  padding: var(--space-sm);
 }
 
 .geocodeAddress {
-  margin: 0 0 var(--space-sm);
+  margin: 0 0 8px;
   font-size: 12px;
   color: var(--color-text-muted);
-  line-height: 1.5;
-  word-break: break-word;
+  line-height: 1.45;
 }
 
 .geocodeActions {
   display: flex;
-  gap: var(--space-sm);
   flex-wrap: wrap;
-}
-
-.geocodeActions button {
-  font-size: 12px;
-  padding: 6px 12px;
-}
-
-.formRow {
-  margin-bottom: var(--space-md);
-}
-
-.formRow label {
-  display: block;
-  margin-bottom: var(--space-xs);
-  font-size: 14px;
-  color: var(--color-text);
-}
-
-.formRow select {
-  width: 100%;
-  height: 40px;
-  padding: 0 var(--space-md);
-  background: var(--color-bg);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  color: var(--color-text);
-  font-size: 14px;
-  outline: none;
-  cursor: pointer;
-}
-
-.formRow select:focus {
-  border-color: var(--color-accent);
-  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
-}
-
-.formActions {
-  display: flex;
-  gap: var(--space-sm);
-  margin-top: var(--space-lg);
-  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .stepList {
   list-style: none;
+  margin: var(--space-sm) 0 0;
   padding: 0;
-  margin: var(--space-md) 0;
   display: flex;
   flex-direction: column;
-  gap: var(--space-sm);
-  min-width: 0;
+  gap: 8px;
 }
 
 .stepList li {
-  padding: var(--space-sm) var(--space-md);
-  background: var(--color-bg-hover);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  transition: border-color 0.15s, box-shadow 0.15s;
-}
-
-@media (max-width: 480px) {
-  .stepList li {
-    padding: var(--space-sm);
-  }
+  border-radius: 12px;
+  background: var(--color-bg-elevated);
+  padding: 10px 12px;
 }
 
 .stepList li:hover {
-  border-color: color-mix(in srgb, var(--color-accent) 40%, var(--color-border));
+  border-color: color-mix(in srgb, var(--color-accent) 32%, var(--color-border) 68%);
 }
 
 .spotItem {
@@ -346,8 +410,8 @@
 
 .spotRow {
   display: flex;
+  align-items: flex-start;
   justify-content: space-between;
-  align-items: center;
   gap: 8px;
 }
 
@@ -361,377 +425,497 @@
 
 .spotLabelRow {
   display: flex;
+  align-items: flex-start;
   justify-content: space-between;
-  align-items: center;
-  gap: var(--space-md);
-  min-width: 0;
-}
-
-.dragHandle {
-  flex-shrink: 0;
-  padding: 4px;
-  margin: 0 0 0 -4px;
-  align-self: center;
-  background: none;
-  border: none;
-  color: var(--color-text-muted);
-  cursor: grab;
-  border-radius: var(--radius-sm);
-  display: flex;
-  align-items: center;
-}
-
-.dragHandle:hover {
-  color: var(--color-text);
-  background: var(--color-bg-hover);
-}
-
-.dragHandle:active {
-  cursor: grabbing;
-}
-
-.spotRow span {
-  flex: 1;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .spotLabel {
   display: flex;
   align-items: center;
-  gap: var(--space-sm);
   flex-wrap: wrap;
-  min-width: 120px;
-  line-height: 1.5;
+  gap: 6px;
+  min-width: 0;
 }
 
 .spotTypeBadge {
   display: inline-flex;
   align-items: center;
-  gap: var(--space-xs);
-  padding: 3px 10px;
-  border-radius: var(--radius-sm);
+  padding: 4px 8px;
+  border-radius: 999px;
   font-size: 11px;
-  font-weight: 600;
-  background: color-mix(in srgb, var(--spot-type-color, var(--color-text-muted)) 18%, transparent);
-  color: var(--spot-type-color, var(--color-text-muted));
-  flex-shrink: 0;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-subtle);
+}
+
+.spotTitle {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.spotMeta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
 }
 
 .spotCoords {
   font-size: 11px;
   color: var(--color-text-muted);
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-
-.spotLabel .spotCoords {
-  margin-left: var(--space-xs);
-}
-
-.guidePreview {
-  padding: var(--space-md);
-  background: var(--color-bg-hover);
-  border-radius: var(--radius-sm);
-  font-size: 13px;
-  line-height: 1.5;
-}
-
-.guideTitle {
-  font-weight: 600;
-  margin: 0 0 8px;
-}
-
-.guideSegment {
-  margin: var(--space-xs) 0;
-  line-height: 1.5;
-}
-
-.guideEmpty {
-  color: var(--color-text-muted);
-  margin: 0;
-}
-
-.previewSection {
-  margin-bottom: var(--space-lg);
-  line-height: 1.5;
-}
-
-.previewSection h3 {
-  margin: 0 0 var(--space-sm);
-  font-size: 18px;
-}
-
-.previewSection p {
-  margin: 0 0 var(--space-sm);
-}
-
-.previewDesc {
-  color: var(--color-text-muted);
-  font-size: 14px;
-}
-
-.previewCounts {
-  font-size: 13px;
-}
-
-.previewSubtitle {
-  margin: var(--space-md) 0 var(--space-sm);
-  font-size: 14px;
-}
-
-.markerList {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  font-size: 13px;
-  line-height: 1.5;
-}
-
-.markerList li {
-  padding: var(--space-xs) 0;
-  border: none;
-}
-
-.spotTitle {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  flex: 1;
-  min-width: 0;
 }
 
 .spotActions {
   display: flex;
-  gap: var(--space-xs);
-  flex-shrink: 0;
   flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
 }
 
-.stepList .spotActions button {
-  font-size: 12px;
-  padding: 4px 8px;
-}
-
-.formHint {
-  font-size: 12px;
+.dragHandle {
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
   color: var(--color-text-muted);
-  margin-bottom: 8px;
+  display: grid;
+  place-items: center;
+  padding: 4px;
+  margin-left: -2px;
+  margin-top: -2px;
+}
+
+.dragHandle:hover {
+  color: var(--color-text);
+  border-color: var(--color-border);
+  background: var(--color-bg-hover);
 }
 
 .guideEditor {
-  margin-bottom: var(--space-lg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-subtle);
+  padding: var(--space-md);
+  margin-top: var(--space-md);
+}
+
+.guideForm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.guideForm .formActions {
+  margin-top: var(--space-sm);
+}
+
+.guideEditorActions {
+  display: flex;
+  gap: 8px;
+}
+
+.guidePreviewPanel {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-subtle);
+  padding: var(--space-md);
+  margin-bottom: var(--space-md);
+}
+
+.guidePreviewPanel h4 {
+  margin: 0 0 var(--space-sm);
+  font-size: 14px;
+}
+
+.guidePreviewContent {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.guidePreviewSegment {
+  padding: var(--space-sm);
+  background: var(--color-bg-elevated);
+  border-radius: var(--radius-sm);
+}
+
+.guidePreviewSegment p {
+  margin: 0 0 4px;
+}
+
+.guidePreviewMedia {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.guidePreviewImg {
+  max-width: 120px;
+  max-height: 80px;
+  object-fit: cover;
+  border-radius: 6px;
+}
+
+.guidePreviewAudio {
+  height: 36px;
+  max-width: 240px;
+}
+
+.guidePreviewHint {
+  margin: 0;
+  font-size: 13px;
+  color: var(--color-text-muted);
+}
+
+.missionPreviewPanel {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-subtle);
+  padding: var(--space-md);
+  margin-bottom: var(--space-md);
+}
+
+.missionPreviewPanel h4 {
+  margin: 0 0 var(--space-sm);
+  font-size: 14px;
+}
+
+.missionPreviewList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.missionPreviewCard {
+  padding: var(--space-sm);
+  background: var(--color-bg-elevated);
+  border-radius: var(--radius-sm);
+}
+
+.missionPreviewCard p,
+.missionPreviewCard ul {
+  margin: 4px 0 0;
+  font-size: 13px;
+}
+
+.missionAddButton {
+  margin-top: var(--space-xs);
 }
 
 .guideEditorHeader {
   display: flex;
+  align-items: center;
   justify-content: space-between;
-  align-items: center;
-  margin-bottom: var(--space-md);
-}
-
-.guideEditorHeader h3 {
-  margin: 0;
-}
-
-.formError {
-  color: var(--color-danger, #dc2626);
-  font-size: 12px;
-  margin: -8px 0 8px;
-}
-
-.missionStepForm {
-  margin-top: var(--space-md);
-  padding: var(--space-md);
-  background: var(--color-bg-hover);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-}
-
-.missionEditPanel {
-  margin-top: var(--space-lg);
-  padding: var(--space-md);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  background: var(--color-bg-hover);
-}
-
-.missionEditPanel h4 {
-  margin: 0 0 var(--space-md);
-  font-size: 14px;
-}
-
-.missionImageUpload {
-  margin-bottom: var(--space-md);
-  padding: var(--space-sm);
-  background: var(--color-bg);
-  border-radius: var(--radius-sm);
-  border: 1px dashed var(--color-border);
-}
-
-.missionImageUploadBtns {
-  display: flex;
   flex-wrap: wrap;
-  gap: var(--space-xs);
-  align-items: center;
+  gap: 8px;
+  margin-bottom: var(--space-sm);
 }
 
 .guideEditor h3 {
-  margin: 0 0 var(--space-md);
-  font-size: 16px;
+  margin: 0 0 6px;
+  font-size: 15px;
+}
+
+.guideError {
+  margin: 0 0 var(--space-sm);
+  font-size: 12px;
+  color: var(--color-text-muted);
 }
 
 .guideLine {
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  padding: var(--space-md);
-  margin-bottom: var(--space-sm);
+  border-radius: 11px;
+  background: var(--color-bg-elevated);
+  padding: 10px;
+}
+
+.guideLineList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .guideLineHeader {
   display: flex;
   align-items: center;
-  gap: var(--space-sm);
-  margin-bottom: var(--space-xs);
+  gap: 8px;
+  margin-bottom: 6px;
 }
 
 .guideLineNum {
-  font-weight: 600;
-  font-size: 12px;
+  min-width: 24px;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 800;
   color: var(--color-text-muted);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  padding: 2px 6px;
 }
 
 .guideAssets {
-  margin-top: var(--space-sm);
+  margin-top: 8px;
+  display: grid;
+  gap: 6px;
 }
 
 .guideAssetRow {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-  margin-bottom: var(--space-xs);
-}
-
-.guideAssetRow > div:first-child {
-  flex: 1;
-}
-
-.guideAssetRow > button {
-  margin-top: 2px;
-}
-
-.guideError {
-  color: var(--color-text-muted);
-  margin: 0 0 var(--space-md);
-  font-size: 14px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: end;
+  gap: 8px;
 }
 
 .guideAssetAdd {
   display: flex;
-  gap: var(--space-xs);
-  margin-top: var(--space-sm);
-}
-
-.hiddenFileInput {
-  position: absolute;
-  width: 0;
-  height: 0;
-  opacity: 0;
-}
-
-.emptyState {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: var(--space-xl) var(--space-lg);
-  background: var(--color-bg-elevated);
-  border: 1px dashed var(--color-border);
-  border-radius: var(--radius-lg);
-  margin: var(--space-md) 0;
-  text-align: center;
-}
-
-.emptyState h3 {
-  margin: 0 0 var(--space-sm);
-  font-size: 18px;
-  color: var(--color-text);
-}
-
-.emptyState p {
-  margin: 0 0 var(--space-lg);
-  font-size: 14px;
-  color: var(--color-text-muted);
-  line-height: 1.5;
-}
-
-.emptyIcon {
-  color: var(--color-text-muted);
-  opacity: 0.5;
-  margin-bottom: var(--space-md);
-}
-
-.deleteConfirm {
-  padding: 12px;
-  background: rgba(234, 179, 8, 0.15);
-  border: 1px solid rgba(234, 179, 8, 0.4);
-  border-radius: var(--radius-sm);
-  margin: 12px 0;
-  display: flex;
-  justify-content: space-between;
   align-items: center;
   flex-wrap: wrap;
-  gap: 8px;
-  color: var(--color-text);
+  gap: 6px;
+  margin-top: 6px;
 }
 
-/* Tour Assets Drawer */
-.tourAssetsDesc {
-  font-size: 13px;
-  color: var(--color-text-muted);
-  margin: 0 0 var(--space-md);
-  line-height: 1.5;
+.guideAddLineButton {
+  margin-top: 2px;
 }
 
-.tourAssetsAdd {
+.guideStepBlock {
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-elevated);
+  padding: var(--space-md);
   display: flex;
   flex-direction: column;
   gap: var(--space-sm);
-  margin-bottom: var(--space-lg);
-  padding-bottom: var(--space-md);
+}
+
+.guideStepHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.guideStepTitle {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.guideAddStepButton {
+  margin-top: var(--space-sm);
+}
+
+.formError {
+  margin: 0;
+  font-size: 12px;
+  color: var(--color-danger);
+}
+
+.missionStepForm {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-elevated);
+  padding: var(--space-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.missionStepForm .formActions {
+  margin-top: var(--space-sm);
+}
+
+.missionEditPanel {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-elevated);
+  padding: var(--space-md);
+  margin-top: var(--space-md);
+}
+
+.missionEditPanel h4 {
+  margin: 0 0 var(--space-sm);
+  font-size: 14px;
+}
+
+.missionImageUpload {
+  border: 1px dashed var(--color-border-strong);
+  border-radius: 12px;
+  background: var(--color-bg-subtle);
+  padding: var(--space-sm);
+  margin-bottom: 0;
+}
+
+.missionImageUploadBtns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.missionImageHint {
+  margin: 0;
+  font-size: 12px;
+  color: var(--color-text-muted);
+  line-height: 1.4;
+}
+
+.missionImagePreview {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+
+.missionImagePreviewItem {
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-bg-subtle);
+  padding: 8px;
+  display: grid;
+  gap: 6px;
+}
+
+.missionImagePreviewLabel {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-text-muted);
+}
+
+.missionImagePreviewThumb {
+  width: 100%;
+  height: 94px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-elevated);
+}
+
+.missionOptionsSection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.quizChoiceRow {
+  display: grid;
+  grid-template-columns: 52px 1fr auto auto auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.quizChoiceRow .quizChoiceId {
+  width: 100%;
+  min-width: 0;
+}
+
+.quizChoiceRow .quizChoiceText {
+  width: 100%;
+  min-width: 0;
+}
+
+.quizChoiceThumb {
+  width: 48px;
+  height: 48px;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 1px solid var(--color-border);
+}
+
+.missionImageRemove {
+  margin-top: 4px;
+  font-size: 12px;
+}
+
+.missionImageRemoveSmall {
+  padding: 2px 6px;
+  min-width: auto;
+  font-size: 14px;
+  line-height: 1;
+}
+
+.missionImageWithRemove {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.missionAnswerSelect {
+  max-width: 320px;
+}
+
+.pronunciationPreview {
+  margin-top: -4px;
+  margin-bottom: 8px;
+}
+
+.pronunciationAudio {
+  width: min(360px, 100%);
+  height: 36px;
+}
+
+.tourAssetsDesc {
+  margin: 0 0 var(--space-md);
+  font-size: 12px;
+  color: var(--color-text-muted);
+  line-height: 1.45;
+}
+
+.tourAssetsAdd {
+  display: grid;
+  gap: 8px;
+  padding-bottom: var(--space-sm);
+  margin-bottom: var(--space-sm);
   border-bottom: 1px solid var(--color-border);
 }
 
 .tourAssetsEmpty {
-  font-size: 14px;
+  margin: var(--space-sm) 0;
   color: var(--color-text-muted);
-  margin: var(--space-md) 0;
+  font-size: 13px;
 }
 
 .tourAssetsList {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-sm);
+  display: grid;
+  gap: 8px;
 }
 
 .tourAssetItem {
-  display: flex;
-  align-items: center;
-  gap: var(--space-md);
-  padding: var(--space-sm);
-  background: var(--color-bg);
-  border-radius: var(--radius-sm);
   border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: var(--color-bg-subtle);
+  padding: 8px;
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
 }
 
 .tourAssetThumb {
-  width: 64px;
-  height: 64px;
+  width: 72px;
+  height: 72px;
+  border-radius: 10px;
   object-fit: cover;
-  border-radius: var(--radius-sm);
-  flex-shrink: 0;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-elevated);
+}
+
+.tourAssetAudio {
+  width: 100%;
+  min-width: 72px;
+  height: 36px;
 }
 
 .tourAssetMeta {
-  flex: 1;
   min-width: 0;
   display: flex;
   flex-direction: column;
@@ -739,17 +923,48 @@
 }
 
 .tourAssetUsage {
-  font-size: 12px;
-  font-weight: 600;
+  display: inline-flex;
+  width: fit-content;
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 700;
   color: var(--color-accent);
+  border: 1px solid color-mix(in srgb, var(--color-accent) 35%, var(--color-border) 65%);
+  background: color-mix(in srgb, var(--color-accent-soft) 60%, transparent 40%);
 }
 
 .tourAssetCaption {
-  font-size: 13px;
+  font-size: 12px;
   color: var(--color-text-muted);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.emptyState {
+  border: 1px dashed var(--color-border-strong);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg-elevated);
+  padding: var(--space-2xl) var(--space-lg);
+  text-align: center;
+}
+
+.emptyIcon {
+  color: var(--color-text-muted);
+  opacity: 0.6;
+  margin-bottom: var(--space-sm);
+}
+
+.emptyState h3 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.emptyState p {
+  margin: var(--space-xs) 0 var(--space-md);
+  color: var(--color-text-muted);
+  font-size: 13px;
 }
 
 .hiddenFileInput {
@@ -758,4 +973,20 @@
   height: 0;
   opacity: 0;
   pointer-events: none;
+}
+
+@media (max-width: 640px) {
+  .rowActions {
+    justify-content: flex-start;
+  }
+
+  .tourAssetItem {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+  .tourAssetThumb {
+    width: 100%;
+    height: 180px;
+  }
 }

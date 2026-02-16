@@ -1,101 +1,146 @@
-/* Design system: dark default, 8px grid, Inter/Pretendard */
 :root {
-  --color-bg: #0f0f12;
-  --color-bg-elevated: #18181c;
-  --color-bg-hover: #222228;
-  --color-border: #2a2a32;
-  --color-text: #e4e4e7;
-  --color-text-muted: #a1a1aa;
-  --color-accent: #6366f1;
-  --color-accent-hover: #818cf8;
-  --color-danger: #ef4444;
-  --color-success: #22c55e;
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 16px;
-  --space-xs: 4px;
-  --space-sm: 8px;
+  color-scheme: light;
+  --gradient-brand-purple: linear-gradient(132.63deg, #e9e1ff -4.51%, #d0bfff 100%);
+  --gradient-brand-mint: linear-gradient(132.63deg, #e7fbf6 -4.51%, #b2f2e3 100%);
+  --gradient-brand-coral: linear-gradient(132.63deg, #ffe5df -4.51%, #ffb3a1 100%);
+  --gradient-brand-mix: linear-gradient(90deg, #ffe5df 0%, #d0bfff 50%, #b2f2e3 100%);
+  --color-bg: #f4f5f8;
+  --color-bg-elevated: #ffffff;
+  --color-bg-hover: #edf0f6;
+  --color-bg-subtle: #f8f9fc;
+  --color-border: #dbe0e8;
+  --color-border-strong: #c5ccd9;
+  --color-text: #242b38;
+  --color-text-muted: #697384;
+  --color-accent: #6b5fc8;
+  --color-accent-hover: #5e52b5;
+  --color-accent-soft: #ece9fb;
+  --color-danger: #d87265;
+  --color-success: #4caf98;
+  --color-overlay: rgba(31, 34, 53, 0.4);
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --space-2xs: 4px;
+  --space-xs: 8px;
+  --space-sm: 12px;
   --space-md: 16px;
   --space-lg: 24px;
   --space-xl: 32px;
-  --sidebar-width: 240px;
-  --header-height: 56px;
-  --breakpoint-sm: 640px;
-  --breakpoint-md: 768px;
-  --breakpoint-lg: 1024px;
-  --shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
-  --font-sans: 'Inter', 'Pretendard', system-ui, sans-serif;
-  --font-mono: ui-monospace, monospace;
+  --space-2xl: 44px;
+  --sidebar-width: 272px;
+  --header-height: 88px;
+  --shadow-sm: 0 2px 10px rgba(35, 41, 69, 0.08);
+  --shadow-md: 0 10px 30px rgba(35, 41, 69, 0.12);
+  --shadow-lg: 0 18px 40px rgba(35, 41, 69, 0.16);
+  --font-sans: 'Manrope', 'Pretendard Variable', 'Noto Sans KR', 'Apple SD Gothic Neo', sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
 }
 
-[data-theme='light'] {
-  --color-bg: #fafafa;
-  --color-bg-elevated: #ffffff;
-  --color-bg-hover: #f4f4f5;
-  --color-border: #e4e4e7;
-  --color-text: #18181b;
-  --color-text-muted: #71717a;
-  --color-accent: #4f46e5;
-  --color-accent-hover: #4338ca;
-  --color-danger: #dc2626;
-  --color-success: #16a34a;
-  --shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+[data-theme='dark'] {
+  color-scheme: dark;
+  --color-bg: #0f1320;
+  --color-bg-elevated: #181e2d;
+  --color-bg-hover: #222b3f;
+  --color-bg-subtle: #1d2537;
+  --color-border: #313d56;
+  --color-border-strong: #445373;
+  --color-text: #f2f5ff;
+  --color-text-muted: #b1bdd6;
+  --color-accent: #8d80ef;
+  --color-accent-hover: #a194ff;
+  --color-accent-soft: rgba(141, 128, 239, 0.24);
+  --color-danger: #ff9388;
+  --color-success: #57cbb1;
+  --color-overlay: rgba(6, 9, 17, 0.72);
+  --shadow-sm: 0 4px 14px rgba(2, 5, 12, 0.42);
+  --shadow-md: 0 14px 36px rgba(2, 5, 12, 0.5);
+  --shadow-lg: 0 26px 58px rgba(2, 5, 12, 0.58);
 }
 
 * {
   box-sizing: border-box;
 }
 
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
 body {
   margin: 0;
-  min-height: 100vh;
   font-family: var(--font-sans);
   font-size: 14px;
-  line-height: 1.5;
+  line-height: 1.55;
   color: var(--color-text);
   background: var(--color-bg);
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
-#root {
-  min-height: 100vh;
+::selection {
+  background: var(--color-accent-soft);
 }
 
 a {
-  color: var(--color-accent);
+  color: inherit;
   text-decoration: none;
 }
-a:hover {
-  color: var(--color-accent-hover);
-}
 
-button {
-  font-family: inherit;
-  cursor: pointer;
-}
-button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
+button,
 input,
 select,
 textarea {
-  font-family: inherit;
-  font-size: 14px;
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--color-accent) 72%, white 28%);
+  outline-offset: 2px;
 }
 
 .code {
   font-family: var(--font-mono);
-  font-size: 13px;
-  background: var(--color-bg-elevated);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  padding: var(--space-xs) var(--space-sm);
+  font-size: 12px;
+  letter-spacing: 0.01em;
+  padding: 2px 8px;
+  border-radius: 999px;
+  color: var(--color-accent);
+  background: var(--color-accent-soft);
 }
 
-/* Leaflet custom marker - 기본 테두리 제거 */
+.leaflet-container {
+  font-family: var(--font-sans);
+}
+
+.leaflet-popup-content-wrapper {
+  border-radius: 12px;
+}
+
 .leaflet-marker-icon.custom-marker {
   background: none !important;
   border: none !important;
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--color-border-strong) 80%, transparent 20%);
+  border-radius: 999px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
 }

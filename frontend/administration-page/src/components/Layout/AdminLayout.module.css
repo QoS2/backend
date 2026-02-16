@@ -6,13 +6,12 @@
 
 .main {
   flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
-  min-width: 0;
 }
 
-@media (min-width: 768px) {
+@media (min-width: 1024px) {
   .main {
     margin-left: var(--sidebar-width);
   }
@@ -20,25 +19,20 @@
 
 .content {
   flex: 1;
-  padding: var(--space-md);
+  width: 100%;
+  padding: clamp(var(--space-md), 2vw, var(--space-xl));
   overflow: auto;
-}
-
-@media (min-width: 768px) {
-  .content {
-    padding: var(--space-lg);
-  }
 }
 
 .sidebarBackdrop {
   display: block;
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
   z-index: 90;
+  background: var(--color-overlay);
 }
 
-@media (min-width: 768px) {
+@media (min-width: 1024px) {
   .sidebarBackdrop {
     display: none;
   }

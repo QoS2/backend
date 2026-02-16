@@ -9,7 +9,7 @@ const DEFAULT_ZOOM = 14;
 
 const icon = L.divIcon({
   className: 'custom-marker',
-  html: '<div style="background:#6366f1;width:20px;height:20px;border-radius:50%;border:3px solid white;box-shadow:0 1px 3px rgba(0,0,0,0.3)"></div>',
+  html: '<div style="background:var(--color-accent);width:20px;height:20px;border-radius:999px;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.25)"></div>',
   iconSize: [20, 20],
   iconAnchor: [10, 10],
 });
@@ -40,38 +40,56 @@ export function SpotsMap({ spots }: { spots: SpotAdminResponse[] }) {
 
   if (withCoords.length === 0) {
     return (
-      <div style={{ height: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--color-bg-hover)', borderRadius: 8, color: 'var(--color-text-muted)' }}>
+      <div
+        style={{
+          height: 220,
+          borderRadius: 12,
+          border: '1px dashed var(--color-border-strong)',
+          background: 'var(--color-bg-subtle)',
+          color: 'var(--color-text-muted)',
+          display: 'grid',
+          placeItems: 'center',
+          fontSize: 13,
+        }}
+      >
         위치가 설정된 Spot이 없습니다.
       </div>
     );
   }
 
   return (
-    <div style={{ height: '100%', minHeight: 280, borderRadius: 8, overflow: 'hidden' }}>
+    <div
+      style={{
+        height: '100%',
+        minHeight: 280,
+        borderRadius: 12,
+        border: '1px solid var(--color-border)',
+        overflow: 'hidden',
+        boxShadow: 'var(--shadow-sm)',
+      }}
+    >
       <MapContainer
         center={center}
         zoom={bounds ? 14 : DEFAULT_ZOOM}
         style={{ height: '100%', width: '100%' }}
-        scrollWheelZoom={true}
+        scrollWheelZoom
       >
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
+
         {withCoords.map((spot) => (
-          <Marker
-            key={spot.id}
-            position={[spot.latitude!, spot.longitude!]}
-            icon={icon}
-          >
+          <Marker key={spot.id} position={[spot.latitude!, spot.longitude!]} icon={icon}>
             <Popup>
-              <strong>[{spot.type}] {spot.orderIndex}. {spot.title}</strong>
+              <strong>
+                [{spot.type}] {spot.orderIndex}. {spot.title}
+              </strong>
               {spot.radiusM != null && (
-                <div style={{ fontSize: 12, color: '#666' }}>
-                  반경 {spot.radiusM}m
-                </div>
+                <div style={{ fontSize: 12, color: '#55695f' }}>반경 {spot.radiusM}m</div>
               )}
             </Popup>
+
             {spot.radiusM != null && spot.radiusM > 0 && (
               <Circle
                 center={[spot.latitude!, spot.longitude!]}
@@ -79,7 +97,7 @@ export function SpotsMap({ spots }: { spots: SpotAdminResponse[] }) {
                 pathOptions={{
                   color: 'var(--color-accent)',
                   fillColor: 'var(--color-accent)',
-                  fillOpacity: 0.1,
+                  fillOpacity: 0.12,
                   weight: 1,
                 }}
               />

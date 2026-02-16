@@ -1,4 +1,5 @@
-FROM eclipse-temurin:17-jdk-alpine AS builder
+# Alpine 이미지는 ARM64(Apple Silicon) 미지원
+FROM eclipse-temurin:17-jdk AS builder
 
 WORKDIR /app
 
@@ -12,7 +13,8 @@ RUN ./gradlew dependencies --no-daemon || true
 COPY src src
 RUN ./gradlew bootJar --no-daemon -x test
 
-FROM eclipse-temurin:17-jre-alpine
+# Alpine 이미지는 ARM64(Apple Silicon) 미지원
+FROM eclipse-temurin:17-jre
 
 WORKDIR /app
 

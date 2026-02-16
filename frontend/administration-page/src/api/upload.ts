@@ -9,16 +9,22 @@ export interface UploadResponse {
  * Upload file to S3 and return URL
  * @param file File to upload (image or audio)
  * @param type File type (image | audio) - auto-detected by Content-Type if omitted
+ * @param category Category for folder: tour, spot, mission, intro, ambient - default: general
  */
 export async function uploadFile(
   file: File,
-  type?: 'image' | 'audio'
+  type?: 'image' | 'audio',
+  category?: string
 ): Promise<string> {
   const token = getAccessToken();
   const formData = new FormData();
   formData.append('file', file);
 
-  const url = type ? `${UPLOAD_URL}?type=${type}` : UPLOAD_URL;
+  const params = new URLSearchParams();
+  if (type) params.set('type', type);
+  if (category) params.set('category', category);
+  const query = params.toString();
+  const url = query ? `${UPLOAD_URL}?${query}` : UPLOAD_URL;
   const headers: HeadersInit = {};
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;

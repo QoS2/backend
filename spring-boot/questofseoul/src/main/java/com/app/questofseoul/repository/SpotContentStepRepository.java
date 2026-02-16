@@ -15,4 +15,6 @@ public interface SpotContentStepRepository extends JpaRepository<SpotContentStep
 
     @Query("SELECT COUNT(s) FROM SpotContentStep s WHERE s.spot.tour.id = :tourId AND s.kind = :kind")
     long countMissionsByTourId(Long tourId, StepKind kind);
+
+    List<SpotContentStep> findBySpot_IdAndLanguageOrderByStepIndexAsc(Long spotId, String language);
 }

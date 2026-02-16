@@ -521,6 +521,59 @@
   margin-bottom: var(--space-lg);
 }
 
+.guideEditorHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-md);
+}
+
+.guideEditorHeader h3 {
+  margin: 0;
+}
+
+.formError {
+  color: var(--color-danger, #dc2626);
+  font-size: 12px;
+  margin: -8px 0 8px;
+}
+
+.missionStepForm {
+  margin-top: var(--space-md);
+  padding: var(--space-md);
+  background: var(--color-bg-hover);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.missionEditPanel {
+  margin-top: var(--space-lg);
+  padding: var(--space-md);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-hover);
+}
+
+.missionEditPanel h4 {
+  margin: 0 0 var(--space-md);
+  font-size: 14px;
+}
+
+.missionImageUpload {
+  margin-bottom: var(--space-md);
+  padding: var(--space-sm);
+  background: var(--color-bg);
+  border-radius: var(--radius-sm);
+  border: 1px dashed var(--color-border);
+}
+
+.missionImageUploadBtns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+  align-items: center;
+}
+
 .guideEditor h3 {
   margin: 0 0 var(--space-md);
   font-size: 16px;
@@ -628,4 +681,81 @@
   flex-wrap: wrap;
   gap: 8px;
   color: var(--color-text);
+}
+
+/* Tour Assets Drawer */
+.tourAssetsDesc {
+  font-size: 13px;
+  color: var(--color-text-muted);
+  margin: 0 0 var(--space-md);
+  line-height: 1.5;
+}
+
+.tourAssetsAdd {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-lg);
+  padding-bottom: var(--space-md);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.tourAssetsEmpty {
+  font-size: 14px;
+  color: var(--color-text-muted);
+  margin: var(--space-md) 0;
+}
+
+.tourAssetsList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.tourAssetItem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-sm);
+  background: var(--color-bg);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+}
+
+.tourAssetThumb {
+  width: 64px;
+  height: 64px;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  flex-shrink: 0;
+}
+
+.tourAssetMeta {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.tourAssetUsage {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-accent);
+}
+
+.tourAssetCaption {
+  font-size: 13px;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hiddenFileInput {
+  position: absolute;
+  width: 0;
+  height: 0;
+  opacity: 0;
+  pointer-events: none;
 }

@@ -70,6 +70,10 @@ public class SpotContentStep {
         this.title = title;
     }
 
+    public void setMission(Mission mission) {
+        this.mission = mission;
+    }
+
     public void setNextAction(StepNextAction nextAction) {
         this.nextAction = nextAction;
     }

@@ -30,7 +30,7 @@ public class FileUploadController {
     private final Optional<FileUploadService> fileUploadService;
 
     @Operation(summary = "파일 업로드",
-        description = "이미지 또는 오디오 파일을 S3에 업로드하고 URL을 반환합니다.")
+        description = "이미지 또는 오디오를 S3에 업로드합니다. 폴더: images/{category}, audio/{category}")
     @SecurityRequirement(name = "bearerAuth")
     @SecurityRequirement(name = "sessionAuth")
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -39,7 +39,9 @@ public class FileUploadController {
             @Parameter(description = "업로드할 파일 (이미지: jpeg/png/gif/webp, 오디오: mp3/wav/ogg/m4a)")
             @RequestParam("file") MultipartFile file,
             @Parameter(description = "파일 타입 (optional: image | audio - 없으면 Content-Type으로 자동 판별)")
-            @RequestParam(value = "type", required = false) String type) {
+            @RequestParam(value = "type", required = false) String type,
+            @Parameter(description = "카테고리 (optional: tour, spot, mission, intro, ambient 등 - 없으면 general)")
+            @RequestParam(value = "category", required = false) String category) {
         if (authentication == null || !authentication.isAuthenticated()) {
             return ResponseEntity.status(401).build();
         }
@@ -49,11 +51,11 @@ public class FileUploadController {
 
         String url;
         if ("image".equalsIgnoreCase(type)) {
-            url = service.uploadImage(file);
+            url = service.uploadImage(file, category);
         } else if ("audio".equalsIgnoreCase(type)) {
-            url = service.uploadAudio(file);
+            url = service.uploadAudio(file, category);
         } else {
-            url = service.uploadFile(file);
+            url = service.uploadFile(file, category);
         }
 
         return ResponseEntity.ok(Map.of("url", url));

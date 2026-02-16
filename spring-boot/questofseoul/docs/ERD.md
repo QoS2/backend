@@ -10,7 +10,7 @@
 
 1. **인증/사용자:** users, tags
 2. **투어 코어:** tours, tour_spots, tour_tags, user_tour_access, tour_runs
-3. **스팟 콘텐츠:** spot_content_steps, spot_script_lines, script_line_assets, missions, media_assets, spot_assets
+3. **스팟 콘텐츠:** spot_content_steps, spot_script_lines, script_line_assets, missions, media_assets, spot_assets, tour_assets
 4. **진행 상태:** user_spot_progress, user_treasure_status, user_mission_attempts
 5. **채팅/AI:** chat_sessions, chat_turns, chat_turn_assets, ai_call_logs
 6. **RAG:** tour_knowledge_embeddings (Pgvector, Spring Boot ↔ ai-server 공유)
@@ -26,6 +26,7 @@ erDiagram
 
     tours ||--o{ tour_spots : "has"
     tours ||--o{ tour_tags : "tagged"
+    tours ||--o{ tour_assets : "has"
     tours ||--o{ user_tour_access : "grants"
     tours ||--o{ tour_runs : "run"
 
@@ -50,6 +51,7 @@ erDiagram
 
     spot_script_lines ||--o{ script_line_assets : "has"
     media_assets ||--o{ spot_assets : "referenced"
+    media_assets ||--o{ tour_assets : "referenced"
     media_assets ||--o{ script_line_assets : "referenced"
     media_assets ||--o{ chat_turn_assets : "referenced"
 
@@ -166,11 +168,20 @@ erDiagram
         timestamp created_at
     }
 
+    tour_assets {
+        long id PK
+        long tour_id FK
+        long asset_id FK
+        string usage
+        int sort_order
+        string caption
+        timestamp created_at
+    }
+
     user_spot_progress {
         long id PK
         long tour_run_id FK
         long spot_id FK
-        string lock_state
         string progress_status
         timestamp unlocked_at
         timestamp completed_at
@@ -343,7 +354,8 @@ erDiagram
 | tour_runs | 사용자별 투어 실행 (IN_PROGRESS, COMPLETED, ABANDONED) |
 | media_assets | 미디어 에셋 (이미지/오디오) |
 | spot_assets | 스팟-미디어 매핑 |
-| user_spot_progress | Run별 스팟 진행 상태 |
+| tour_assets | 투어-미디어 매핑 (THUMBNAIL, HERO_IMAGE, GALLERY_IMAGE) |
+| user_spot_progress | Run별 스팟 진행 상태 (progress_status: PENDING/ACTIVE/COMPLETED/SKIPPED) |
 | user_treasure_status | Run별 보물 스팟 상태 |
 | missions | 미션 정의 (QUIZ, INPUT, PHOTO_CHECK 등) |
 | spot_content_steps | 스팟별 콘텐츠 스텝 (GUIDE, MISSION). next_action: NEXT \| MISSION_CHOICE |
@@ -386,3 +398,6 @@ erDiagram
 | **action** | action_json | UI에서 사용자에게 제공하는 동작. `type`: `NEXT`(다음 컨텐츠), `MISSION_START`(게임 시작), `SKIP`(미션 스킵) |
 | **mission** | mission_id | 게임/미션 정의 FK. action이 MISSION_START일 때 연결되는 missions 레코드 |
 - **MissionType:** QUIZ, INPUT, PHOTO_CHECK
+- **ProgressStatus:** PENDING, ACTIVE, COMPLETED, SKIPPED (user_spot_progress, lock_state 제거됨)
+- **TourAssetUsage:** THUMBNAIL, HERO_IMAGE, GALLERY_IMAGE (tour_assets)
+- **SpotAssetUsage:** THUMBNAIL, HERO_IMAGE, GALLERY_IMAGE, INTRO_AUDIO, AMBIENT_AUDIO (spot_assets)

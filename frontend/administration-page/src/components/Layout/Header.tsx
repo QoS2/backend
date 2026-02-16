@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Menu } from 'lucide-react';
-import { clearAccessToken, getAccessToken } from '../../api/auth';
+import { clearAccessToken } from '../../api/auth';
 import { AUTH_QUERY_KEY } from '../../hooks/useAuth';
 import { LOGOUT_URL } from '../../config/constants';
 import styles from './Header.module.css';

@@ -7,6 +7,7 @@ import { DashboardPage } from './pages/DashboardPage';
 import { LoginPage } from './pages/LoginPage';
 import { EnumsPage } from './pages/EnumsPage';
 import { ToursPage } from './pages/ToursPage';
+import { PhotoSubmissionsPage } from './pages/PhotoSubmissionsPage';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -33,6 +34,7 @@ function App() {
           >
             <Route index element={<DashboardPage />} />
             <Route path="tours" element={<ToursPage />} />
+            <Route path="photo-submissions" element={<PhotoSubmissionsPage />} />
             <Route path="enums" element={<EnumsPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Route>

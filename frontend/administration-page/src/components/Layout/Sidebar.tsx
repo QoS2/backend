@@ -1,10 +1,11 @@
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, MapPin, ListOrdered, X } from 'lucide-react';
+import { LayoutDashboard, MapPin, ListOrdered, Camera, X } from 'lucide-react';
 import styles from './Sidebar.module.css';
 
 const NAV_ITEMS = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/tours', label: 'Tours', icon: MapPin },
+  { to: '/photo-submissions', label: '포토 검토', icon: Camera },
   { to: '/enums', label: 'Enums', icon: ListOrdered },
 ] as const;
 

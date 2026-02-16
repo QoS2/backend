@@ -1,6 +1,6 @@
 package com.app.questofseoul.domain.entity;
 
-import com.app.questofseoul.domain.enums.SpotAssetUsage;
+import com.app.questofseoul.domain.enums.TourAssetUsage;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -9,18 +9,18 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "spot_assets", uniqueConstraints = @UniqueConstraint(columnNames = {"spot_id", "usage", "sort_order"}))
+@Table(name = "tour_assets", uniqueConstraints = @UniqueConstraint(columnNames = {"tour_id", "usage", "sort_order"}))
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class SpotAsset {
+public class TourAsset {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "spot_id", nullable = false)
-    private TourSpot spot;
+    @JoinColumn(name = "tour_id", nullable = false)
+    private Tour tour;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "asset_id", nullable = false)
@@ -28,7 +28,7 @@ public class SpotAsset {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "usage", nullable = false)
-    private SpotAssetUsage usage;
+    private TourAssetUsage usage;
 
     @Column(name = "sort_order", nullable = false)
     private Integer sortOrder = 1;
@@ -44,17 +44,17 @@ public class SpotAsset {
         createdAt = LocalDateTime.now();
     }
 
-    public static SpotAsset create(TourSpot spot, MediaAsset asset, SpotAssetUsage usage) {
-        return create(spot, asset, usage, 1);
+    public static TourAsset create(Tour tour, MediaAsset asset, TourAssetUsage usage) {
+        return create(tour, asset, usage, 1);
     }
 
-    public static SpotAsset create(TourSpot spot, MediaAsset asset, SpotAssetUsage usage, int sortOrder) {
-        SpotAsset sa = new SpotAsset();
-        sa.spot = spot;
-        sa.asset = asset;
-        sa.usage = usage;
-        sa.sortOrder = sortOrder;
-        return sa;
+    public static TourAsset create(Tour tour, MediaAsset asset, TourAssetUsage usage, int sortOrder) {
+        TourAsset ta = new TourAsset();
+        ta.tour = tour;
+        ta.asset = asset;
+        ta.usage = usage;
+        ta.sortOrder = sortOrder;
+        return ta;
     }
 
     public void setCaption(String caption) {

@@ -25,6 +25,10 @@ public class TourDetailResponse {
     private CurrentRunDto currentRun;
     private ActionsDto actions;
     private List<MainMissionPathItemDto> mainMissionPath;
+    /** 투어 디테일 캐러셀용 썸네일 URL 목록 (메인 플레이스 이미지 기반) */
+    private List<String> thumbnails;
+    /** 메인 플레이스별 썸네일 (spotId, title, thumbnailUrl) */
+    private List<MainPlaceThumbnailDto> mainPlaceThumbnails;
 
     @Data
     @Builder
@@ -118,5 +122,13 @@ public class TourDetailResponse {
         private Long stepId;
         private Long missionId;
         private String title;
+    }
+
+    @Data
+    @Builder
+    public static class MainPlaceThumbnailDto {
+        private Long spotId;
+        private String title;
+        private String thumbnailUrl;
     }
 }

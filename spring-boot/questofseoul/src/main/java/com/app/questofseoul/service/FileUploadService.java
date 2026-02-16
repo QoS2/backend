@@ -35,14 +35,24 @@ public class FileUploadService {
     private final S3Client s3Client;
     private final S3Properties s3Properties;
 
+    /** 이미지: images/{category}/ (카테고리: tour, spot, mission 등) */
     public String uploadImage(MultipartFile file) {
-        validateFile(file, ALLOWED_IMAGE_TYPES, "이미지");
-        return uploadFile(file, "images");
+        return uploadImage(file, "general");
     }
 
+    public String uploadImage(MultipartFile file, String category) {
+        validateFile(file, ALLOWED_IMAGE_TYPES, "이미지");
+        return uploadFile(file, "images", sanitizeCategory(category));
+    }
+
+    /** 오디오: audio/{category}/ (카테고리: intro, ambient 등) */
     public String uploadAudio(MultipartFile file) {
+        return uploadAudio(file, "general");
+    }
+
+    public String uploadAudio(MultipartFile file, String category) {
         validateFile(file, ALLOWED_AUDIO_TYPES, "오디오");
-        return uploadFile(file, "audio");
+        return uploadFile(file, "audio", sanitizeCategory(category));
     }
 
     /**
@@ -50,20 +60,31 @@ public class FileUploadService {
      * 이미지와 오디오 모두 지원합니다.
      */
     public String uploadFile(MultipartFile file) {
+        return uploadFile(file, null);
+    }
+
+    public String uploadFile(MultipartFile file, String category) {
         String contentType = file.getContentType();
         if (contentType == null) {
             throw new BusinessException("파일 타입을 확인할 수 없습니다.");
         }
+        String cat = sanitizeCategory(category);
         if (ALLOWED_IMAGE_TYPES.contains(contentType)) {
-            return uploadImage(file);
+            return uploadFile(file, "images", cat);
         }
         if (ALLOWED_AUDIO_TYPES.contains(contentType)) {
-            return uploadAudio(file);
+            return uploadFile(file, "audio", cat);
         }
         throw new BusinessException("지원하지 않는 파일 타입입니다. (이미지: jpeg/png/gif/webp, 오디오: mp3/wav/ogg/m4a)");
     }
 
-    private String uploadFile(MultipartFile file, String folder) {
+    private String sanitizeCategory(String category) {
+        if (category == null || category.isBlank()) return "general";
+        String s = category.replaceAll("[^a-zA-Z0-9_-]", "").toLowerCase();
+        return s.isEmpty() ? "general" : s;
+    }
+
+    private String uploadFile(MultipartFile file, String folder, String subFolder) {
         String bucket = s3Properties.getBucket();
         if (bucket == null || bucket.isBlank()) {
             throw new BusinessException("S3 버킷이 설정되지 않았습니다.");
@@ -71,7 +92,7 @@ public class FileUploadService {
 
         String originalFilename = file.getOriginalFilename();
         String extension = extractExtension(originalFilename);
-        String objectKey = folder + "/" + UUID.randomUUID() + (extension != null ? "." + extension : "");
+        String objectKey = folder + "/" + subFolder + "/" + UUID.randomUUID() + (extension != null ? "." + extension : "");
 
         try {
             // ACL 제거: "Bucket owner enforced" 모드는 객체별 ACL을 지원하지 않음.

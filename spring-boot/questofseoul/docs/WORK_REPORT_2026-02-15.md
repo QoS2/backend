@@ -134,7 +134,7 @@
 
 - **user_photo_submissions** 테이블 추가 (`ddl-auto=update`로 자동 생성)
 - **tour_spots**: title_kr, pronunciation_url, address 컬럼 추가
-- 기존 `user_spot_progress`, `user_treasure_status` 테이블 스키마 변경 없음
+- 기존 `user_treasure_status` 테이블 스키마 변경 없음. (`user_spot_progress.lock_state`는 2026-02-16에 제거됨, CHANGELOG_2026-02-16 참조)
 
 ---
 

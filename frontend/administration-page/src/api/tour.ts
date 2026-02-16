@@ -240,3 +240,148 @@ export async function saveGuide(
     body
   );
 }
+
+// --- Tour Assets (투어 레벨 썸네일/이미지) ---
+
+export type TourAssetResponse = {
+  id: number;
+  assetId: number;
+  url: string;
+  usage: string;
+  sortOrder: number;
+  caption: string | null;
+};
+
+export type TourAssetRequest = {
+  url: string;
+  usage: string;
+  sortOrder?: number;
+  caption?: string;
+};
+
+export async function fetchTourAssets(tourId: number) {
+  return getJson<TourAssetResponse[]>(`${TOURS_BASE}/${tourId}/assets`);
+}
+
+export async function addTourAsset(tourId: number, body: TourAssetRequest) {
+  return postJson<TourAssetResponse, TourAssetRequest>(
+    `${TOURS_BASE}/${tourId}/assets`,
+    body
+  );
+}
+
+export async function deleteTourAsset(tourId: number, tourAssetId: number) {
+  return deleteNoContent(`${TOURS_BASE}/${tourId}/assets/${tourAssetId}`);
+}
+
+// --- Mission Steps (MISSION 스텝) ---
+
+export type MissionStepResponse = {
+  stepId: number;
+  missionId: number;
+  missionType: string;
+  prompt: string;
+  optionsJson: Record<string, unknown>;
+  answerJson: Record<string, unknown>;
+  title: string;
+  stepIndex: number;
+};
+
+export type MissionStepCreateRequest = {
+  missionType: string;
+  prompt: string;
+  optionsJson?: Record<string, unknown>;
+  answerJson?: Record<string, unknown>;
+  title?: string;
+};
+
+export type MissionStepUpdateRequest = {
+  prompt?: string;
+  optionsJson?: Record<string, unknown>;
+  answerJson?: Record<string, unknown>;
+  title?: string;
+};
+
+export async function fetchMissionSteps(tourId: number, spotId: number) {
+  return getJson<MissionStepResponse[]>(
+    `${TOURS_BASE}/${tourId}/spots/${spotId}/mission-steps`
+  );
+}
+
+export async function createMissionStep(
+  tourId: number,
+  spotId: number,
+  body: MissionStepCreateRequest
+) {
+  return postJson<MissionStepResponse, MissionStepCreateRequest>(
+    `${TOURS_BASE}/${tourId}/spots/${spotId}/mission-steps`,
+    body
+  );
+}
+
+export async function updateMissionStep(
+  tourId: number,
+  spotId: number,
+  stepId: number,
+  body: MissionStepUpdateRequest
+) {
+  return patchJson<MissionStepResponse, MissionStepUpdateRequest>(
+    `${TOURS_BASE}/${tourId}/spots/${spotId}/mission-steps/${stepId}`,
+    body
+  );
+}
+
+export async function deleteMissionStep(
+  tourId: number,
+  spotId: number,
+  stepId: number
+) {
+  return deleteNoContent(
+    `${TOURS_BASE}/${tourId}/spots/${spotId}/mission-steps/${stepId}`
+  );
+}
+
+// --- Spot Assets (스팟별 썸네일/히어로/갤러리) ---
+
+export type SpotAssetResponse = {
+  id: number;
+  assetId: number;
+  url: string;
+  usage: string;
+  sortOrder: number;
+  caption: string | null;
+};
+
+export type SpotAssetRequest = {
+  url: string;
+  usage: string;
+  sortOrder?: number;
+  caption?: string;
+};
+
+export async function fetchSpotAssets(tourId: number, spotId: number) {
+  return getJson<SpotAssetResponse[]>(
+    `${TOURS_BASE}/${tourId}/spots/${spotId}/assets`
+  );
+}
+
+export async function addSpotAsset(
+  tourId: number,
+  spotId: number,
+  body: SpotAssetRequest
+) {
+  return postJson<SpotAssetResponse, SpotAssetRequest>(
+    `${TOURS_BASE}/${tourId}/spots/${spotId}/assets`,
+    body
+  );
+}
+
+export async function deleteSpotAsset(
+  tourId: number,
+  spotId: number,
+  spotAssetId: number
+) {
+  return deleteNoContent(
+    `${TOURS_BASE}/${tourId}/spots/${spotId}/assets/${spotAssetId}`
+  );
+}

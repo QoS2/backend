@@ -2,6 +2,8 @@ package com.app.questofseoul.service;
 
 import com.app.questofseoul.domain.entity.*;
 import com.app.questofseoul.domain.enums.RunStatus;
+import com.app.questofseoul.domain.enums.SpotAssetUsage;
+import com.app.questofseoul.domain.enums.TourAssetUsage;
 import com.app.questofseoul.domain.enums.SpotType;
 import com.app.questofseoul.domain.enums.StepKind;
 import com.app.questofseoul.domain.enums.TourAccessStatus;
@@ -26,6 +28,8 @@ public class TourDetailService {
     private final TourRunRepository tourRunRepository;
     private final SpotContentStepRepository spotContentStepRepository;
     private final UserSpotProgressRepository userSpotProgressRepository;
+    private final SpotAssetRepository spotAssetRepository;
+    private final TourAssetRepository tourAssetRepository;
 
     @Transactional(readOnly = true)
     public TourDetailResponse getTourDetail(Long tourId, UUID userId) {
@@ -98,14 +102,8 @@ public class TourDetailService {
                     .build();
         }
 
-        // Good to know
-        List<String> goodToKnow = new ArrayList<>();
-        if (tour.getGoodToKnowJson() != null) {
-            Object tips = tour.getGoodToKnowJson().get("tips");
-            if (tips instanceof List) {
-                for (Object t : (List<?>) tips) goodToKnow.add(String.valueOf(t));
-            }
-        }
+        // Good to know (API 문서: 배열 ["팁1","팁2"] 또는 레거시 {"tips": ["팁1","팁2"]})
+        List<String> goodToKnow = parseGoodToKnow(tour.getGoodToKnowJson());
 
         // Start spot
         TourDetailResponse.StartSpotDto startSpot = null;
@@ -194,6 +192,47 @@ public class TourDetailService {
                     .build());
         }
 
+        // 투어 디테일 썸네일: tour_assets 우선, 없으면 메인 플레이스 이미지로 fallback
+        List<String> thumbnails = new ArrayList<>();
+        List<TourAsset> tourAssets = tourAssetRepository.findByTour_IdOrderBySortOrderAsc(tourId);
+        for (TourAsset ta : tourAssets) {
+            if (ta.getUsage() == TourAssetUsage.THUMBNAIL || ta.getUsage() == TourAssetUsage.HERO_IMAGE
+                    || ta.getUsage() == TourAssetUsage.GALLERY_IMAGE) {
+                String url = ta.getAsset() != null ? ta.getAsset().getUrl() : null;
+                if (url != null && !url.isBlank()) thumbnails.add(url);
+            }
+        }
+        if (thumbnails.isEmpty()) {
+            for (TourSpot ms : mainSpots) {
+                List<SpotAsset> assets = spotAssetRepository.findBySpot_IdOrderBySortOrderAsc(ms.getId());
+                for (SpotAsset sa : assets) {
+                    if (sa.getUsage() == SpotAssetUsage.THUMBNAIL || sa.getUsage() == SpotAssetUsage.HERO_IMAGE
+                            || sa.getUsage() == SpotAssetUsage.GALLERY_IMAGE) {
+                        String url = sa.getAsset() != null ? sa.getAsset().getUrl() : null;
+                        if (url != null && !url.isBlank()) thumbnails.add(url);
+                    }
+                }
+            }
+        }
+
+        // 메인 플레이스별 썸네일 (항상 spot_assets 기반)
+        List<TourDetailResponse.MainPlaceThumbnailDto> mainPlaceThumbnails = new ArrayList<>();
+        for (TourSpot ms : mainSpots) {
+            String spotThumbUrl = spotAssetRepository
+                    .findFirstBySpot_IdAndUsageOrderBySortOrderAsc(ms.getId(), SpotAssetUsage.THUMBNAIL)
+                    .map(sa -> sa.getAsset() != null ? sa.getAsset().getUrl() : null)
+                    .orElseGet(() -> spotAssetRepository.findBySpot_IdOrderBySortOrderAsc(ms.getId()).stream()
+                            .filter(sa -> sa.getUsage() == SpotAssetUsage.HERO_IMAGE || sa.getUsage() == SpotAssetUsage.GALLERY_IMAGE)
+                            .findFirst()
+                            .map(sa -> sa.getAsset() != null ? sa.getAsset().getUrl() : null)
+                            .orElse(null));
+            mainPlaceThumbnails.add(TourDetailResponse.MainPlaceThumbnailDto.builder()
+                    .spotId(ms.getId())
+                    .title(ms.getTitle())
+                    .thumbnailUrl(spotThumbUrl)
+                    .build());
+        }
+
         return TourDetailResponse.builder()
                 .tourId(tour.getId())
                 .title(tour.getDisplayTitle())
@@ -211,6 +250,33 @@ public class TourDetailService {
                 .currentRun(currentRun)
                 .actions(actions)
                 .mainMissionPath(mainMissionPath.isEmpty() ? null : mainMissionPath)
+                .thumbnails(thumbnails.isEmpty() ? null : thumbnails)
+                .mainPlaceThumbnails(mainPlaceThumbnails.isEmpty() ? null : mainPlaceThumbnails)
                 .build();
+    }
+
+    /** good_to_know_json: {"tips": ["a","b"]} 또는 루트 배열 구조 파싱 */
+    private List<String> parseGoodToKnow(Map<String, Object> goodToKnowJson) {
+        List<String> result = new ArrayList<>();
+        if (goodToKnowJson == null || goodToKnowJson.isEmpty()) return result;
+        Object tips = goodToKnowJson.get("tips");
+        if (tips instanceof List) {
+            for (Object t : (List<?>) tips) result.add(String.valueOf(t));
+            return result;
+        }
+        // JSON 배열 ["a","b"]가 Map으로 역직렬화되면 "0","1"... 키로 들어올 수 있음
+        List<String> keys = new ArrayList<>(goodToKnowJson.keySet());
+        keys.sort((a, b) -> {
+            try {
+                return Integer.compare(Integer.parseInt(a), Integer.parseInt(b));
+            } catch (NumberFormatException e) {
+                return a.compareTo(b);
+            }
+        });
+        for (String k : keys) {
+            Object v = goodToKnowJson.get(k);
+            if (v != null && !"tips".equals(k)) result.add(String.valueOf(v));
+        }
+        return result;
     }
 }

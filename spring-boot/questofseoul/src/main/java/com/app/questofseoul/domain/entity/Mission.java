@@ -60,4 +60,10 @@ public class Mission {
         m.prompt = prompt;
         return m;
     }
+
+    public void setPrompt(String prompt) { this.prompt = prompt; }
+    public void setMissionType(MissionType type) { this.missionType = type; }
+    public void setOptionsJson(java.util.Map<String, Object> optionsJson) { this.optionsJson = optionsJson; }
+    public void setAnswerJson(java.util.Map<String, Object> answerJson) { this.answerJson = answerJson; }
+    public void setMetaJson(java.util.Map<String, Object> metaJson) { this.metaJson = metaJson; }
 }

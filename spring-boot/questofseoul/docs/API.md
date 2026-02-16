@@ -249,6 +249,7 @@ Content-Type: multipart/form-data
 |------|------|------|------|
 | file | file | O | 업로드할 파일 |
 | type | string | X | `"image"` \| `"audio"` — 미지정 시 Content-Type으로 판별 |
+| category | string | X | 폴더 카테고리 (tour, spot, mission, intro, ambient 등, 기본: general). 경로: images/{category}/, audio/{category}/ |
 
 **지원 형식**
 - **이미지:** jpeg, png, gif, webp
@@ -357,6 +358,10 @@ GET /api/v1/tours/{tourId}
     { "spotId": 9, "type": "TREASURE", "title": "비밀의 문", "lat": 37.579, "lng": 126.975 }
   ],
   "access": { "status": "UNLOCKED", "hasAccess": true },
+  "thumbnails": ["https://s3.../images/tour/img1.jpg", "https://s3.../images/tour/img2.jpg"],
+  "mainPlaceThumbnails": [
+    { "spotId": 1, "title": "광화문", "thumbnailUrl": "https://s3.../thumb.jpg" }
+  ],
   "currentRun": {
     "runId": 101,
     "status": "IN_PROGRESS",
@@ -381,10 +386,12 @@ GET /api/v1/tours/{tourId}
 | tags | array | 태그 목록 (id, name, slug) |
 | counts | object | main, sub, photo, treasure, missions 개수 |
 | info | object | entrance_fee, available_hours, estimated_duration_min (infoJson 기반) |
-| goodToKnow | array | tips 배열 (goodToKnowJson.tips) |
+| goodToKnow | array | 팁 배열 (goodToKnowJson: {"tips": ["a","b"]} 또는 루트 배열 지원) |
 | startSpot | object | 시작 스팟 (spotId, title, lat, lng, radiusM) |
 | mapSpots | array | 맵에 표시할 스팟 (MAIN + TREASURE) |
 | access | object | status: LOCKED \| UNLOCKED, hasAccess |
+| thumbnails | array | 투어 디테일 캐러셀용 이미지 URL (tour_assets 우선, 없으면 메인 플레이스 이미지) |
+| mainPlaceThumbnails | array | 메인 플레이스별 썸네일 (spotId, title, thumbnailUrl) |
 | currentRun | object | IN_PROGRESS인 Run (없으면 null) |
 | actions | object | 버튼 액션 정보 |
 | mainMissionPath | array | Main Mission Path (스팟별 미션 목록) |
@@ -409,10 +416,9 @@ GET /api/v1/tours/{tourId}
 **tours.good_to_know_json 스키마** (팁 목록)
 
 ```json
-{
-  "tips": ["한복 입장 무료", "편한 신발 추천", "화요일 휴궁"]
-}
+{ "tips": ["한복 입장 무료", "편한 신발 추천", "화요일 휴궁"] }
 ```
+또는 루트 배열 `["한복 입장 무료", "편한 신발 추천"]` 형식도 지원.
 
 ---
 
@@ -884,6 +890,39 @@ GET /api/v1/spots/{spotId}/guide
 | segments[].triggerKey | 트리거 키 (있는 경우) |
 | segments[].media | 첨부 미디어 (id, url, meta) |
 
+#### 3.10.3 미션 스텝 상세
+
+```
+GET /api/v1/content-steps/{stepId}/mission
+```
+
+Proximity 응답의 MISSION_CHOICE 후, 미션 UI용 prompt·optionsJson 조회. `options_json` 구조는 MISSION_SCHEMA.md 참조.
+
+**Path Parameters**
+
+| 이름 | 타입 | 설명 |
+|------|------|------|
+| stepId | long | spot_content_steps.id (MISSION kind) |
+
+**Response 200**
+
+```json
+{
+  "stepId": 10,
+  "missionId": 3,
+  "missionType": "QUIZ",
+  "prompt": "광화문은 몇 개의 잡상이 있을까요?",
+  "optionsJson": {
+    "choices": [
+      { "id": "a", "text": "1개", "imageUrl": "https://..." },
+      { "id": "b", "text": "2개" }
+    ],
+    "questionImageUrl": "https://..."
+  },
+  "title": "광화문 퀴즈"
+}
+```
+
 ---
 
 ### 3.11 미션 제출
@@ -1272,7 +1311,166 @@ Content-Type: application/json
 
 ---
 
-### 4.4 Enum
+### 4.4 Tour Assets (투어 레벨 썸네일/이미지)
+
+**Base Path:** `/api/v1/admin/tours/{tourId}/assets`
+
+투어 디테일 페이지용 썸네일·히어로 이미지 관리. tour_assets 테이블 (THUMBNAIL, HERO_IMAGE, GALLERY_IMAGE).
+
+| 메서드 | 경로 | 설명 |
+|--------|------|------|
+| GET | `/` | 에셋 목록 |
+| POST | `/` | 에셋 추가 |
+| DELETE | `/{tourAssetId}` | 에셋 삭제 |
+
+#### 에셋 목록
+
+```
+GET /api/v1/admin/tours/{tourId}/assets
+```
+
+**Response 200**
+
+```json
+[
+  {
+    "id": 1,
+    "assetId": 101,
+    "url": "https://s3.../images/tour/img1.jpg",
+    "usage": "THUMBNAIL",
+    "sortOrder": 1,
+    "caption": "경복궁 전경"
+  }
+]
+```
+
+#### 에셋 추가
+
+```
+POST /api/v1/admin/tours/{tourId}/assets
+Content-Type: application/json
+```
+
+**Request Body (TourAssetRequest)**
+
+```json
+{
+  "url": "https://s3.../images/tour/img1.jpg",
+  "usage": "THUMBNAIL",
+  "sortOrder": 1,
+  "caption": "경복궁 전경"
+}
+```
+
+| 필드 | 타입 | 필수 | 설명 |
+|------|------|------|------|
+| url | string | O | S3 업로드 API로 얻은 URL |
+| usage | string | O | THUMBNAIL \| HERO_IMAGE \| GALLERY_IMAGE |
+| sortOrder | int | X | 정렬 순서 (없으면 자동) |
+| caption | string | X | 캡션 |
+
+**Response 201** — TourAssetResponse
+
+#### 에셋 삭제
+
+```
+DELETE /api/v1/admin/tours/{tourId}/assets/{tourAssetId}
+```
+
+**Response 204**
+
+---
+
+### 4.5 Spot Assets (스팟별 썸네일/히어로/갤러리)
+
+**Base Path:** `/api/v1/admin/tours/{tourId}/spots/{spotId}/assets`
+
+메인 플레이스별 썸네일(mainPlaceThumbnails) 관리. THUMBNAIL, HERO_IMAGE, GALLERY_IMAGE.
+
+| 메서드 | 경로 | 설명 |
+|--------|------|------|
+| GET | `/` | 스팟 에셋 목록 |
+| POST | `/` | 스팟 에셋 추가 |
+| DELETE | `/{spotAssetId}` | 스팟 에셋 삭제 |
+
+(요청/응답 구조는 Tour Assets와 동일: url, usage, sortOrder, caption)
+
+---
+
+### 4.6 Mission Steps (MISSION 스텝 관리)
+
+**Base Path:** `/api/v1/admin/tours/{tourId}/spots/{spotId}/mission-steps`
+
+스팟별 MISSION 스텝 (QUIZ, INPUT, PHOTO_CHECK) CRUD. options_json/answer_json 구조는 MISSION_SCHEMA.md 참조.
+
+| 메서드 | 경로 | 설명 |
+|--------|------|------|
+| GET | `/` | MISSION 스텝 목록 |
+| POST | `/` | MISSION 스텝 추가 |
+| PATCH | `/{stepId}` | MISSION 스텝 수정 |
+| DELETE | `/{stepId}` | MISSION 스텝 삭제 |
+
+#### 스텝 목록
+
+```
+GET /api/v1/admin/tours/{tourId}/spots/{spotId}/mission-steps
+```
+
+**Response 200**
+
+```json
+[
+  {
+    "stepId": 10,
+    "missionId": 5,
+    "missionType": "QUIZ",
+    "prompt": "이 건물은 언제 지어졌나요?",
+    "optionsJson": {"choices": [{"id":"a","text":"1395년"}]},
+    "answerJson": {"answer": "a"},
+    "title": "퀴즈 1",
+    "stepIndex": 1
+  }
+]
+```
+
+#### 스텝 추가
+
+```
+POST /api/v1/admin/tours/{tourId}/spots/{spotId}/mission-steps
+Content-Type: application/json
+```
+
+**Request Body (MissionStepCreateRequest)**
+
+```json
+{
+  "missionType": "QUIZ",
+  "prompt": "정답을 고르세요.",
+  "title": "퀴즈 1",
+  "optionsJson": {"choices": [{"id":"a","text":"보기1"},{"id":"b","text":"보기2"}]},
+  "answerJson": {"answer": "a"}
+}
+```
+
+#### 스텝 수정
+
+```
+PATCH /api/v1/admin/tours/{tourId}/spots/{spotId}/mission-steps/{stepId}
+```
+
+**Request Body (MissionStepUpdateRequest)** — prompt, title, optionsJson, answerJson (선택)
+
+#### 스텝 삭제
+
+```
+DELETE /api/v1/admin/tours/{tourId}/spots/{spotId}/mission-steps/{stepId}
+```
+
+**Response 204**
+
+---
+
+### 4.7 Enum
 
 ```
 GET /api/v1/admin/enums/{enumName}
@@ -1284,7 +1482,7 @@ GET /api/v1/admin/enums/{enumName}
 
 | 이름 | 타입 | 설명 |
 |------|------|------|
-| enumName | string | `language` \| `spotType` \| `markerType` \| `stepKind` |
+| enumName | string | `language` \| `spotType` \| `markerType` \| `stepKind` \| `tourAssetUsage` \| `spotAssetUsage` |
 
 **Response 200**
 
@@ -1300,12 +1498,14 @@ GET /api/v1/admin/enums/{enumName}
 | spotType | MAIN, SUB, PHOTO, TREASURE |
 | markerType | STEP, WAYPOINT, PHOTO_SPOT, TREASURE |
 | stepKind | GUIDE, MISSION |
+| tourAssetUsage | THUMBNAIL, HERO_IMAGE, GALLERY_IMAGE |
+| spotAssetUsage | THUMBNAIL, HERO_IMAGE, GALLERY_IMAGE, INTRO_AUDIO, AMBIENT_AUDIO |
 
 **Response 404** — 지원하지 않는 enumName
 
 ---
 
-### 4.5 RAG (벡터 지식 동기화)
+### 4.8 RAG (벡터 지식 동기화)
 
 투어·가이드 콘텐츠를 Pgvector에 임베딩하여 AI 가이드 RAG에 활용합니다. ai-server의 VectorRetriever가 이 데이터를 조회합니다.
 
@@ -1367,7 +1567,7 @@ Tour, TourSpot, SpotScriptLine(가이드) 콘텐츠를 OpenAI 임베딩 후 `tou
 
 ### 5.1 Place Collection (플레이스 도감)
 
-MAIN, SUB 타입 스팟을 도감처럼 수집. `user_spot_progress`(unlocked) 기반.
+MAIN, SUB 타입 스팟을 도감처럼 수집. `user_spot_progress`(progress_status ≠ PENDING) 기반.
 
 #### 5.1.1 내 Place 컬렉션 조회
 

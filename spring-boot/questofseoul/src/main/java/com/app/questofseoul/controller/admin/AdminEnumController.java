@@ -25,7 +25,9 @@ public class AdminEnumController {
         Map.entry("language", Language.class),
         Map.entry("spotType", SpotType.class),
         Map.entry("markerType", MarkerType.class),
-        Map.entry("stepKind", StepKind.class)
+        Map.entry("stepKind", StepKind.class),
+        Map.entry("tourAssetUsage", TourAssetUsage.class),
+        Map.entry("spotAssetUsage", SpotAssetUsage.class)
     );
 
     @Operation(summary = "Enum 값 목록 조회", description = "프론트 폼용 Enum 상수 목록을 조회합니다.")

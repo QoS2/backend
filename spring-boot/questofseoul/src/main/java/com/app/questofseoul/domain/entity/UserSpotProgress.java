@@ -1,7 +1,6 @@
 package com.app.questofseoul.domain.entity;
 
 import com.app.questofseoul.domain.enums.ProgressStatus;
-import com.app.questofseoul.domain.enums.SpotLockState;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -26,10 +25,6 @@ public class UserSpotProgress {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "spot_id", nullable = false)
     private TourSpot spot;
-
-    @Enumerated(EnumType.STRING)
-    @Column(name = "lock_state", nullable = false)
-    private SpotLockState lockState = SpotLockState.LOCKED;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "progress_status", nullable = false)
@@ -57,11 +52,22 @@ public class UserSpotProgress {
         return p;
     }
 
-    /** 50m 근접 시 잠금 해제 */
+    /** 50m 근접 시 잠금 해제 → progress_status = ACTIVE (lock_state 제거됨, progress_status로 통합) */
     public void unlock() {
-        if (this.lockState == SpotLockState.LOCKED) {
-            this.lockState = SpotLockState.UNLOCKED;
+        if (this.progressStatus == ProgressStatus.PENDING) {
+            this.progressStatus = ProgressStatus.ACTIVE;
             this.unlockedAt = LocalDateTime.now();
         }
+    }
+
+    /** 스팟 완료 처리 → progress_status = COMPLETED */
+    public void complete() {
+        this.progressStatus = ProgressStatus.COMPLETED;
+        this.completedAt = LocalDateTime.now();
+    }
+
+    /** 미션 스킵 처리 → progress_status = SKIPPED */
+    public void skip() {
+        this.progressStatus = ProgressStatus.SKIPPED;
     }
 }

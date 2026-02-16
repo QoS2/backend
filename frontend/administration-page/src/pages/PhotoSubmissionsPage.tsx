@@ -9,7 +9,7 @@ import {
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Modal } from '../components/ui/Modal';
-import { useToast } from '../context/ToastContext';
+import { useToast } from '../hooks/useToast';
 import styles from './PhotoSubmissionsPage.module.css';
 
 export function PhotoSubmissionsPage() {

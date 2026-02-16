@@ -56,7 +56,7 @@ import { FileUploadInput } from '../components/ui/FileUploadInput';
 import { MapPicker } from '../components/Map/MapPicker';
 import { SpotsMap } from '../components/Map/SpotsMap';
 import { reverseGeocode, type ReverseGeocodeResult } from '../utils/geocode';
-import { useToast } from '../context/ToastContext';
+import { useToast } from '../hooks/useToast';
 import styles from './ToursPage.module.css';
 
 export function ToursPage() {
@@ -1397,13 +1397,13 @@ function MissionEditor({
               <div key={s.stepId} className={styles.missionPreviewCard}>
                 <strong>{s.stepIndex}. {s.title || '(제목 없음)'}</strong> — {s.missionType}
                 <p>{s.prompt}</p>
-                {s.optionsJson?.choices && Array.isArray(s.optionsJson.choices) && (
+                {Array.isArray(s.optionsJson?.choices) ? (
                   <ul>
                     {(s.optionsJson.choices as Array<{ id: string; text: string }>).map((c) => (
                       <li key={String(c.id)}>{String(c.id)}: {String(c.text)}</li>
                     ))}
                   </ul>
-                )}
+                ) : null}
               </div>
             ))}
           </div>

@@ -1,30 +1,13 @@
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useState,
-} from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
+import {
+  ToastContext,
+  TOAST_DURATION_MS,
+  type ToastItem,
+} from './toast-context';
 import styles from '../components/ui/Toast.module.css';
 
-type ToastType = 'error' | 'success';
-
-interface ToastItem {
-  id: number;
-  type: ToastType;
-  message: string;
-}
-
-interface ToastContextValue {
-  showError: (message: string) => void;
-  showSuccess: (message: string) => void;
-}
-
-const ToastContext = createContext<ToastContextValue | null>(null);
-
 let nextId = 0;
-const TOAST_DURATION_MS = 4000;
 
 export function ToastProvider({ children }: { children: React.ReactNode }) {
   const [toasts, setToasts] = useState<ToastItem[]>([]);
@@ -91,12 +74,4 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
       </div>
     </ToastContext.Provider>
   );
-}
-
-export function useToast(): ToastContextValue {
-  const ctx = useContext(ToastContext);
-  if (!ctx) {
-    throw new Error('useToast must be used within ToastProvider');
-  }
-  return ctx;
 }

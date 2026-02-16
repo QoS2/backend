@@ -55,8 +55,9 @@ services:
       AI_SERVER_URL: http://ai-server:8081
       AI_SERVER_ENABLED: "true"
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
-      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
-      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      # OAuth 미설정 시 placeholder 사용 (Spring 검증 통과용, 실제 로그인 불가)
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-placeholder-for-docker}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-placeholder-for-docker}
       AWS_S3_ENABLED: ${AWS_S3_ENABLED:-false}
       AWS_S3_BUCKET: ${AWS_S3_BUCKET:-}
       AWS_REGION: ${AWS_REGION:-ap-northeast-2}

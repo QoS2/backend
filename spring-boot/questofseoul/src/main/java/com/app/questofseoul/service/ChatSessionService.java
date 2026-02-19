@@ -274,10 +274,14 @@ public class ChatSessionService {
         ChatTurn turn = scriptTurns.get(currentIndex);
         StepNextAction nextAction = turn.getStep() != null ? turn.getStep().getNextAction() : null;
         if (nextAction == StepNextAction.MISSION_CHOICE) {
+            Long preferredMissionId = turn.getStep() != null && turn.getStep().getMission() != null
+                    ? turn.getStep().getMission().getId()
+                    : null;
             Long missionStepId = resolveNextMissionStepId(
                     session.getTourRun().getId(),
                     session.getSpot().getId(),
-                    session.getLanguage()
+                    session.getLanguage(),
+                    preferredMissionId
             );
             if (missionStepId != null) {
                 return new ProximityResponse.ActionDto("MISSION_CHOICE", nextApi, "게임 시작", missionStepId);
@@ -290,7 +294,7 @@ public class ChatSessionService {
         return new ProximityResponse.ActionDto("NEXT", null, "다음", session.getSpot().getId());
     }
 
-    private Long resolveNextMissionStepId(Long runId, Long spotId, String language) {
+    private Long resolveNextMissionStepId(Long runId, Long spotId, String language, Long preferredMissionId) {
         String lang = language != null && !language.isBlank() ? language : "ko";
         List<SpotContentStep> missionSteps = spotContentStepRepository
                 .findBySpot_IdAndKindAndLanguageOrderByStepIndexAsc(spotId, StepKind.MISSION, lang);
@@ -300,6 +304,15 @@ public class ChatSessionService {
         }
         if (missionSteps.isEmpty()) {
             return null;
+        }
+
+        if (preferredMissionId != null) {
+            for (SpotContentStep missionStep : missionSteps) {
+                if (missionStep.getMission() != null
+                        && preferredMissionId.equals(missionStep.getMission().getId())) {
+                    return missionStep.getId();
+                }
+            }
         }
 
         Set<Long> attemptedStepIds = new HashSet<>();

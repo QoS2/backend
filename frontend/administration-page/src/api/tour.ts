@@ -184,6 +184,7 @@ export type GuideLineRequest = {
 export type GuideStepSaveRequest = {
   stepTitle?: string;
   nextAction?: string;
+  missionStepId?: number | null;
   lines: GuideLineRequest[];
 };
 
@@ -211,6 +212,7 @@ export type GuideStepAdminResponse = {
   stepIndex: number;
   stepTitle: string;
   nextAction?: string | null;
+  missionStepId?: number | null;
   lines: GuideLineResponse[];
 };
 

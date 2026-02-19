@@ -137,6 +137,10 @@ public class AdminMissionStepService {
         Mission mission = step.getMission();
         spotContentStepRepository.delete(step);
         if (mission != null) {
+            List<SpotContentStep> linkedGuideSteps = spotContentStepRepository
+                    .findBySpot_IdAndKindAndMission_Id(spotId, StepKind.GUIDE, mission.getId());
+            linkedGuideSteps.forEach(linkedStep -> linkedStep.setMission(null));
+            spotContentStepRepository.saveAll(linkedGuideSteps);
             missionRepository.delete(mission);
         }
     }

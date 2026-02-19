@@ -17,4 +17,6 @@ public interface SpotContentStepRepository extends JpaRepository<SpotContentStep
     long countMissionsByTourId(Long tourId, StepKind kind);
 
     List<SpotContentStep> findBySpot_IdAndLanguageOrderByStepIndexAsc(Long spotId, String language);
+
+    List<SpotContentStep> findBySpot_IdAndKindAndMission_Id(Long spotId, StepKind kind, Long missionId);
 }

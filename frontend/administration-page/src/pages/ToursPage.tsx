@@ -930,6 +930,7 @@ function SpotItemContent({
 type GuideStepForm = {
   stepTitle: string;
   nextAction: string;
+  missionStepId: number | null;
   lines: GuideLineRequest[];
 };
 
@@ -949,6 +950,11 @@ function GuideEditor({
   const { data: guide, isLoading, isError, refetch } = useQuery({
     queryKey: ['admin', 'guide', tourId, spotId],
     queryFn: () => fetchGuideSteps(tourId, spotId),
+  });
+  const { data: missionSteps = [] } = useQuery({
+    queryKey: ['admin', 'mission-steps', tourId, spotId],
+    queryFn: () => fetchMissionSteps(tourId, spotId),
+    enabled: !!spotId,
   });
   const saveMutation = useMutation({
     mutationFn: (body: GuideStepsSaveRequest) => saveGuideSteps(tourId, spotId, body),
@@ -981,6 +987,7 @@ function GuideEditor({
         stepsArr.map((s) => ({
           stepTitle: s.stepTitle || spotTitle,
           nextAction: s.nextAction ?? 'NEXT',
+          missionStepId: s.missionStepId ?? null,
           lines:
             (s.lines?.length ?? 0) > 0
               ? (s.lines ?? []).map((l) => ({
@@ -995,15 +1002,48 @@ function GuideEditor({
         }))
       );
     } else {
-      setSteps([{ stepTitle: spotTitle, nextAction: 'NEXT', lines: [{ text: '', assets: [] }] }]);
+      setSteps([{ stepTitle: spotTitle, nextAction: 'NEXT', missionStepId: null, lines: [{ text: '', assets: [] }] }]);
     }
   }, [guide, spotTitle, isError]);
 
   const addStep = () =>
-    setSteps((prev) => [...prev, { stepTitle: spotTitle, nextAction: 'NEXT', lines: [{ text: '', assets: [] }] }]);
+    setSteps((prev) => [...prev, { stepTitle: spotTitle, nextAction: 'NEXT', missionStepId: null, lines: [{ text: '', assets: [] }] }]);
   const removeStep = (stepIdx: number) => setSteps((prev) => prev.filter((_, i) => i !== stepIdx));
   const updateStep = (stepIdx: number, patch: Partial<GuideStepForm>) =>
     setSteps((prev) => prev.map((s, i) => (i === stepIdx ? { ...s, ...patch } : s)));
+
+  const hasMissionSteps = missionSteps.length > 0;
+  const missionStepIdSet = new Set(missionSteps.map((m) => m.stepId));
+  const missionOptions = missionSteps.map((m) => ({
+    value: String(m.stepId),
+    label: `${m.stepIndex}. ${m.title || '(제목 없음)'} — ${m.missionType}`,
+  }));
+
+  const getMissionLabel = (missionStepId: number | null | undefined) => {
+    if (missionStepId == null) return null;
+    const mission = missionSteps.find((m) => m.stepId === missionStepId);
+    if (!mission) return `연결 미션 #${missionStepId} (삭제됨)`;
+    return `${mission.stepIndex}. ${mission.title || '(제목 없음)'} — ${mission.missionType}`;
+  };
+
+  useEffect(() => {
+    if (hasMissionSteps) return;
+    setSteps((prev) => {
+      let changed = false;
+      const next = prev.map((step) => {
+        if (step.nextAction !== 'MISSION_CHOICE' && step.missionStepId == null) {
+          return step;
+        }
+        changed = true;
+        return {
+          ...step,
+          nextAction: step.nextAction === 'MISSION_CHOICE' ? 'NEXT' : step.nextAction,
+          missionStepId: null,
+        };
+      });
+      return changed ? next : prev;
+    });
+  }, [hasMissionSteps]);
 
   const addLine = (stepIdx: number) =>
     setSteps((prev) =>
@@ -1101,9 +1141,21 @@ function GuideEditor({
         showError(`컨텐츠 ${stepsToSave.length + 1}: 최소 1개 문장이 필요합니다.`);
         return;
       }
+      const nextAction = step.nextAction?.trim() || 'NEXT';
+      if (nextAction === 'MISSION_CHOICE') {
+        if (!hasMissionSteps) {
+          showError(`컨텐츠 ${stepsToSave.length + 1}: 연결할 미션이 없습니다. 먼저 미션을 생성해주세요.`);
+          return;
+        }
+        if (step.missionStepId == null || !missionStepIdSet.has(step.missionStepId)) {
+          showError(`컨텐츠 ${stepsToSave.length + 1}: 연결 미션을 선택해주세요.`);
+          return;
+        }
+      }
       stepsToSave.push({
         stepTitle: step.stepTitle.trim() || spotTitle,
-        nextAction: step.nextAction?.trim() || 'NEXT',
+        nextAction,
+        missionStepId: nextAction === 'MISSION_CHOICE' ? step.missionStepId : null,
         lines: validLines.map((l) => ({
           text: l.text.trim(),
           assets: l.assets.filter((a) => a.url.trim()),
@@ -1132,7 +1184,7 @@ function GuideEditor({
           <Button
             variant="primary"
             onClick={() => {
-              setSteps([{ stepTitle: spotTitle, nextAction: 'NEXT', lines: [{ text: '', assets: [] }] }]);
+              setSteps([{ stepTitle: spotTitle, nextAction: 'NEXT', missionStepId: null, lines: [{ text: '', assets: [] }] }]);
               setForceCreateMode(true);
             }}
           >
@@ -1194,6 +1246,10 @@ function GuideEditor({
               {steps.map((step, si) => (
                 <div key={si} className={styles.guidePreviewSegment}>
                   <strong>{step.stepTitle}</strong>
+                  <p className={styles.formHint}>
+                    버튼: {step.nextAction === 'MISSION_CHOICE' ? '게임 스타트/스킵' : '다음 컨텐츠'}
+                    {step.nextAction === 'MISSION_CHOICE' ? ` · 연결 미션: ${getMissionLabel(step.missionStepId) ?? '(미선택)'}` : ''}
+                  </p>
                   {step.lines.map((line, li) => (
                     <div key={li}>
                       <p>{line.text}</p>
@@ -1245,13 +1301,48 @@ function GuideEditor({
             />
             <Select
               label="컨텐츠 후 버튼"
-              value={step.nextAction}
-              onChange={(e) => updateStep(stepIdx, { nextAction: e.target.value })}
+              value={step.nextAction === 'MISSION_CHOICE' && !hasMissionSteps ? 'NEXT' : step.nextAction}
+              onChange={(e) => {
+                const nextAction = e.target.value;
+                updateStep(stepIdx, {
+                  nextAction,
+                  missionStepId:
+                    nextAction === 'MISSION_CHOICE'
+                      ? step.missionStepId ?? missionSteps[0]?.stepId ?? null
+                      : null,
+                });
+              }}
               options={[
                 { value: 'NEXT', label: 'NEXT - 다음 컨텐츠' },
-                { value: 'MISSION_CHOICE', label: 'MISSION_CHOICE - 게임 스타트/스킵' },
+                ...(hasMissionSteps
+                  ? [{ value: 'MISSION_CHOICE', label: 'MISSION_CHOICE - 게임 스타트/스킵' }]
+                  : []),
               ]}
             />
+            {!hasMissionSteps && (
+              <p className={styles.formHint}>등록된 미션이 없어 게임 스타트 버튼은 선택할 수 없습니다.</p>
+            )}
+            {step.nextAction === 'MISSION_CHOICE' && (
+              <>
+                <Select
+                  label="연결 미션"
+                  value={step.missionStepId != null ? String(step.missionStepId) : ''}
+                  onChange={(e) =>
+                    updateStep(stepIdx, {
+                      missionStepId: e.target.value ? Number(e.target.value) : null,
+                    })
+                  }
+                  options={[
+                    { value: '', label: '(선택)' },
+                    ...missionOptions,
+                  ]}
+                  disabled={!hasMissionSteps}
+                />
+                <p className={styles.formHint}>
+                  현재 연결: {getMissionLabel(step.missionStepId) ?? '(미선택)'}
+                </p>
+              </>
+            )}
             <label className={styles.formSectionLabel}>컨텐츠 문장</label>
             <div className={styles.guideLineList}>
               {step.lines.map((line, lineIdx) => (
@@ -1629,6 +1720,13 @@ function MissionStepForm({
   const [inputPlaceholder, setInputPlaceholder] = useState(() =>
     typeof optionsJson?.placeholder === 'string' ? optionsJson.placeholder : ''
   );
+  const [inputHintText, setInputHintText] = useState(() =>
+    typeof optionsJson?.hintText === 'string'
+      ? optionsJson.hintText
+      : typeof optionsJson?.hint === 'string'
+        ? optionsJson.hint
+        : ''
+  );
   const [inputHintImage, setInputHintImage] = useState(() =>
     typeof optionsJson?.hintImageUrl === 'string' ? optionsJson.hintImageUrl : ''
   );
@@ -1657,6 +1755,13 @@ function MissionStepForm({
       setQuizAnswer(String(answerJson?.answer ?? answerJson?.value ?? ''));
     } else if (mt === 'TEXT_INPUT') {
       setInputPlaceholder(typeof optionsJson?.placeholder === 'string' ? optionsJson.placeholder : '');
+      setInputHintText(
+        typeof optionsJson?.hintText === 'string'
+          ? optionsJson.hintText
+          : typeof optionsJson?.hint === 'string'
+            ? optionsJson.hint
+            : ''
+      );
       setInputHintImage(typeof optionsJson?.hintImageUrl === 'string' ? optionsJson.hintImageUrl : '');
     } else if (mt === 'PHOTO') {
       setPhotoExampleImage(typeof optionsJson?.exampleImageUrl === 'string' ? optionsJson.exampleImageUrl : '');
@@ -1725,6 +1830,7 @@ function MissionStepForm({
     if (mt === 'TEXT_INPUT') {
       const o: Record<string, unknown> = {};
       if (inputPlaceholder.trim()) o.placeholder = inputPlaceholder.trim();
+      if (inputHintText.trim()) o.hintText = inputHintText.trim();
       if (inputHintImage.trim()) o.hintImageUrl = inputHintImage.trim();
       return { optionsJson: Object.keys(o).length ? o : undefined, answerJson: undefined };
     }
@@ -1943,6 +2049,13 @@ function MissionStepForm({
             value={inputPlaceholder}
             onChange={(e) => setInputPlaceholder(e.target.value)}
             placeholder="답을 입력하세요"
+          />
+          <Textarea
+            label="힌트 텍스트"
+            value={inputHintText}
+            onChange={(e) => setInputHintText(e.target.value)}
+            rows={2}
+            placeholder="필요 시 사용자에게 보여줄 힌트를 입력하세요"
           />
           <div className={styles.missionImageUpload}>
             <label className={styles.formSectionLabel}>힌트 이미지</label>

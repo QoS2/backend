@@ -1,6 +1,7 @@
 package com.app.questofseoul.service.admin;
 
 import com.app.questofseoul.domain.entity.MediaAsset;
+import com.app.questofseoul.domain.entity.Mission;
 import com.app.questofseoul.domain.entity.ScriptLineAsset;
 import com.app.questofseoul.domain.entity.SpotContentStep;
 import com.app.questofseoul.domain.entity.SpotScriptLine;
@@ -26,8 +27,10 @@ import org.springframework.transaction.annotation.Transactional;
 import jakarta.persistence.EntityManager;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -58,11 +61,24 @@ public class AdminGuideService {
 
         List<SpotContentStep> guideSteps = spotContentStepRepository
                 .findBySpot_IdAndKindAndLanguageOrderByStepIndexAsc(spotId, StepKind.GUIDE, lang);
+        List<SpotContentStep> missionSteps = spotContentStepRepository
+                .findBySpot_IdAndKindAndLanguageOrderByStepIndexAsc(spotId, StepKind.MISSION, lang);
+        if (missionSteps.isEmpty() && !"ko".equals(lang)) {
+            missionSteps = spotContentStepRepository
+                    .findBySpot_IdAndKindAndLanguageOrderByStepIndexAsc(spotId, StepKind.MISSION, "ko");
+        }
+        Map<Long, Long> missionIdToStepId = missionSteps.stream()
+                .filter(s -> s.getMission() != null && s.getMission().getId() != null)
+                .collect(Collectors.toMap(
+                        s -> s.getMission().getId(),
+                        SpotContentStep::getId,
+                        (first, ignored) -> first
+                ));
 
         List<GuideStepAdminResponse> stepResponses = new ArrayList<>();
-        for (int i = 0; i < guideSteps.size(); i++) {
-            SpotContentStep step = guideSteps.get(i);
+        for (SpotContentStep step : guideSteps) {
             String nextAction = step.getNextAction() != null ? step.getNextAction().name() : null;
+            Long missionStepId = step.getMission() != null ? missionIdToStepId.get(step.getMission().getId()) : null;
             List<SpotScriptLine> lines = spotScriptLineRepository.findByStep_IdOrderBySeqAsc(step.getId());
             List<GuideLineResponse> lineResponses = new ArrayList<>();
             int seq = 1;
@@ -82,6 +98,7 @@ public class AdminGuideService {
                     step.getStepIndex(),
                     step.getTitle(),
                     nextAction,
+                    missionStepId,
                     lineResponses));
         }
 
@@ -94,8 +111,15 @@ public class AdminGuideService {
                 .orElseThrow(() -> new ResourceNotFoundException("Spot not found"));
 
         String lang = normalizeLanguage(req.language());
-        List<SpotContentStep> existing = spotContentStepRepository
-                .findBySpot_IdAndKindAndLanguageOrderByStepIndexAsc(spotId, StepKind.GUIDE, lang);
+        List<SpotContentStep> allLangSteps = spotContentStepRepository
+                .findBySpot_IdAndLanguageOrderByStepIndexAsc(spotId, lang);
+        List<SpotContentStep> existing = allLangSteps.stream()
+                .filter(s -> s.getKind() == StepKind.GUIDE)
+                .toList();
+        Set<Integer> occupiedStepIndexes = allLangSteps.stream()
+                .filter(s -> s.getKind() != StepKind.GUIDE)
+                .map(SpotContentStep::getStepIndex)
+                .collect(Collectors.toCollection(HashSet::new));
 
         Set<Long> assetIdsToCheck = existing.stream()
                 .flatMap(s -> spotScriptLineRepository.findByStep_IdOrderBySeqAsc(s.getId()).stream())
@@ -106,15 +130,22 @@ public class AdminGuideService {
         spotContentStepRepository.deleteAll(existing);
         entityManager.flush();
 
-        for (int stepIndex = 0; stepIndex < req.steps().size(); stepIndex++) {
-            GuideStepSaveRequest stepReq = req.steps().get(stepIndex);
+        for (GuideStepSaveRequest stepReq : req.steps()) {
+            int stepIndex = nextAvailableStepIndex(occupiedStepIndexes);
             SpotContentStep step = SpotContentStep.create(spot, StepKind.GUIDE, stepIndex);
             step.setLanguage(lang);
             step.setTitle(stepReq.stepTitle() != null && !stepReq.stepTitle().isBlank()
                     ? stepReq.stepTitle()
                     : spot.getTitle());
-            step.setNextAction(parseNextAction(stepReq.nextAction()));
+            StepNextAction nextAction = parseNextAction(stepReq.nextAction());
+            step.setNextAction(nextAction);
+            if (nextAction == StepNextAction.MISSION_CHOICE) {
+                step.setMission(resolveLinkedMission(spotId, stepReq.missionStepId()));
+            } else {
+                step.setMission(null);
+            }
             step = spotContentStepRepository.save(step);
+            occupiedStepIndexes.add(stepIndex);
 
             int seq = 1;
             for (GuideLineRequest lineReq : stepReq.lines()) {
@@ -137,6 +168,29 @@ public class AdminGuideService {
 
         deleteOrphanedMediaAssets(assetIdsToCheck);
         return getGuideSteps(tourId, spotId, lang);
+    }
+
+    private Mission resolveLinkedMission(Long spotId, Long missionStepId) {
+        if (missionStepId == null) {
+            return null;
+        }
+        SpotContentStep linkedMissionStep = spotContentStepRepository.findById(missionStepId)
+                .orElseThrow(() -> new ResourceNotFoundException("Linked mission step not found"));
+        if (!linkedMissionStep.getSpot().getId().equals(spotId) || linkedMissionStep.getKind() != StepKind.MISSION) {
+            throw new IllegalArgumentException("Linked mission step must belong to the same spot and be MISSION kind");
+        }
+        if (linkedMissionStep.getMission() == null) {
+            throw new IllegalArgumentException("Linked mission step has no mission");
+        }
+        return linkedMissionStep.getMission();
+    }
+
+    private static int nextAvailableStepIndex(Set<Integer> occupiedStepIndexes) {
+        int candidate = 0;
+        while (occupiedStepIndexes.contains(candidate)) {
+            candidate++;
+        }
+        return candidate;
     }
 
     private static String normalizeLanguage(String language) {

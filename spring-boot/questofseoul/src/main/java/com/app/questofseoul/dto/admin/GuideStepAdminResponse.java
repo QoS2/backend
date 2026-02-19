@@ -10,5 +10,6 @@ public record GuideStepAdminResponse(
     Integer stepIndex,
     String stepTitle,
     String nextAction,
+    Long missionStepId,
     List<GuideLineResponse> lines
 ) {}

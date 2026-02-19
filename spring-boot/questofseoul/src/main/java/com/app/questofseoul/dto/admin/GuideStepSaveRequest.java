@@ -12,5 +12,6 @@ import java.util.List;
 public record GuideStepSaveRequest(
     String stepTitle,
     String nextAction,
+    Long missionStepId,
     @NotEmpty @Valid List<GuideLineRequest> lines
 ) {}

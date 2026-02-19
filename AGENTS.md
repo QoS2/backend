@@ -155,6 +155,7 @@ backend/
 - **공개 API**: `/api/v1` (인증: `@SecurityRequirement(name = "bearerAuth")`)
 - **관리자 API**: `/api/v1/admin/*` (인증: `sessionAuth`)
 - **Swagger UI**: Spring Boot 실행 시 `/swagger-ui.html`
+- **미션 스키마 단일 문서**: `spring-boot/questofseoul/docs/API.md` (4.6.1)
 - **프론트 공통 컴포넌트**: `frontend/administration-page/src/components/ui/`
 
 ---
@@ -225,6 +226,31 @@ public class TourController {
 - **Base path**: `/api/v1` (Spring Boot), FastAPI는 prefix 없음 (`/tour-guide`, `/health`)
 - **인증**: JWT Bearer (`bearerAuth`) 또는 세션 (`sessionAuth`) — Swagger `@SecurityRequirement` 참조
 - **에러 응답**: Spring `GlobalExceptionHandler` 패턴 따르기
+
+### 주요 API 엔드포인트
+
+| Method | Path | 설명 |
+|--------|------|------|
+| GET | `/api/v1/tours` | 투어 목록 (thumbnailUrl, counts, tags 포함) |
+| GET | `/api/v1/tours/{tourId}` | 투어 디테일 (mapSpots에 썸네일 통합) |
+| POST | `/api/v1/tours/{tourId}/runs` | RUN 시작/계속 (body: `{ mode: START\|CONTINUE }`) |
+| POST | `/api/v1/tour-runs/{runId}/proximity` | 근접 감지 (단일 message 반환 + nextApi 체이닝) |
+| GET | `/api/v1/tour-runs/{runId}/spots/{spotId}/chat-session` | 채팅 세션 획득 |
+| GET | `/api/v1/chat-sessions/{sessionId}/turns` | 채팅 히스토리 (nextScriptApi, hasNextScript 포함) |
+| POST | `/api/v1/chat-sessions/{sessionId}/messages` | 채팅 메시지 전송 |
+| GET | `/api/v1/spots/{spotId}/detail` | 스팟 상세 |
+| GET | `/api/v1/spots/{spotId}/guide` | 스팟 가이드 (assets 용어 사용) |
+| POST | `/api/v1/tour-runs/{runId}/missions/{stepId}/submit` | 미션 제출 |
+| POST | `/api/v1/tour-runs/{runId}/treasures/{spotId}/collect` | 보물 수집 |
+
+### 필드 네이밍 규칙
+
+- **좌표**: `lat` / `lng` (latitude/longitude가 아닌 축약형 사용)
+- **진행률**: `completedCount` / `totalCount` / `completedSpotIds`
+- **미디어**: `assets` (media가 아닌 assets 용어 통일)
+- **텍스트**: `text` (textEn, textKo 등이 아닌 language 파라미터로 분리)
+- **순차 재생**: `delayMs` (밀리초 단위 딜레이), `nextApi` (다음 턴 API 경로)
+- **RUN 모드**: `START` / `CONTINUE` (RESTART 없음)
 
 ### 환경변수 (각 서비스 `.env`)
 

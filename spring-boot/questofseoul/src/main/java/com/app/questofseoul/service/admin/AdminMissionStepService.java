@@ -55,7 +55,7 @@ public class AdminMissionStepService {
         TourSpot spot = tourSpotRepository.findByIdAndTourId(spotId, tourId)
                 .orElseThrow(() -> new ResourceNotFoundException("Spot not found"));
 
-        MissionType type = MissionType.valueOf(req.missionType());
+        MissionType type = req.missionType();
         Mission mission = Mission.create(type, req.prompt() != null ? req.prompt() : "");
         if (req.optionsJson() != null && !req.optionsJson().isEmpty()) {
             mission.setOptionsJson(req.optionsJson());

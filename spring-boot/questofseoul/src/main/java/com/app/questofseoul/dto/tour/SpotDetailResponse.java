@@ -8,7 +8,7 @@ public record SpotDetailResponse(
         String description,
         String pronunciationUrl,
         String thumbnailUrl,
-        Double latitude,
-        Double longitude,
+        Double lat,
+        Double lng,
         String address
 ) {}

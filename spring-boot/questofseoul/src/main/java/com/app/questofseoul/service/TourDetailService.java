@@ -8,6 +8,7 @@ import com.app.questofseoul.domain.enums.SpotType;
 import com.app.questofseoul.domain.enums.StepKind;
 import com.app.questofseoul.domain.enums.TourAccessStatus;
 import com.app.questofseoul.dto.tour.TourDetailResponse;
+import com.app.questofseoul.dto.tour.TourListItem;
 import com.app.questofseoul.exception.ResourceNotFoundException;
 import com.app.questofseoul.repository.*;
 import lombok.RequiredArgsConstructor;
@@ -53,15 +54,17 @@ public class TourDetailService {
             Optional<TourRun> runOpt = tourRunRepository.findByUserIdAndTourIdAndStatus(userId, tourId, RunStatus.IN_PROGRESS);
             if (runOpt.isPresent()) {
                 TourRun run = runOpt.get();
-                int completedSpots = (int) userSpotProgressRepository.countByTourRunIdAndProgressStatus(run.getId(), com.app.questofseoul.domain.enums.ProgressStatus.COMPLETED);
-                List<TourSpot> allSpots = tourSpotRepository.findByTourIdOrderByOrderIndexAsc(tourId);
+                List<Long> completedSpotIds = userSpotProgressRepository.findCompletedSpotIdsByTourRunId(run.getId(), com.app.questofseoul.domain.enums.ProgressStatus.COMPLETED);
+                long totalProgressSpots = tourSpotRepository.countByTourIdAndType(tourId, SpotType.MAIN)
+                        + tourSpotRepository.countByTourIdAndType(tourId, SpotType.SUB);
                 currentRun = TourDetailResponse.CurrentRunDto.builder()
                         .runId(run.getId())
                         .status(run.getStatus().name())
                         .startedAt(run.getStartedAt() != null ? run.getStartedAt().toString() : null)
                         .progress(TourDetailResponse.ProgressDto.builder()
-                                .completedSpots(completedSpots)
-                                .totalSpots(allSpots.size())
+                                .completedCount(completedSpotIds.size())
+                                .totalCount((int) totalProgressSpots)
+                                .completedSpotIds(completedSpotIds)
                                 .build())
                         .build();
             }
@@ -122,18 +125,24 @@ public class TourDetailService {
                     .build();
         }
 
-        // Map spots (MAIN + TREASURE for map display)
+        // Map spots (MAIN + TREASURE for map display) - thumbnailUrl, isHighlight 포함
         List<TourDetailResponse.MapSpotDto> mapSpots = new ArrayList<>();
         List<TourSpot> mainSpots = tourSpotRepository.findByTourIdAndTypeOrderByOrderIndexAsc(tourId, SpotType.MAIN);
         List<TourSpot> treasureSpots = tourSpotRepository.findByTourIdAndTypeOrderByOrderIndexAsc(tourId, SpotType.TREASURE);
         for (TourSpot s : mainSpots) {
             if (s.getLatitude() != null && s.getLongitude() != null) {
+                String thumbUrl = spotAssetRepository
+                        .findFirstBySpot_IdAndUsageOrderBySortOrderAsc(s.getId(), SpotAssetUsage.THUMBNAIL)
+                        .map(sa -> sa.getAsset() != null ? sa.getAsset().getUrl() : null)
+                        .orElse(null);
                 mapSpots.add(TourDetailResponse.MapSpotDto.builder()
                         .spotId(s.getId())
                         .type("MAIN")
                         .title(s.getTitle())
                         .lat(s.getLatitude())
                         .lng(s.getLongitude())
+                        .thumbnailUrl(thumbUrl)
+                        .isHighlight(true)
                         .build());
             }
         }
@@ -145,6 +154,8 @@ public class TourDetailService {
                         .title(s.getTitle())
                         .lat(s.getLatitude())
                         .lng(s.getLongitude())
+                        .thumbnailUrl(null)
+                        .isHighlight(false)
                         .build());
             }
         }
@@ -152,12 +163,10 @@ public class TourDetailService {
         // Actions
         String primaryButton;
         String secondaryButton = "GPS_TO_START";
-        List<String> moreActions = new ArrayList<>();
         if (!hasAccess) {
             primaryButton = "UNLOCK";
         } else if (currentRun != null) {
             primaryButton = "CONTINUE";
-            moreActions.add("RESTART");
         } else {
             primaryButton = "START";
         }
@@ -165,7 +174,7 @@ public class TourDetailService {
         TourDetailResponse.ActionsDto actions = TourDetailResponse.ActionsDto.builder()
                 .primaryButton(primaryButton)
                 .secondaryButton(secondaryButton)
-                .moreActions(moreActions.isEmpty() ? null : moreActions)
+                .moreActions(null)
                 .build();
 
         // Main Mission Path (MAIN 스팟별 MISSION 스텝)
@@ -215,24 +224,6 @@ public class TourDetailService {
             }
         }
 
-        // 메인 플레이스별 썸네일 (항상 spot_assets 기반)
-        List<TourDetailResponse.MainPlaceThumbnailDto> mainPlaceThumbnails = new ArrayList<>();
-        for (TourSpot ms : mainSpots) {
-            String spotThumbUrl = spotAssetRepository
-                    .findFirstBySpot_IdAndUsageOrderBySortOrderAsc(ms.getId(), SpotAssetUsage.THUMBNAIL)
-                    .map(sa -> sa.getAsset() != null ? sa.getAsset().getUrl() : null)
-                    .orElseGet(() -> spotAssetRepository.findBySpot_IdOrderBySortOrderAsc(ms.getId()).stream()
-                            .filter(sa -> sa.getUsage() == SpotAssetUsage.HERO_IMAGE || sa.getUsage() == SpotAssetUsage.GALLERY_IMAGE)
-                            .findFirst()
-                            .map(sa -> sa.getAsset() != null ? sa.getAsset().getUrl() : null)
-                            .orElse(null));
-            mainPlaceThumbnails.add(TourDetailResponse.MainPlaceThumbnailDto.builder()
-                    .spotId(ms.getId())
-                    .title(ms.getTitle())
-                    .thumbnailUrl(spotThumbUrl)
-                    .build());
-        }
-
         return TourDetailResponse.builder()
                 .tourId(tour.getId())
                 .title(tour.getDisplayTitle())
@@ -251,8 +242,72 @@ public class TourDetailService {
                 .actions(actions)
                 .mainMissionPath(mainMissionPath.isEmpty() ? null : mainMissionPath)
                 .thumbnails(thumbnails.isEmpty() ? null : thumbnails)
-                .mainPlaceThumbnails(mainPlaceThumbnails.isEmpty() ? null : mainPlaceThumbnails)
                 .build();
+    }
+
+    @Transactional(readOnly = true)
+    public List<TourListItem> getTourList(UUID userId) {
+        List<Tour> tours = tourRepository.findAll();
+        return tours.stream().map(tour -> {
+            Long tourId = tour.getId();
+
+            // Counts
+            long mainCount = tourSpotRepository.countByTourIdAndType(tourId, SpotType.MAIN);
+            long subCount = tourSpotRepository.countByTourIdAndType(tourId, SpotType.SUB);
+            long photoCount = tourSpotRepository.countByTourIdAndType(tourId, SpotType.PHOTO);
+            long treasureCount = tourSpotRepository.countByTourIdAndType(tourId, SpotType.TREASURE);
+            long missionsCount = spotContentStepRepository.countMissionsByTourId(tourId, StepKind.MISSION);
+
+            TourDetailResponse.CountsDto counts = TourDetailResponse.CountsDto.builder()
+                    .main((int) mainCount).sub((int) subCount)
+                    .photo((int) photoCount).treasure((int) treasureCount)
+                    .missions((int) missionsCount).build();
+
+            // Tags
+            List<TourDetailResponse.TagDto> tags = tourTagRepository.findByTourId(tourId).stream()
+                    .map(tt -> TourDetailResponse.TagDto.builder()
+                            .id(tt.getTag().getId())
+                            .name(tt.getTag().getName())
+                            .slug(tt.getTag().getSlug())
+                            .build())
+                    .collect(Collectors.toList());
+
+            // estimatedDurationMin
+            Integer estimatedDurationMin = null;
+            if (tour.getInfoJson() != null && tour.getInfoJson().get("estimated_duration_min") != null) {
+                estimatedDurationMin = ((Number) tour.getInfoJson().get("estimated_duration_min")).intValue();
+            }
+
+            // accessStatus
+            String accessStatus = "LOCKED";
+            if (userId != null) {
+                accessStatus = userTourAccessRepository.findByUserIdAndTourId(userId, tourId)
+                        .map(a -> a.getStatus().name())
+                        .orElse("LOCKED");
+            }
+
+            // thumbnailUrl (tour_assets 우선, fallback to first main spot asset)
+            String thumbnailUrl = null;
+            List<TourAsset> tourAssets = tourAssetRepository.findByTour_IdOrderBySortOrderAsc(tourId);
+            for (TourAsset ta : tourAssets) {
+                if (ta.getUsage() == TourAssetUsage.THUMBNAIL || ta.getUsage() == TourAssetUsage.HERO_IMAGE) {
+                    String url = ta.getAsset() != null ? ta.getAsset().getUrl() : null;
+                    if (url != null && !url.isBlank()) { thumbnailUrl = url; break; }
+                }
+            }
+
+            return TourListItem.builder()
+                    .id(tour.getId())
+                    .externalKey(tour.getExternalKey())
+                    .title(tour.getDisplayTitle())
+                    .thumbnailUrl(thumbnailUrl)
+                    .description(tour.getDisplayDescription())
+                    .counts(counts)
+                    .estimatedDurationMin(estimatedDurationMin)
+                    .accessStatus(accessStatus)
+                    .tags(tags)
+                    .build();
+        }).collect(Collectors.toList());
     }
 
     /** good_to_know_json: {"tips": ["a","b"]} 또는 루트 배열 구조 파싱 */

@@ -11,9 +11,10 @@ public record GuideSegmentResponse(
     public record SegmentItem(
         Long id,
         Integer segIdx,
-        String textEn,
+        String text,
         String triggerKey,
-        List<AssetItem> media
+        List<AssetItem> assets,
+        Integer delayMs
     ) {}
-    public record AssetItem(Long id, String url, Object meta) {}
+    public record AssetItem(Long id, String type, String url, Object meta) {}
 }

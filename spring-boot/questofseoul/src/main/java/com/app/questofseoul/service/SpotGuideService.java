@@ -24,6 +24,8 @@ import java.util.List;
 @RequiredArgsConstructor
 public class SpotGuideService {
 
+    private static final int DEFAULT_DELAY_MS = 2000;
+
     private final TourSpotRepository tourSpotRepository;
     private final SpotContentStepRepository spotContentStepRepository;
     private final SpotScriptLineRepository spotScriptLineRepository;
@@ -47,16 +49,17 @@ public class SpotGuideService {
             lastNextAction = step.getNextAction();
             var lines = spotScriptLineRepository.findByStep_IdOrderBySeqAsc(step.getId());
             for (var line : lines) {
-                List<GuideSegmentResponse.AssetItem> media = scriptLineAssetRepository
+                List<GuideSegmentResponse.AssetItem> assets = scriptLineAssetRepository
                         .findByScriptLine_IdOrderBySortOrderAsc(line.getId())
                         .stream()
                         .map(a -> new GuideSegmentResponse.AssetItem(
                                 a.getAsset().getId(),
+                                a.getAsset().getAssetType() != null ? a.getAsset().getAssetType().name() : "IMAGE",
                                 a.getAsset().getUrl(),
                                 a.getAsset().getMetadataJson()))
                         .toList();
                 segments.add(new GuideSegmentResponse.SegmentItem(
-                        line.getId(), segIdx++, line.getText(), null, media));
+                        line.getId(), segIdx++, line.getText(), null, assets, DEFAULT_DELAY_MS));
             }
         }
 

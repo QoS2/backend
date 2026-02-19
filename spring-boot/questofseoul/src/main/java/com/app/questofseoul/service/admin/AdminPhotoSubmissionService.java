@@ -6,6 +6,7 @@ import com.app.questofseoul.dto.admin.PhotoSubmissionVerifyRequest;
 import com.app.questofseoul.exception.ResourceNotFoundException;
 import com.app.questofseoul.repository.UserPhotoSubmissionRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,8 +20,11 @@ public class AdminPhotoSubmissionService {
     private final UserPhotoSubmissionRepository userPhotoSubmissionRepository;
 
     @Transactional(readOnly = true)
-    public List<UserPhotoSubmission> getPendingSubmissions() {
-        return userPhotoSubmissionRepository.findByStatusOrderBySubmittedAtAsc(PhotoSubmissionStatus.PENDING);
+    public List<UserPhotoSubmission> getSubmissions(PhotoSubmissionStatus status) {
+        if (status == null) {
+            return userPhotoSubmissionRepository.findAll(Sort.by(Sort.Direction.ASC, "submittedAt"));
+        }
+        return userPhotoSubmissionRepository.findByStatusOrderBySubmittedAtAsc(status);
     }
 
     @Transactional

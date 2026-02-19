@@ -1,6 +1,7 @@
 package com.app.questofseoul.controller.admin;
 
 import com.app.questofseoul.domain.entity.UserPhotoSubmission;
+import com.app.questofseoul.domain.enums.PhotoSubmissionStatus;
 import com.app.questofseoul.dto.admin.PhotoSubmissionVerifyRequest;
 import com.app.questofseoul.service.AuthService;
 import com.app.questofseoul.service.admin.AdminPhotoSubmissionService;
@@ -13,6 +14,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 
@@ -30,7 +32,8 @@ public class AdminPhotoSubmissionController {
     @GetMapping
     public ResponseEntity<List<Map<String, Object>>> list(
             @RequestParam(required = false, defaultValue = "PENDING") String status) {
-        List<UserPhotoSubmission> list = adminPhotoSubmissionService.getPendingSubmissions();
+        PhotoSubmissionStatus statusEnum = parseStatus(status);
+        List<UserPhotoSubmission> list = adminPhotoSubmissionService.getSubmissions(statusEnum);
         List<Map<String, Object>> items = list.stream()
                 .map(s -> Map.<String, Object>of(
                         "submissionId", s.getId(),
@@ -43,6 +46,17 @@ public class AdminPhotoSubmissionController {
                 ))
                 .toList();
         return ResponseEntity.ok(items);
+    }
+
+    private PhotoSubmissionStatus parseStatus(String raw) {
+        if (raw == null || raw.isBlank()) return PhotoSubmissionStatus.PENDING;
+        String normalized = raw.trim().toUpperCase(Locale.ROOT);
+        if ("ALL".equals(normalized)) return null;
+        try {
+            return PhotoSubmissionStatus.valueOf(normalized);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("status must be one of: PENDING, APPROVED, REJECTED, ALL");
+        }
     }
 
     @Operation(summary = "승인/거절")

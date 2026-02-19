@@ -195,7 +195,7 @@ erDiagram
 
     missions {
         long id PK
-        string mission_type "QUIZ|INPUT|PHOTO_CHECK"
+        string mission_type "QUIZ|OX|PHOTO|TEXT_INPUT"
         text prompt
         jsonb options_json
         jsonb answer_json
@@ -261,7 +261,7 @@ erDiagram
         long step_id FK
         long mission_id FK
         int attempt_no
-        string status "STARTED|SUBMITTED|CORRECT|INCORRECT"
+        string status "STARTED|SUBMITTED|GRADED"
         jsonb answer_json
         jsonb submission_assets_json
         boolean is_correct
@@ -484,7 +484,7 @@ erDiagram
 | ended_at | TIMESTAMP | | 종료 시각 |
 | created_at | TIMESTAMP | NOT NULL | 생성 시각 |
 
-**RunStatus**: 한 사용자가 동일 투어에 여러 Run 가능 (재시작).
+**RunStatus**: 한 사용자가 동일 투어에 여러 Run 누적 가능.
 
 ---
 
@@ -542,7 +542,7 @@ erDiagram
 | 컬럼 | 타입 | 제약 | 설명 |
 |------|------|------|------|
 | id | BIGINT | PK | IDENTITY |
-| mission_type | VARCHAR | NOT NULL | QUIZ, INPUT, PHOTO_CHECK |
+| mission_type | VARCHAR | NOT NULL | QUIZ, OX, PHOTO, TEXT_INPUT |
 | prompt | TEXT | NOT NULL | 미션 지문 |
 | options_json | JSONB | | 선택지 (퀴즈 등) |
 | answer_json | JSONB | | 정답 |
@@ -550,7 +550,7 @@ erDiagram
 | created_at | TIMESTAMP | NOT NULL | 생성 시각 |
 | updated_at | TIMESTAMP | NOT NULL | 수정 시각 |
 
-**MissionType**: QUIZ(선택/입력), INPUT(텍스트 입력), PHOTO_CHECK(사진 제출)
+**MissionType**: QUIZ(객관식), OX(O/X 선택), PHOTO(사진 제출), TEXT_INPUT(텍스트 입력)
 
 ---
 
@@ -645,7 +645,7 @@ erDiagram
 | step_id | BIGINT | FK, NOT NULL | SpotContentStep |
 | mission_id | BIGINT | FK, NOT NULL | Mission |
 | attempt_no | INT | NOT NULL | 시도 횟수 |
-| status | VARCHAR | NOT NULL | STARTED, SUBMITTED, CORRECT, INCORRECT |
+| status | VARCHAR | NOT NULL | STARTED, SUBMITTED, GRADED |
 | answer_json | JSONB | | 제출 답변 |
 | submission_assets_json | JSONB | | 제출 첨부(예: 사진 ID) |
 | is_correct | BOOLEAN | | 채점 결과 |
@@ -690,13 +690,13 @@ erDiagram
 | step_id | BIGINT | FK | 참조 스텝 |
 | script_line_id | BIGINT | FK | 참조 스크립트 라인 |
 | mission_id | BIGINT | FK | 참조 미션 |
-| action_json | JSONB | | UI 동작(NEXT/MISSION_START/SKIP) |
+| action_json | JSONB | | UI 동작(AUTO_NEXT/NEXT/MISSION_CHOICE) |
 | context_json | JSONB | | AI 컨텍스트 |
 | created_at | TIMESTAMP | NOT NULL | 생성 시각 |
 
 **ChatSource**: USER(사용자 입력), SCRIPT(가이드 스크립트), LLM(AI 응답)  
 **ChatRole**: USER, GUIDE, SYSTEM  
-**action_json.type**: NEXT(다음), MISSION_START(미션 시작), SKIP(스킵)
+**action_json.type**: AUTO_NEXT(자동 다음 턴), NEXT(다음), MISSION_CHOICE(미션 선택)
 
 ---
 
@@ -823,12 +823,12 @@ erDiagram
 | SpotAssetUsage | THUMBNAIL, HERO_IMAGE, GALLERY_IMAGE, INTRO_AUDIO, AMBIENT_AUDIO |
 | LineAssetUsage | ILLUSTRATION, SCRIPT_AUDIO |
 | ChatTurnAssetUsage | ATTACHMENT, VOICE, REFERENCE |
-| MissionType | QUIZ, INPUT, PHOTO_CHECK |
+| MissionType | QUIZ, OX, PHOTO, TEXT_INPUT |
 | StepKind | GUIDE, MISSION |
 | StepNextAction | NEXT, MISSION_CHOICE |
 | ProgressStatus | PENDING, ACTIVE, COMPLETED, SKIPPED |
 | TreasureStatus | LOCKED, UNLOCKED, GET |
-| MissionAttemptStatus | STARTED, SUBMITTED, CORRECT, INCORRECT |
+| MissionAttemptStatus | STARTED, SUBMITTED, GRADED |
 | PhotoSubmissionStatus | PENDING, APPROVED, REJECTED |
 | ChatSource | USER, SCRIPT, LLM |
 | ChatRole | USER, GUIDE, SYSTEM |

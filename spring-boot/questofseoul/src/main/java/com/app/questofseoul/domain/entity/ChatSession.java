@@ -67,4 +67,12 @@ public class ChatSession {
         s.allowUserQuestion = spot.getAiChatEnabled() != null && spot.getAiChatEnabled();
         return s;
     }
+
+    public int getCursorStepIndexSafe() {
+        return cursorStepIndex != null ? cursorStepIndex : 0;
+    }
+
+    public void moveCursorTo(int index) {
+        this.cursorStepIndex = Math.max(0, index);
+    }
 }

@@ -5,6 +5,6 @@ import jakarta.validation.constraints.NotNull;
 import java.math.BigDecimal;
 
 public record ProximityRequest(
-    @NotNull BigDecimal latitude,
-    @NotNull BigDecimal longitude
+    @NotNull BigDecimal lat,
+    @NotNull BigDecimal lng
 ) {}

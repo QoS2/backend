@@ -4,5 +4,7 @@ public record SendMessageResponse(
     Long userTurnId,
     String userText,
     Long aiTurnId,
-    String aiText
+    String aiText,
+    String nextScriptApi,
+    Boolean hasNextScript
 ) {}

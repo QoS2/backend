@@ -10,27 +10,16 @@ export type TourDetailResponse = {
   info: Record<string, unknown> | null;
   goodToKnow: string[];
   startSpot: { spotId: number; title: string; lat: number; lng: number; radiusM: number } | null;
-  mapSpots: Array<{ spotId: number; type: string; title: string; lat: number; lng: number }>;
+  mapSpots: Array<{ spotId: number; type: string; title: string; lat: number; lng: number; thumbnailUrl: string | null; isHighlight: boolean }>;
   access: { status: string; hasAccess: boolean };
-  currentRun: { runId: number; status: string; startedAt: string; progress: { completedSpots: number; totalSpots: number } } | null;
-  actions: { primaryButton: string; secondaryButton: string | null; moreActions: string[] };
+  currentRun: { runId: number; status: string; startedAt: string; progress: { completedCount: number; totalCount: number; completedSpotIds: number[] } } | null;
+  actions: { primaryButton: string; secondaryButton: string | null; moreActions?: string[] | null };
   mainMissionPath?: Array<{
     spotId: number;
     spotTitle: string;
     orderIndex: number;
     missions: Array<{ stepId: number; missionId: number | null; title: string }>;
   }>;
-};
-
-export type MarkerResponse = {
-  id: number;
-  type: string;
-  title: string;
-  latitude: number;
-  longitude: number;
-  radiusM: number;
-  refId: number;
-  stepOrder: number;
 };
 
 export type SpotGuideResponse = {
@@ -40,21 +29,16 @@ export type SpotGuideResponse = {
   segments: Array<{
     id: number;
     segIdx: number;
-    textEn: string;
+    text: string;
     triggerKey: string | null;
-    media: Array<{ id: number; url: string; meta: unknown }>;
+    assets: Array<{ id: number; type: string; url: string; meta: unknown }>;
+    delayMs: number;
   }>;
 };
 
 /** 사용자용 투어 디테일 (미리보기) */
 export async function fetchTourDetail(tourId: number) {
   return getJson<TourDetailResponse>(`/tours/${tourId}`, { base: 'api' });
-}
-
-/** 사용자용 마커 목록 (미리보기) */
-export async function fetchMarkers(tourId: number, filter?: string) {
-  const q = filter ? `?filter=${filter}` : '';
-  return getJson<MarkerResponse[]>(`/tours/${tourId}/markers${q}`, { base: 'api' });
 }
 
 /** 사용자용 스팟 가이드 (미리보기) */

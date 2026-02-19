@@ -33,7 +33,7 @@ public class MissionController {
 
     @Operation(summary = "미션 제출", description = "run의 step에 연결된 미션 제출 및 채점")
     @SecurityRequirement(name = "bearerAuth")
-    @PostMapping("/tour-runs/{runId}/steps/{stepId}/missions/submit")
+    @PostMapping("/tour-runs/{runId}/missions/{stepId}/submit")
     public ResponseEntity<MissionSubmitResponse> submitMission(
             @PathVariable Long runId,
             @PathVariable Long stepId,

@@ -6,10 +6,11 @@
     "**/.git": true,
     "**/.DS_Store": true
   },
-
   // Python (ai-server)
   "python.defaultInterpreterPath": "${workspaceFolder}/ai-server/.venv/bin/python",
-  "python.analysis.extraPaths": ["${workspaceFolder}/ai-server"],
+  "python.analysis.extraPaths": [
+    "${workspaceFolder}/ai-server"
+  ],
   "[python]": {
     "editor.defaultFormatter": "ms-python.black-formatter",
     "editor.codeActionsOnSave": {
@@ -18,8 +19,9 @@
   },
   "python.testing.pytestEnabled": true,
   "python.testing.unittestEnabled": false,
-  "python.testing.pytestArgs": ["ai-server"],
-
+  "python.testing.pytestArgs": [
+    "ai-server"
+  ],
   // Java (Spring Boot)
   "java.configuration.runtimes": [
     {
@@ -37,7 +39,6 @@
     "editor.defaultFormatter": "redhat.java",
     "editor.tabSize": 4
   },
-
   // TypeScript / JavaScript (frontend)
   "[typescript]": {
     "editor.defaultFormatter": "esbenp.prettier-vscode"
@@ -47,5 +48,6 @@
   },
   "[json]": {
     "editor.defaultFormatter": "esbenp.prettier-vscode"
-  }
+  },
+  "java.compile.nullAnalysis.mode": "automatic"
 }

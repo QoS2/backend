@@ -27,7 +27,7 @@ public class SpotController {
     }
 
     @Operation(summary = "스팟 상세", description = "Place/Treasure 더블모달용 상세 정보")
-    @GetMapping("/spots/{spotId}")
+    @GetMapping({"/spots/{spotId}", "/spots/{spotId}/detail"})
     public ResponseEntity<SpotDetailResponse> getSpotDetail(@PathVariable Long spotId) {
         return ResponseEntity.ok(spotGuideService.getSpotDetail(spotId));
     }

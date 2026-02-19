@@ -313,12 +313,13 @@ GET /api/v1/tours
   {
     "id": 1,
     "externalKey": "gyeongbokgung",
-    "title": "경복궁 핵심 투어"
-  },
-  {
-    "id": 2,
-    "externalKey": "changdeokgung",
-    "title": "창덕궁 탐험"
+    "title": "경복궁 핵심 투어",
+    "thumbnailUrl": "https://s3.../tour-thumb.jpg",
+    "description": "조선의 대표 궁궐을 둘러보는 핵심 코스입니다.",
+    "counts": { "main": 8, "sub": 12, "photo": 5, "treasure": 3, "missions": 4 },
+    "estimatedDurationMin": 90,
+    "accessStatus": "UNLOCKED",
+    "tags": [{ "id": 1, "name": "역사", "slug": "history" }]
   }
 ]
 ```
@@ -328,6 +329,12 @@ GET /api/v1/tours
 | id | long | 투어 ID |
 | externalKey | string | 외부 식별 키 |
 | title | string | 표시 제목 |
+| thumbnailUrl | string | 대표 썸네일 URL |
+| description | string | 설명 |
+| counts | object | main, sub, photo, treasure, missions |
+| estimatedDurationMin | int | 예상 소요 시간(분) |
+| accessStatus | string | LOCKED \| UNLOCKED |
+| tags | array | 태그 목록 |
 
 ---
 
@@ -378,24 +385,40 @@ GET /api/v1/tours/{tourId}
     "radiusM": 60
   },
   "mapSpots": [
-    { "spotId": 1, "type": "MAIN", "title": "광화문", "lat": 37.576, "lng": 126.977 },
-    { "spotId": 9, "type": "TREASURE", "title": "비밀의 문", "lat": 37.579, "lng": 126.975 }
+    {
+      "spotId": 1,
+      "type": "MAIN",
+      "title": "광화문",
+      "lat": 37.576,
+      "lng": 126.977,
+      "thumbnailUrl": "https://s3.../thumb.jpg",
+      "isHighlight": true
+    },
+    {
+      "spotId": 9,
+      "type": "TREASURE",
+      "title": "비밀의 문",
+      "lat": 37.579,
+      "lng": 126.975,
+      "thumbnailUrl": null,
+      "isHighlight": false
+    }
   ],
   "access": { "status": "UNLOCKED", "hasAccess": true },
   "thumbnails": ["https://s3.../images/tour/img1.jpg", "https://s3.../images/tour/img2.jpg"],
-  "mainPlaceThumbnails": [
-    { "spotId": 1, "title": "광화문", "thumbnailUrl": "https://s3.../thumb.jpg" }
-  ],
   "currentRun": {
     "runId": 101,
     "status": "IN_PROGRESS",
     "startedAt": "2026-02-11T10:00:00",
-    "progress": { "completedSpots": 2, "totalSpots": 8 }
+    "progress": {
+      "completedCount": 2,
+      "totalCount": 8,
+      "completedSpotIds": [1, 3]
+    }
   },
   "actions": {
     "primaryButton": "CONTINUE",
-    "secondaryButton": "GPS_TO_START",
-    "moreActions": ["RESTART"]
+    "secondaryButton": "GPS_TO_START"
   }
 }
 ```
@@ -412,10 +435,9 @@ GET /api/v1/tours/{tourId}
 | info | object | entrance_fee, available_hours, estimated_duration_min (infoJson 기반) |
 | goodToKnow | array | 팁 배열 (goodToKnowJson: {"tips": ["a","b"]} 또는 루트 배열 지원) |
 | startSpot | object | 시작 스팟 (spotId, title, lat, lng, radiusM) |
-| mapSpots | array | 맵에 표시할 스팟 (MAIN + TREASURE) |
+| mapSpots | array | 맵에 표시할 스팟 (MAIN + TREASURE, thumbnailUrl + isHighlight 포함) |
 | access | object | status: LOCKED \| UNLOCKED, hasAccess |
 | thumbnails | array | 투어 디테일 캐러셀용 이미지 URL (tour_assets 우선, 없으면 메인 플레이스 이미지) |
-| mainPlaceThumbnails | array | 메인 플레이스별 썸네일 (spotId, title, thumbnailUrl) |
 | currentRun | object | IN_PROGRESS인 Run (없으면 null) |
 | actions | object | 버튼 액션 정보 |
 | mainMissionPath | array | Main Mission Path (스팟별 미션 목록) |
@@ -425,7 +447,7 @@ GET /api/v1/tours/{tourId}
 **actions 규칙**
 - `primaryButton`: `UNLOCK` (미접근) \| `START` (접근, Run 없음) \| `CONTINUE` (접근, Run 있음)
 - `secondaryButton`: `GPS_TO_START`
-- `moreActions`: `["RESTART"]` (Run 있으면)
+- `moreActions`: 현재 기본 null
 
 **tours.info_json 스키마** (입장료·운영시간·예상소요시간 등)
 
@@ -448,70 +470,8 @@ GET /api/v1/tours/{tourId}
 
 ### 3.3 마커 목록
 
-```
-GET /api/v1/tours/{tourId}/markers
-```
-
-맵 표시용 마커 조회.
-
-**Path Parameters**
-
-| 이름 | 타입 | 설명 |
-|------|------|------|
-| tourId | long | 투어 ID |
-
-**Query Parameters**
-
-| 이름 | 타입 | 필수 | 설명 |
-|------|------|------|------|
-| filter | MarkerType | X | `STEP` \| `WAYPOINT` \| `PHOTO_SPOT` \| `TREASURE` — 미지정 시 전체 |
-
-**MarkerType** (API 용어) ↔ **SpotType** (DB `tour_spots.type`)
-
-| MarkerType | SpotType | 설명 |
-|------------|----------|------|
-| STEP | MAIN | 퀘스트 핵심 장소 (Place) |
-| WAYPOINT | SUB | 서브 장소 (이동 경로) |
-| PHOTO_SPOT | PHOTO | 포토 스팟 |
-| TREASURE | TREASURE | 보물 찾기 |
-
-**Response 200**
-
-```json
-[
-  {
-    "id": 1,
-    "type": "STEP",
-    "title": "광화문",
-    "latitude": 37.576,
-    "longitude": 126.977,
-    "radiusM": 60,
-    "refId": 1,
-    "stepOrder": 1
-  },
-  {
-    "id": 2,
-    "type": "WAYPOINT",
-    "title": "근정전 앞",
-    "latitude": 37.579,
-    "longitude": 126.977,
-    "radiusM": 30,
-    "refId": 2,
-    "stepOrder": 2
-  }
-]
-```
-
-| 필드 | 타입 | 설명 |
-|------|------|------|
-| id | long | 마커 ID |
-| type | string | MarkerType |
-| title | string | 제목 |
-| latitude | number | 위도 |
-| longitude | number | 경도 |
-| radiusM | int | 감지 반경(미터) |
-| refId | long | 참조 스팟 ID |
-| stepOrder | int | 순서 |
+기존 `/api/v1/tours/{tourId}/markers`는 제거되었습니다.  
+마커 정보는 `GET /api/v1/tours/{tourId}`의 `mapSpots`로 통합됩니다.
 
 ---
 
@@ -541,7 +501,7 @@ Authorization: Bearer <accessToken>
 Content-Type: application/json
 ```
 
-투어 Run 시작/재개/재시작. 유저당 투어별 `IN_PROGRESS` Run은 1개만 유지됩니다.
+투어 Run 시작/재개. 유저당 투어별 `IN_PROGRESS` Run은 1개만 유지됩니다.
 
 **Path Parameters**
 
@@ -549,13 +509,7 @@ Content-Type: application/json
 |------|------|------|
 | tourId | long | 투어 ID |
 
-**Query Parameters** (우선)
-
-| 이름 | 타입 | 필수 | 설명 |
-|------|------|------|------|
-| mode | RunMode | X | `START` \| `CONTINUE` \| `RESTART` — Query와 Body 중 하나만 사용 가능 |
-
-**Request Body** (선택)
+**Request Body**
 
 ```json
 {
@@ -565,7 +519,7 @@ Content-Type: application/json
 
 | 필드 | 타입 | 필수 | 설명 |
 |------|------|------|------|
-| mode | string | X | Query에 없으면 Body 사용. 없으면 기본 `START` |
+| mode | string | O | `START` \| `CONTINUE` |
 
 **RunMode**
 
@@ -573,7 +527,6 @@ Content-Type: application/json
 |----|------|
 | START | 새 Run 시작 |
 | CONTINUE | 기존 IN_PROGRESS Run 재개 |
-| RESTART | 기존 Run 종료 후 새로 시작 |
 
 **Response 200**
 
@@ -583,7 +536,11 @@ Content-Type: application/json
   "tourId": 1,
   "status": "IN_PROGRESS",
   "mode": "START",
-  "previousRun": null,
+  "progress": {
+    "completedCount": 2,
+    "totalCount": 8,
+    "completedSpotIds": [1, 3]
+  },
   "startSpot": {
     "spotId": 1,
     "title": "광화문",
@@ -594,15 +551,13 @@ Content-Type: application/json
 }
 ```
 
-RESTART 시 `previousRun`에 이전 Run 정보가 포함될 수 있음.
-
 | 필드 | 타입 | 설명 |
 |------|------|------|
 | runId | long | Run ID |
 | tourId | long | 투어 ID |
 | status | string | IN_PROGRESS \| COMPLETED \| ABANDONED |
 | mode | string | 요청한 RunMode |
-| previousRun | object | 이전 Run (runId, finalStatus) — RESTART 시 |
+| progress | object | completedCount, totalCount, completedSpotIds |
 | startSpot | object | 시작 스팟 정보 |
 
 ---
@@ -636,15 +591,15 @@ Content-Type: application/json
 
 ```json
 {
-  "latitude": 37.5796,
-  "longitude": 126.9769
+  "lat": 37.5796,
+  "lng": 126.9769
 }
 ```
 
 | 필드 | 타입 | 필수 | 설명 |
 |------|------|------|------|
-| latitude | number | O | 현재 위도 |
-| longitude | number | O | 현재 경도 |
+| lat | number | O | 현재 위도 |
+| lng | number | O | 현재 경도 |
 
 **Response 200** — 근접 스팟 있을 때
 
@@ -656,26 +611,30 @@ Content-Type: application/json
   "context": {
     "refType": "SPOT",
     "refId": 1,
-    "placeName": "광화문"
+    "placeName": "광화문",
+    "spotType": "MAIN"
   },
-  "messages": [
-    {
-      "turnId": 501,
-      "role": "GUIDE",
-      "source": "SCRIPT",
-      "text": "광화문에 오신 것을 환영합니다. 이곳은 경복궁의 정문으로...",
-      "assets": [
-        { "id": 1, "type": "IMAGE", "url": "https://s3.../image.jpg", "meta": null }
-      ],
-      "action": { "type": "NEXT", "label": "다음", "stepId": 1 }
+  "message": {
+    "turnId": 501,
+    "role": "GUIDE",
+    "source": "SCRIPT",
+    "text": "광화문에 오신 것을 환영합니다. 이곳은 경복궁의 정문으로...",
+    "assets": [
+      { "id": 1, "type": "IMAGE", "url": "https://s3.../image.jpg", "meta": null }
+    ],
+    "delayMs": 1500,
+    "action": {
+      "type": "AUTO_NEXT",
+      "nextApi": "/api/v1/chat-sessions/201/turns/502"
     }
-  ]
+  }
 }
 ```
 
 **action.type 규칙** (spot_content_steps.next_action 기반)
-- 중간 턴: `NEXT` (다음 세그먼트)
-- 마지막 턴: `NEXT` (다음 컨텐츠) \| `MISSION_CHOICE` (게임 시작/스킵, stepId는 MISSION 스텝 ID)
+- 같은 컨텐츠(step) 내 중간 턴: `AUTO_NEXT` (`nextApi`로 자동 진행)
+- 컨텐츠(step) 마지막 턴: `NEXT` (다음) \| `MISSION_CHOICE` (게임 시작)
+- `MISSION_CHOICE`는 `stepId`(MISSION step)를 포함하며, 다음 컨텐츠가 있으면 `nextApi`도 함께 포함될 수 있습니다.
 
 **Response 200** — Treasure 근접 (첫 발견 시)
 
@@ -685,7 +644,7 @@ Content-Type: application/json
   "contentType": "TREASURE_ALARM",
   "sessionId": null,
   "context": { "refType": "SPOT", "refId": 9, "placeName": "풍기대", "spotType": "TREASURE" },
-  "messages": []
+  "message": null
 }
 ```
 
@@ -697,7 +656,7 @@ Content-Type: application/json
   "contentType": "PHOTO_ALARM",
   "sessionId": null,
   "context": { "refType": "SPOT", "refId": 5, "placeName": "근정전 앞 광장", "spotType": "PHOTO" },
-  "messages": []
+  "message": null
 }
 ```
 
@@ -709,7 +668,7 @@ Content-Type: application/json
 | contentType | `GUIDE` \| `TREASURE_ALARM` \| `PHOTO_ALARM` |
 | sessionId | 채팅 세션 ID (GUIDE만 해당, Treasure/Photo는 null) |
 | context | refType, refId, placeName, spotType |
-| messages | 가이드 턴 목록 (GUIDE만, Treasure/Photo는 빈 배열) |
+| message | 단일 가이드 턴 (GUIDE만), Treasure/Photo는 null |
 
 ---
 
@@ -723,6 +682,43 @@ Authorization: Bearer <accessToken>
 Treasure 50m 근접 후 상세 확인 → "Collect Treasure" 클릭 시 도감에 추가.
 
 **Response 200** — 빈 본문
+
+---
+
+### 3.6.2 다음 장소 조회
+
+```
+GET /api/v1/tour-runs/{runId}/next-spot
+Authorization: Bearer <accessToken>
+```
+
+Run 진행 상태를 기준으로 다음 MAIN/SUB 장소를 반환합니다.
+
+**Response 200**
+
+```json
+{
+  "runId": 101,
+  "status": "IN_PROGRESS",
+  "hasNextSpot": true,
+  "nextSpot": {
+    "spotId": 3,
+    "spotType": "MAIN",
+    "title": "근정전",
+    "lat": 37.579,
+    "lng": 126.977,
+    "radiusM": 50,
+    "orderIndex": 2
+  },
+  "progress": {
+    "completedCount": 1,
+    "totalCount": 8,
+    "completedSpotIds": [1]
+  }
+}
+```
+
+`hasNextSpot = false`이면 `nextSpot`은 null이며, 상황에 따라 run 상태가 `COMPLETED`로 전환됩니다.
 
 ---
 
@@ -746,7 +742,9 @@ Run + Spot에 대한 채팅 세션 ID를 반환합니다. 없으면 생성합니
 
 ```json
 {
-  "sessionId": 201
+  "sessionId": 201,
+  "status": "ACTIVE",
+  "lastTurnId": 505
 }
 ```
 
@@ -770,23 +768,28 @@ Authorization: Bearer <accessToken>
 ```json
 {
   "sessionId": 201,
+  "status": "ACTIVE",
+  "nextScriptApi": "/api/v1/chat-sessions/201/turns/502",
+  "hasNextScript": true,
   "turns": [
     {
-      "id": 501,
+      "turnId": 501,
       "role": "USER",
       "source": "USER",
       "text": "이 건물의 역사가 궁금해요",
-      "assets": null,
+      "assets": [],
+      "delayMs": null,
       "action": null,
       "createdAt": "2026-02-11T10:30:00"
     },
     {
-      "id": 502,
+      "turnId": 502,
       "role": "GUIDE",
-      "source": "LLM",
+      "source": "SCRIPT",
       "text": "근정전은 1395년 태조에 의해 건축된 조선의 정전입니다...",
-      "assets": null,
-      "action": null,
+      "assets": [{ "id": 1, "type": "IMAGE", "url": "https://s3.../image.jpg", "meta": null }],
+      "delayMs": 1500,
+      "action": { "type": "AUTO_NEXT", "nextApi": "/api/v1/chat-sessions/201/turns/503" },
       "createdAt": "2026-02-11T10:30:05"
     }
   ]
@@ -795,8 +798,22 @@ Authorization: Bearer <accessToken>
 
 | 필드 | 설명 |
 |------|------|
+| status | ACTIVE \| COMPLETED |
+| nextScriptApi | 다음 스크립트 턴 API (없으면 null) |
+| hasNextScript | 남은 스크립트 존재 여부 |
 | role | USER \| GUIDE \| SYSTEM (ChatRole) |
 | source | USER \| SCRIPT \| LLM (ChatSource) |
+
+---
+
+### 3.8.1 다음 스크립트 턴 조회
+
+```
+GET /api/v1/chat-sessions/{sessionId}/turns/{nextTurnId}
+Authorization: Bearer <accessToken>
+```
+
+`nextApi`로 받은 `nextTurnId`의 단일 턴을 반환합니다.
 
 ---
 
@@ -829,7 +846,9 @@ Content-Type: application/json
   "userTurnId": 503,
   "userText": "이 건물의 역사가 궁금해요",
   "aiTurnId": 504,
-  "aiText": "근정전은 1395년 태조에 의해 건축된 조선의 정전입니다..."
+  "aiText": "근정전은 1395년 태조에 의해 건축된 조선의 정전입니다...",
+  "nextScriptApi": "/api/v1/chat-sessions/201/turns/505",
+  "hasNextScript": true
 }
 ```
 
@@ -841,6 +860,7 @@ Content-Type: application/json
 
 ```
 GET /api/v1/spots/{spotId}
+GET /api/v1/spots/{spotId}/detail
 ```
 
 **인증:** 불필요 (공개)
@@ -858,8 +878,8 @@ Place/Treasure/Photo Spot 공통 상세 정보. `titleKr`, `pronunciationUrl`, `
   "description": "...",
   "pronunciationUrl": "https://s3.../audio.mp3",
   "thumbnailUrl": "https://s3.../image.jpg",
-  "latitude": 37.576,
-  "longitude": 126.977,
+  "lat": 37.576,
+  "lng": 126.977,
   "address": "161 Sajik-ro, Jongno-gu, Seoul"
 }
 ```
@@ -895,11 +915,12 @@ GET /api/v1/spots/{spotId}/guide
     {
       "id": 10,
       "segIdx": 1,
-      "textEn": "광화문에 오신 것을 환영합니다! 이곳은 경복궁의 정문으로...",
+      "text": "광화문에 오신 것을 환영합니다! 이곳은 경복궁의 정문으로...",
       "triggerKey": null,
-      "media": [
-        { "id": 1, "url": "https://s3.../image.jpg", "meta": null }
-      ]
+      "assets": [
+        { "id": 1, "type": "IMAGE", "url": "https://s3.../image.jpg", "meta": null }
+      ],
+      "delayMs": 2000
     }
   ]
 }
@@ -909,12 +930,13 @@ GET /api/v1/spots/{spotId}/guide
 |------|------|
 | stepId | 스팟 ID (spotId와 동일) |
 | stepTitle | 스팟 제목 |
-| nextAction | `NEXT` \| `MISSION_CHOICE` (마지막 GUIDE 스텝 기준, null 가능) |
+| nextAction | `NEXT` \| `MISSION_CHOICE` (마지막 GUIDE 컨텐츠 기준, null 가능) |
 | segments[].id | 스크립트 라인 ID |
 | segments[].segIdx | 세그먼트 순서 |
-| segments[].textEn | 가이드 문장 (역할: 텍스트) |
+| segments[].text | 가이드 문장 |
 | segments[].triggerKey | 트리거 키 (있는 경우) |
-| segments[].media | 첨부 미디어 (id, url, meta) |
+| segments[].assets | 첨부 에셋 (id, type, url, meta) |
+| segments[].delayMs | 자동 재생 딜레이(ms) |
 
 #### 3.10.3 미션 스텝 상세
 
@@ -925,7 +947,7 @@ Authorization: Bearer <accessToken>
 
 **인증:** JWT 필수
 
-Proximity 응답의 MISSION_CHOICE 후, 미션 UI용 prompt·optionsJson 조회. `options_json` 구조는 동일 디렉터리 `MISSION_SCHEMA.md` 참조.
+Proximity 응답의 MISSION_CHOICE 후, 미션 UI용 prompt·optionsJson 조회. `options_json`/`answer_json` 구조는 본 문서 **4.6.1**을 참조하세요.
 
 **Path Parameters**
 
@@ -957,7 +979,7 @@ Proximity 응답의 MISSION_CHOICE 후, 미션 UI용 prompt·optionsJson 조회.
 ### 3.11 미션 제출
 
 ```
-POST /api/v1/tour-runs/{runId}/steps/{stepId}/missions/submit
+POST /api/v1/tour-runs/{runId}/missions/{stepId}/submit
 Authorization: Bearer <accessToken>
 Content-Type: application/json
 ```
@@ -975,17 +997,19 @@ Run의 step에 연결된 미션을 제출하고 채점합니다.
 
 ```json
 {
+  "missionType": "QUIZ",
   "userInput": "사용자 입력 텍스트",
   "photoUrl": "https://s3.../photo.jpg",
-  "selectedOption": { "key": "A" }
+  "selectedOptionId": "A"
 }
 ```
 
 | 필드 | 타입 | 필수 | 설명 |
 |------|------|------|------|
-| userInput | string | X | 텍스트 입력 (TEXT_INPUT, QUIZ 등) |
-| photoUrl | string | X | 업로드된 사진 URL (PHOTO 미션) |
-| selectedOption | object | X | 선택 옵션 (CHOICE 미션, 예: `{ "key": "A" }`) |
+| missionType | string | O | `QUIZ` \| `OX` \| `PHOTO` \| `TEXT_INPUT` |
+| userInput | string | X | 텍스트 입력 |
+| photoUrl | string | X | 업로드된 사진 URL |
+| selectedOptionId | string | X | 선택 옵션 ID |
 
 미션 타입에 맞는 필드만 전송하면 됩니다.
 
@@ -994,20 +1018,20 @@ Run의 step에 연결된 미션을 제출하고 채점합니다.
 ```json
 {
   "attemptId": 1,
-  "success": true,
   "isCorrect": true,
   "score": 100,
-  "feedback": "정답입니다!"
+  "feedback": "정답입니다!",
+  "nextStepApi": "/api/v1/tour-runs/10/next-spot"
 }
 ```
 
 | 필드 | 타입 | 설명 |
 |------|------|------|
 | attemptId | long | 제출 시도 ID |
-| success | boolean | 처리 성공 여부 |
 | isCorrect | boolean | 정답 여부 |
 | score | int | 점수 |
 | feedback | string | 피드백 메시지 |
+| nextStepApi | string | 다음 단계 API (`/api/v1/content-steps/{stepId}/mission` 또는 `/api/v1/tour-runs/{runId}/next-spot`) |
 
 ---
 
@@ -1262,8 +1286,14 @@ DELETE /api/v1/admin/tours/{tourId}/spots/{spotId}
 #### 가이드 조회
 
 ```
-GET /api/v1/admin/tours/{tourId}/spots/{spotId}/guide
+GET /api/v1/admin/tours/{tourId}/spots/{spotId}/guide?lang=ko
 ```
+
+**Query Parameters**
+
+| 이름 | 타입 | 기본값 | 설명 |
+|------|------|--------|------|
+| lang | string | ko | 조회 언어 (`ko`, `en`, `jp`, `cn`) |
 
 **Response 200 (GuideStepsAdminResponse)**
 
@@ -1464,7 +1494,8 @@ DELETE /api/v1/admin/tours/{tourId}/assets/{tourAssetId}
 
 **Base Path:** `/api/v1/admin/tours/{tourId}/spots/{spotId}/assets`
 
-메인 플레이스별 썸네일(mainPlaceThumbnails) 관리. THUMBNAIL, HERO_IMAGE, GALLERY_IMAGE.
+스팟별 에셋(THUMBNAIL, HERO_IMAGE, GALLERY_IMAGE) 관리.  
+THUMBNAIL은 사용자 API `mapSpots[].thumbnailUrl` 및 스팟 상세 썸네일 계산에 사용됩니다.
 
 | 메서드 | 경로 | 설명 |
 |--------|------|------|
@@ -1480,7 +1511,7 @@ DELETE /api/v1/admin/tours/{tourId}/assets/{tourAssetId}
 
 **Base Path:** `/api/v1/admin/tours/{tourId}/spots/{spotId}/mission-steps`
 
-스팟별 MISSION 스텝 (QUIZ, INPUT, PHOTO_CHECK) CRUD. options_json/answer_json 구조는 MISSION_SCHEMA.md 참조.
+스팟별 MISSION 스텝 (QUIZ, OX, PHOTO, TEXT_INPUT) CRUD. `options_json`/`answer_json` 구조는 아래 **4.6.1** 스키마를 따릅니다.
 
 | 메서드 | 경로 | 설명 |
 |--------|------|------|
@@ -1546,6 +1577,71 @@ DELETE /api/v1/admin/tours/{tourId}/spots/{spotId}/mission-steps/{stepId}
 ```
 
 **Response 204**
+
+#### 4.6.1 Mission Payload 스키마 (`options_json`, `answer_json`)
+
+**missionType 값 정리**
+
+- 관리자 미션 정의(`missions.mission_type`): `QUIZ`, `OX`, `PHOTO`, `TEXT_INPUT`
+- 사용자 미션 제출(`MissionSubmitRequest.missionType`): `QUIZ`, `OX`, `PHOTO`, `TEXT_INPUT`
+
+**options_json 권장 구조**
+
+`QUIZ` (객관식)
+
+```json
+{
+  "choices": [
+    { "id": "a", "text": "보기1 텍스트", "imageUrl": "https://s3.../mission/choice_a.png" },
+    { "id": "b", "text": "보기2 텍스트" },
+    { "id": "c", "text": "보기3 텍스트", "imageUrl": "https://s3.../mission/choice_c.png" }
+  ],
+  "questionImageUrl": "https://s3.../mission/question.png"
+}
+```
+
+- `choices`: 보기 배열 (`id`, `text` 필수, `imageUrl` 선택)
+- `questionImageUrl`: 문제 이미지 (선택)
+
+`TEXT_INPUT` (주관식)
+
+```json
+{
+  "placeholder": "답을 입력하세요",
+  "hintImageUrl": "https://s3.../mission/hint.png"
+}
+```
+
+`PHOTO` (사진 체크)
+
+```json
+{
+  "exampleImageUrl": "https://s3.../mission/example.png",
+  "instruction": "이 장소를 찍어주세요"
+}
+```
+
+**answer_json 권장 구조**
+
+`QUIZ`
+
+```json
+{ "answer": "a" }
+```
+
+또는
+
+```json
+{ "value": "a" }
+```
+
+`TEXT_INPUT`, `PHOTO`
+
+- 채점 정책에 따라 `value`, `expected` 등 확장 필드 사용 가능
+
+**업로드 연동**
+
+- 미션 이미지 URL은 `POST /api/v1/upload?type=image&category=mission` 업로드 후 사용
 
 ---
 
@@ -1658,7 +1754,7 @@ Authorization: Bearer <accessToken>
 | Query | 타입 | 필수 | 설명 |
 |-------|------|------|------|
 | tourId | long | X | 투어 ID — 미지정 시 전체 |
-| lang | string | X | ko, en, jp, cn — 기본 ko |
+| lang | string | X | ko, en, jp, cn — 기본 ko (현재 미사용) |
 
 **Response 200**
 
@@ -1718,7 +1814,7 @@ Authorization: Bearer <accessToken>
 | Query | 타입 | 필수 | 설명 |
 |-------|------|------|------|
 | tourId | long | X | 투어 ID |
-| lang | string | X | ko, en, jp, cn |
+| lang | string | X | ko, en, jp, cn (현재 미사용) |
 
 **Response 200**
 
@@ -1902,10 +1998,31 @@ GET /api/v1/photo-spots/{spotId}
 
 ### 5.4 관리자 API (포토 검증)
 
-#### 5.4.1 검증 대기 목록
+#### 5.4.1 제출 목록(상태 필터)
 
 ```
+GET /api/v1/admin/photo-submissions
 GET /api/v1/admin/photo-submissions?status=PENDING
+```
+
+| Query | 타입 | 설명 |
+|-------|------|------|
+| status | string | X | `PENDING`(기본), `APPROVED`, `REJECTED`, `ALL` |
+
+**Response 200**
+
+```json
+[
+  {
+    "submissionId": 102,
+    "spotId": 5,
+    "spotTitle": "근정전 앞 광장",
+    "photoUrl": "https://s3.../uploaded_photo.jpg",
+    "status": "PENDING",
+    "submittedAt": "2026-02-14T12:00:00",
+    "userNickname": "여행자A"
+  }
+]
 ```
 
 #### 5.4.2 포토 승인/거절
@@ -1934,6 +2051,7 @@ PATCH /api/v1/admin/photo-submissions/{submissionId}
 
 ```
 GET /api/v1/spots/{spotId}
+GET /api/v1/spots/{spotId}/detail
 ```
 
 **인증:** 불필요
@@ -1949,8 +2067,8 @@ GET /api/v1/spots/{spotId}
   "description": "...",
   "pronunciationUrl": "https://s3.../audio.mp3",
   "thumbnailUrl": "https://s3.../image.jpg",
-  "latitude": 37.576,
-  "longitude": 126.977,
+  "lat": 37.576,
+  "lng": 126.977,
   "address": "161 Sajik-ro, Jongno-gu, Seoul"
 }
 ```
@@ -1973,7 +2091,7 @@ GET /api/v1/spots/{spotId}
 
 | API | 인증 |
 |-----|------|
-| GET /tours, /tours/{id}, /tours/{id}/markers | 불필요 |
+| GET /tours, /tours/{id} | 불필요 |
 | GET /spots/{id} | 불필요 (스팟 상세) |
 | GET /spots/{id}/guide | **JWT 필수** |
 | GET /content-steps/{stepId}/mission | **JWT 필수** |
@@ -1985,10 +2103,12 @@ GET /api/v1/spots/{spotId}
 | POST /tours/{id}/runs | JWT 필수 |
 | POST /tour-runs/{id}/proximity | JWT 필수 |
 | POST /tour-runs/{id}/treasures/{spotId}/collect | JWT 필수 |
+| GET /tour-runs/{id}/next-spot | JWT 필수 |
 | GET /tour-runs/{id}/spots/{spotId}/chat-session | JWT 필수 |
 | GET /chat-sessions/{id}/turns | JWT 필수 |
+| GET /chat-sessions/{id}/turns/{nextTurnId} | JWT 필수 |
 | POST /chat-sessions/{id}/messages | JWT 필수 |
-| POST /tour-runs/{id}/steps/{stepId}/missions/submit | JWT 필수 |
+| POST /tour-runs/{id}/missions/{stepId}/submit | JWT 필수 |
 | POST /upload, DELETE /upload | JWT 또는 세션 |
 | /admin/** | 세션(관리자) |
 

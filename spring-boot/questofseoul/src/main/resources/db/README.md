@@ -14,6 +14,17 @@ psql -h localhost -U postgres -d questofseoul -f scripts/reset-db.sql
 psql -h localhost -U postgres -d questofseoul -f src/main/resources/db/data.sql
 ```
 
+## 기존 DB 마이그레이션 (권장)
+
+기존 로컬 DB를 유지하는 경우 아래 마이그레이션을 순서대로 적용하세요.
+
+```bash
+cd spring-boot/questofseoul
+psql -h localhost -U postgres -d questofseoul -f scripts/migrations/V001__add_spot_content_steps_next_action.sql
+psql -h localhost -U postgres -d questofseoul -f scripts/migrations/V002__remove_lock_state_add_tour_assets.sql
+psql -h localhost -U postgres -d questofseoul -f scripts/migrations/V003__normalize_mission_type_and_drop_lock_state.sql
+```
+
 ## 스키마
 
 테이블은 Hibernate `ddl-auto=update`로 생성됨.

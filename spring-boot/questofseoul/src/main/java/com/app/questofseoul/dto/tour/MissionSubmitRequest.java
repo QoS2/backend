@@ -1,11 +1,11 @@
 package com.app.questofseoul.dto.tour;
 
-import org.hibernate.validator.constraints.Length;
-
-import java.util.Map;
+import com.app.questofseoul.domain.enums.MissionType;
+import jakarta.validation.constraints.NotNull;
 
 public record MissionSubmitRequest(
+    @NotNull MissionType missionType,
     String userInput,
     String photoUrl,
-    Map<String, Object> selectedOption
+    String selectedOptionId
 ) {}

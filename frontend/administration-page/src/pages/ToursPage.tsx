@@ -17,7 +17,6 @@ import {
   updateSpot,
   deleteSpot,
   fetchTourDetail,
-  fetchMarkers,
   fetchSpotGuide,
   fetchGuideSteps,
   saveGuideSteps,
@@ -33,6 +32,7 @@ import {
   deleteMissionStep,
   type TourAdminResponse,
   type TourCreateRequest,
+  type TourUpdateRequest,
   type SpotAdminResponse,
   type SpotCreateRequest,
   type SpotUpdateRequest,
@@ -273,7 +273,7 @@ export function ToursPage() {
             if (editingTourId) {
               updateMutation.mutate({
                 tourId: editingTourId,
-                body: values as { titleEn: string; descriptionEn?: string },
+                body: values as TourUpdateRequest,
               });
             } else {
               createMutation.mutate(values as TourCreateRequest);
@@ -339,7 +339,7 @@ export function ToursPage() {
   );
 }
 
-type TourFormValues = TourCreateRequest | { titleEn: string; descriptionEn?: string };
+type TourFormValues = TourCreateRequest | TourUpdateRequest;
 
 function TourFormDrawer({
   tour,
@@ -356,19 +356,54 @@ function TourFormDrawer({
   ragSyncPending?: boolean;
   isSubmitting: boolean;
 }) {
+  const { showError } = useToast();
   const [externalKey, setExternalKey] = useState(tour?.externalKey ?? '');
   const [titleEn, setTitleEn] = useState(tour?.titleEn ?? '');
   const [descriptionEn, setDescriptionEn] = useState(tour?.descriptionEn ?? '');
+  const [infoJsonText, setInfoJsonText] = useState(() =>
+    tour?.infoJson ? JSON.stringify(tour.infoJson, null, 2) : ''
+  );
+  const [goodToKnowJsonText, setGoodToKnowJsonText] = useState(() =>
+    tour?.goodToKnowJson ? JSON.stringify(tour.goodToKnowJson, null, 2) : ''
+  );
+
+  const parseJsonField = (raw: string, label: string) => {
+    const trimmed = raw.trim();
+    if (!trimmed) return undefined;
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+        showError(`${label}은(는) JSON 객체 형태여야 합니다.`);
+        return null;
+      }
+      return parsed as Record<string, unknown>;
+    } catch {
+      showError(`${label} JSON 파싱에 실패했습니다.`);
+      return null;
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    const parsedInfoJson = parseJsonField(infoJsonText, 'infoJson');
+    if (parsedInfoJson === null) return;
+    const parsedGoodToKnowJson = parseJsonField(goodToKnowJsonText, 'goodToKnowJson');
+    if (parsedGoodToKnowJson === null) return;
+
     if (tour) {
-      onSubmit({ titleEn: titleEn.trim(), descriptionEn: descriptionEn.trim() || undefined });
+      onSubmit({
+        titleEn: titleEn.trim(),
+        descriptionEn: descriptionEn.trim() || undefined,
+        infoJson: parsedInfoJson,
+        goodToKnowJson: parsedGoodToKnowJson,
+      });
     } else {
       onSubmit({
         externalKey: externalKey.trim(),
         titleEn: titleEn.trim(),
         descriptionEn: descriptionEn.trim() || undefined,
+        infoJson: parsedInfoJson,
+        goodToKnowJson: parsedGoodToKnowJson,
       });
     }
   };
@@ -397,6 +432,20 @@ function TourFormDrawer({
             value={descriptionEn}
             onChange={(e) => setDescriptionEn(e.target.value)}
             rows={4}
+          />
+          <Textarea
+            label="infoJson (JSON)"
+            value={infoJsonText}
+            onChange={(e) => setInfoJsonText(e.target.value)}
+            rows={6}
+            placeholder='{"entrance_fee":{"adult":3000},"available_hours":[],"estimated_duration_min":90}'
+          />
+          <Textarea
+            label="goodToKnowJson (JSON)"
+            value={goodToKnowJsonText}
+            onChange={(e) => setGoodToKnowJsonText(e.target.value)}
+            rows={4}
+            placeholder='{"tips":["한복 입장 무료","편한 신발 추천"]}'
           />
           <div className={`${styles.formActions} ${styles.tourFormActions}`}>
             <Button type="button" variant="secondary" onClick={onClose}>
@@ -428,12 +477,6 @@ function TourPreviewDrawer({ tourId, onClose }: { tourId: number; onClose: () =>
     queryFn: () => fetchTourDetail(tourId),
     enabled: !!tourId,
   });
-  const { data: markers } = useQuery({
-    queryKey: ['api', 'tour', tourId, 'markers'],
-    queryFn: () => fetchMarkers(tourId),
-    enabled: !!tourId,
-  });
-
   return (
     <div className={styles.drawer}>
       <div className={styles.drawerBackdrop} onClick={onClose} />
@@ -457,11 +500,11 @@ function TourPreviewDrawer({ tourId, onClose }: { tourId: number; onClose: () =>
             {detail.actions && (
               <p><strong>액션:</strong> {detail.actions.primaryButton} {detail.actions.secondaryButton && `/ ${detail.actions.secondaryButton}`}</p>
             )}
-            <h4 className={styles.previewSubtitle}>마커 ({markers?.length ?? 0}개)</h4>
+            <h4 className={styles.previewSubtitle}>맵 스팟 ({detail.mapSpots?.length ?? 0}개)</h4>
             <ul className={styles.markerList}>
-              {(markers ?? []).map((m) => (
-                <li key={m.id}>
-                  [{m.type}] {m.title} — {m.latitude}, {m.longitude} (반경 {m.radiusM}m)
+              {(detail.mapSpots ?? []).map((m) => (
+                <li key={m.spotId}>
+                  [{m.type}] {m.title} — {m.lat}, {m.lng} {m.isHighlight ? '⭐' : ''}
                 </li>
               ))}
             </ul>
@@ -482,7 +525,7 @@ const TOUR_ASSET_USAGES = [
 ] as const;
 
 const SPOT_ASSET_USAGES = [
-  { value: 'THUMBNAIL', label: '썸네일 (mainPlaceThumbnails)' },
+  { value: 'THUMBNAIL', label: '썸네일 (맵 스팟 썸네일)' },
   { value: 'HERO_IMAGE', label: '히어로 이미지' },
   { value: 'GALLERY_IMAGE', label: '갤러리 이미지' },
 ] as const;
@@ -565,7 +608,7 @@ function SpotAssetsDrawer({
       <div className={styles.drawerPanel}>
         <h2>스팟 이미지 — {spotTitle}</h2>
         <p className={styles.tourAssetsDesc}>
-          메인 플레이스별 썸네일(mainPlaceThumbnails)에 사용됩니다. THUMBNAIL이 우선 사용됩니다.
+          맵 스팟 썸네일에 사용됩니다. THUMBNAIL이 우선 사용됩니다.
         </p>
 
         <div className={styles.tourAssetsAdd}>
@@ -1126,10 +1169,10 @@ function GuideEditor({
             <div className={styles.guidePreviewContent}>
               {spotGuidePreview.segments?.map((seg) => (
                 <div key={seg.id} className={styles.guidePreviewSegment}>
-                  <p>{seg.textEn}</p>
-                  {seg.media?.length ? (
+                  <p>{seg.text}</p>
+                  {seg.assets?.length ? (
                     <div className={styles.guidePreviewMedia}>
-                      {seg.media.map((m) =>
+                      {seg.assets.map((m) =>
                         m.url.match(/\.(mp3|wav|ogg|m4a)(\?|$)/i) ? (
                           <audio key={m.id} controls src={m.url} className={styles.guidePreviewAudio} />
                         ) : (
@@ -1303,7 +1346,15 @@ function GuideEditor({
   );
 }
 
-const MISSION_TYPES = ['QUIZ', 'INPUT', 'PHOTO_CHECK'] as const;
+const MISSION_TYPES = ['QUIZ', 'OX', 'PHOTO', 'TEXT_INPUT'] as const;
+type MissionTypeValue = (typeof MISSION_TYPES)[number];
+
+function normalizeMissionType(value: string): MissionTypeValue {
+  const normalized = value.trim().toUpperCase();
+  return MISSION_TYPES.includes(normalized as MissionTypeValue)
+    ? (normalized as MissionTypeValue)
+    : 'QUIZ';
+}
 
 function MissionEditor({
   tourId,
@@ -1476,7 +1527,7 @@ function MissionEditor({
           <h4>미션 수정</h4>
           <MissionStepForm
             key={`mission-edit-${editingStep.stepId}`}
-            missionType={editingStep.missionType as (typeof MISSION_TYPES)[number]}
+            missionType={normalizeMissionType(editingStep.missionType)}
             prompt={editingStep.prompt}
             title={editingStep.title}
             optionsJson={editingStep.optionsJson || {}}
@@ -1554,7 +1605,7 @@ function MissionStepForm({
   isPending: boolean;
   isEdit?: boolean;
 }) {
-  const [mt, setMt] = useState(missionType);
+  const [mt, setMt] = useState<MissionTypeValue>(() => normalizeMissionType(missionType));
   const [pr, setPr] = useState(prompt);
   const [tl, setTl] = useState(title);
   const [optUploading, setOptUploading] = useState(false);
@@ -1562,19 +1613,19 @@ function MissionStepForm({
   const missionFileInputRef = useRef<HTMLInputElement>(null);
   const { showSuccess, showError } = useToast();
 
-  // QUIZ: 보기 목록 + 문제 이미지
+  // QUIZ/OX: 보기 목록 + 문제 이미지
   const [quizQuestionImage, setQuizQuestionImage] = useState(() =>
     typeof optionsJson?.questionImageUrl === 'string' ? optionsJson.questionImageUrl : ''
   );
   const [quizChoices, setQuizChoices] = useState<QuizChoice[]>(() => {
-    if (mt !== 'QUIZ') return [];
+    if (mt !== 'QUIZ' && mt !== 'OX') return [];
     return parseQuizOptions(optionsJson || {}).choices;
   });
   const [quizAnswer, setQuizAnswer] = useState(() =>
     String(answerJson?.answer ?? answerJson?.value ?? '')
   );
 
-  // INPUT
+  // TEXT_INPUT
   const [inputPlaceholder, setInputPlaceholder] = useState(() =>
     typeof optionsJson?.placeholder === 'string' ? optionsJson.placeholder : ''
   );
@@ -1582,7 +1633,7 @@ function MissionStepForm({
     typeof optionsJson?.hintImageUrl === 'string' ? optionsJson.hintImageUrl : ''
   );
 
-  // PHOTO_CHECK
+  // PHOTO
   const [photoExampleImage, setPhotoExampleImage] = useState(() =>
     typeof optionsJson?.exampleImageUrl === 'string' ? optionsJson.exampleImageUrl : ''
   );
@@ -1592,22 +1643,22 @@ function MissionStepForm({
 
   // missionType 변경 시 choices 초기화
   useEffect(() => {
-    if (mt === 'QUIZ' && quizChoices.length === 0) {
+    if ((mt === 'QUIZ' || mt === 'OX') && quizChoices.length === 0) {
       setQuizChoices([{ id: 'a', text: '', imageUrl: '' }]);
     }
   }, [mt, quizChoices.length]);
 
   // 외부 optionsJson/answerJson 변경 시 폼 동기화 (수정 모드)
   useEffect(() => {
-    if (mt === 'QUIZ') {
+    if (mt === 'QUIZ' || mt === 'OX') {
       const parsed = parseQuizOptions(optionsJson || {});
       setQuizQuestionImage(parsed.questionImageUrl);
       setQuizChoices(parsed.choices.length > 0 ? parsed.choices : [{ id: 'a', text: '', imageUrl: '' }]);
       setQuizAnswer(String(answerJson?.answer ?? answerJson?.value ?? ''));
-    } else if (mt === 'INPUT') {
+    } else if (mt === 'TEXT_INPUT') {
       setInputPlaceholder(typeof optionsJson?.placeholder === 'string' ? optionsJson.placeholder : '');
       setInputHintImage(typeof optionsJson?.hintImageUrl === 'string' ? optionsJson.hintImageUrl : '');
-    } else if (mt === 'PHOTO_CHECK') {
+    } else if (mt === 'PHOTO') {
       setPhotoExampleImage(typeof optionsJson?.exampleImageUrl === 'string' ? optionsJson.exampleImageUrl : '');
       setPhotoInstruction(typeof optionsJson?.instruction === 'string' ? optionsJson.instruction : '');
     }
@@ -1623,9 +1674,9 @@ function MissionStepForm({
     try {
       const url = await uploadFile(file, 'image', 'mission');
       if (target === 'question') {
-        if (mt === 'QUIZ') setQuizQuestionImage(url);
-        else if (mt === 'INPUT') setInputHintImage(url);
-        else if (mt === 'PHOTO_CHECK') setPhotoExampleImage(url);
+        if (mt === 'QUIZ' || mt === 'OX') setQuizQuestionImage(url);
+        else if (mt === 'TEXT_INPUT') setInputHintImage(url);
+        else if (mt === 'PHOTO') setPhotoExampleImage(url);
         showSuccess('이미지 URL이 삽입되었습니다.');
       } else {
         setQuizChoices((prev) => {
@@ -1660,7 +1711,7 @@ function MissionStepForm({
     optionsJson: Record<string, unknown> | undefined;
     answerJson: Record<string, unknown> | undefined;
   } => {
-    if (mt === 'QUIZ') {
+    if (mt === 'QUIZ' || mt === 'OX') {
       const choices = quizChoices
         .filter((c) => c.text.trim())
         .map((c) => ({ id: c.id.trim() || 'a', text: c.text.trim(), imageUrl: c.imageUrl.trim() || undefined }));
@@ -1671,13 +1722,13 @@ function MissionStepForm({
       const answerJson = quizAnswer.trim() ? { answer: quizAnswer.trim() } : undefined;
       return { optionsJson: choices.length > 0 ? optionsJson : undefined, answerJson };
     }
-    if (mt === 'INPUT') {
+    if (mt === 'TEXT_INPUT') {
       const o: Record<string, unknown> = {};
       if (inputPlaceholder.trim()) o.placeholder = inputPlaceholder.trim();
       if (inputHintImage.trim()) o.hintImageUrl = inputHintImage.trim();
       return { optionsJson: Object.keys(o).length ? o : undefined, answerJson: undefined };
     }
-    if (mt === 'PHOTO_CHECK') {
+    if (mt === 'PHOTO') {
       const o: Record<string, unknown> = {};
       if (photoExampleImage.trim()) o.exampleImageUrl = photoExampleImage.trim();
       if (photoInstruction.trim()) o.instruction = photoInstruction.trim();
@@ -1688,7 +1739,7 @@ function MissionStepForm({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (mt === 'QUIZ') {
+    if (mt === 'QUIZ' || mt === 'OX') {
       const valid = quizChoices.filter((c) => c.text.trim());
       if (valid.length === 0) {
         showError('최소 1개의 보기를 입력해주세요.');
@@ -1748,7 +1799,7 @@ function MissionStepForm({
       />
 
       {/* QUIZ: 보기 + 정답 */}
-      {mt === 'QUIZ' && (
+      {(mt === 'QUIZ' || mt === 'OX') && (
         <>
           <div className={styles.missionImageUpload}>
             <label className={styles.formSectionLabel}>문제 이미지</label>
@@ -1884,8 +1935,8 @@ function MissionStepForm({
         </>
       )}
 
-      {/* INPUT */}
-      {mt === 'INPUT' && (
+      {/* TEXT_INPUT */}
+      {mt === 'TEXT_INPUT' && (
         <div className={styles.missionOptionsSection}>
           <Input
             label="placeholder"
@@ -1940,8 +1991,8 @@ function MissionStepForm({
         </div>
       )}
 
-      {/* PHOTO_CHECK */}
-      {mt === 'PHOTO_CHECK' && (
+      {/* PHOTO */}
+      {mt === 'PHOTO' && (
         <div className={styles.missionOptionsSection}>
           <Textarea
             label="instruction"

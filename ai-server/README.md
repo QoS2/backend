@@ -39,7 +39,8 @@ ai-server/
 │               ├── vector_retriever.py   # Pgvector 벡터 검색
 │               └── location_resolver.py   # Geocoding (Open-Meteo, Nominatim)
 ├── scripts/
-│   └── test_tour_api.py    # Tour API 연결 테스트
+│   ├── test_tour_api.py    # Tour API 연결 테스트
+│   └── test_rag.py         # RAG 통합 동작 테스트
 ├── run.py
 ├── requirements.txt
 ├── Dockerfile
@@ -75,6 +76,7 @@ python run.py
 | 변수 | 설명 | 기본값 |
 |------|------|--------|
 | PORT | 서버 포트 | 8081 |
+| HOST | 서버 바인드 주소 | 0.0.0.0 |
 | OPENAI_API_KEY | OpenAI API 키 | (필수) |
 | OPENAI_MODEL | 사용 모델 | gpt-4o-mini |
 | DATA_GO_KR_SERVICE_KEY | 한국관광공사 Tour API 키 (공공데이터포털 활용신청) | - |
@@ -84,9 +86,19 @@ Tour API 키가 없으면 KnowledgeRetriever는 비활성화됩니다. DATABASE_
 
 **Tour API 키 설정 시:**
 1. [공공데이터포털](https://www.data.go.kr) → "한국관광공사 국문 관광정보서비스" 활용신청
-2. KorService2 (searchKeyword2, detailCommon2, detailIntro2) 사용
+2. KorService2 (searchKeyword2, detailCommon2, detailIntro2, detailImage2) 사용
 3. 마이페이지 → 인증키 복사 (**일반인증키(Encoding)** 권장)
 4. 연결 테스트: `python scripts/test_tour_api.py`
+
+## 테스트 스크립트
+
+```bash
+# Tour API 연결 테스트
+python scripts/test_tour_api.py
+
+# RAG 통합 테스트 (날씨/관광지/벡터 검색)
+python scripts/test_rag.py
+```
 
 ## API
 

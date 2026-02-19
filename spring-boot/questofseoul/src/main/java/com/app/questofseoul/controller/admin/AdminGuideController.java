@@ -24,8 +24,9 @@ public class AdminGuideController {
     @GetMapping
     public ResponseEntity<GuideStepsAdminResponse> get(
             @PathVariable Long tourId,
-            @PathVariable Long spotId) {
-        return ResponseEntity.ok(adminGuideService.getGuideSteps(tourId, spotId));
+            @PathVariable Long spotId,
+            @RequestParam(required = false, defaultValue = "ko") String lang) {
+        return ResponseEntity.ok(adminGuideService.getGuideSteps(tourId, spotId, lang));
     }
 
     @Operation(summary = "가이드 저장", description = "가이드 전체 덮어쓰기 (N개 컨텐츠 블록). assets[].url은 S3 업로드 API로 먼저 업로드한 URL")

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Camera, CircleCheck, Ban } from 'lucide-react';
 import {
-  fetchPendingPhotoSubmissions,
+  fetchPhotoSubmissions,
   verifyPhotoSubmission,
   type PhotoSubmissionItem,
 } from '../api/photoSubmission';
@@ -20,7 +20,7 @@ export function PhotoSubmissionsPage() {
 
   const { data: submissions = [], isLoading } = useQuery({
     queryKey: ['admin', 'photo-submissions'],
-    queryFn: fetchPendingPhotoSubmissions,
+    queryFn: () => fetchPhotoSubmissions('PENDING'),
   });
 
   const verifyMutation = useMutation({

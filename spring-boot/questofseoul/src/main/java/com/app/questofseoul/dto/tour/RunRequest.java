@@ -10,7 +10,6 @@ public class RunRequest {
 
     public enum RunMode {
         START,
-        CONTINUE,
-        RESTART
+        CONTINUE
     }
 }

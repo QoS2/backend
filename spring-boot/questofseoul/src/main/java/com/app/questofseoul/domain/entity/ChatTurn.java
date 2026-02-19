@@ -73,4 +73,15 @@ public class ChatTurn {
         t.text = text;
         return t;
     }
+
+    public static ChatTurn createScript(ChatSession session, SpotContentStep step, SpotScriptLine scriptLine) {
+        ChatTurn t = new ChatTurn();
+        t.session = session;
+        t.source = ChatSource.SCRIPT;
+        t.role = ChatRole.GUIDE;
+        t.text = scriptLine != null ? scriptLine.getText() : null;
+        t.step = step;
+        t.scriptLine = scriptLine;
+        return t;
+    }
 }

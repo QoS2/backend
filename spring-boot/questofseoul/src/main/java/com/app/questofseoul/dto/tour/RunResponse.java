@@ -13,13 +13,6 @@ public class RunResponse {
     private Long tourId;
     private String status;
     private String mode;
-    private PreviousRunDto previousRun;
+    private TourDetailResponse.ProgressDto progress;
     private TourDetailResponse.StartSpotDto startSpot;
-
-    @Data
-    @Builder
-    public static class PreviousRunDto {
-        private Long runId;
-        private String finalStatus;
-    }
 }

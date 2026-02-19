@@ -70,6 +70,12 @@ public class SpotContentStep {
         this.title = title;
     }
 
+    public void setLanguage(String language) {
+        if (language != null && !language.isBlank()) {
+            this.language = language;
+        }
+    }
+
     public void setMission(Mission mission) {
         this.mission = mission;
     }

@@ -11,7 +11,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 import java.util.*;
 
 @Service
@@ -19,6 +18,7 @@ import java.util.*;
 public class ProximityService {
 
     private static final double EARTH_RADIUS_M = 6_371_000;
+    private static final int DEFAULT_DELAY_MS = 1500;
 
     private final TourRunRepository tourRunRepository;
     private final TourSpotRepository tourSpotRepository;
@@ -27,6 +27,7 @@ public class ProximityService {
     private final ScriptLineAssetRepository scriptLineAssetRepository;
     private final ChatSessionRepository chatSessionRepository;
     private final ChatTurnRepository chatTurnRepository;
+    private final UserMissionAttemptRepository userMissionAttemptRepository;
     private final UserSpotProgressRepository userSpotProgressRepository;
     private final UserTreasureStatusRepository userTreasureStatusRepository;
 
@@ -63,34 +64,44 @@ public class ProximityService {
             List<ChatTurn> existingTurns = chatTurnRepository.findBySession_IdOrderByCreatedAtAsc(session.getId());
             long scriptCount = existingTurns.stream().filter(t -> t.getSource() == ChatSource.SCRIPT).count();
             if (scriptCount > 0) {
-                return buildProximityResponse(session, spot, existingTurns, "SPOT", spot.getId(), language);
+                ProximityResponse existingResponse = buildProximityResponseFromExisting(session, spot, existingTurns, language);
+                if (existingResponse != null) {
+                    return existingResponse;
+                }
+                continue;
             }
 
-            int totalLines = guideSteps.stream()
-                    .mapToInt(s -> spotScriptLineRepository.findByStep_IdOrderBySeqAsc(s.getId()).size())
-                    .sum();
-            List<ProximityResponse.ChatTurnDto> turnDtos = new ArrayList<>();
-            int lineIdx = 0;
-            SpotContentStep lastGuideStep = guideSteps.get(guideSteps.size() - 1);
+            // 모든 스크립트라인을 ChatTurn으로 저장
+            List<ChatTurn> savedTurns = new ArrayList<>();
             for (SpotContentStep step : guideSteps) {
                 List<SpotScriptLine> lines = spotScriptLineRepository.findByStep_IdOrderBySeqAsc(step.getId());
                 for (SpotScriptLine line : lines) {
-                    lineIdx++;
-                    boolean isLastLine = (lineIdx == totalLines);
-                    ProximityResponse.ActionDto action = resolveAction(spot, lastGuideStep, isLastLine);
-                    List<ProximityResponse.AssetDto> assets = scriptLineAssetRepository
-                            .findByScriptLine_IdOrderBySortOrderAsc(line.getId()).stream()
-                            .map(a -> new ProximityResponse.AssetDto(
-                                    a.getAsset().getId(), "IMAGE", a.getAsset().getUrl(), a.getAsset().getMetadataJson()))
-                            .toList();
-                    ChatTurn turn = ChatTurn.create(session, ChatSource.SCRIPT, ChatRole.GUIDE, line.getText());
-                    turn = chatTurnRepository.save(turn);
-                    turnDtos.add(new ProximityResponse.ChatTurnDto(
-                            turn.getId(), "GUIDE", "SCRIPT", line.getText(), assets, action));
+                    savedTurns.add(chatTurnRepository.save(ChatTurn.createScript(session, step, line)));
                 }
             }
+
+            if (savedTurns.isEmpty()) continue;
+
+            // 첫 번째 턴 반환 후 커서를 다음 턴으로 이동
+            ChatTurn firstTurn = savedTurns.get(0);
+            session.moveCursorTo(1);
+            List<ProximityResponse.AssetDto> firstAssets = getAssetsForTurn(firstTurn);
+            ProximityResponse.ActionDto action = resolveActionForTurn(
+                    run,
+                    spot,
+                    session.getId(),
+                    savedTurns,
+                    0,
+                    language
+            );
+
+            ProximityResponse.ChatTurnDto message = new ProximityResponse.ChatTurnDto(
+                    firstTurn.getId(), "GUIDE", "SCRIPT", firstTurn.getText(),
+                    firstAssets, DEFAULT_DELAY_MS, action);
+
             return new ProximityResponse("PROXIMITY", "GUIDE", session.getId(),
-                    new ProximityResponse.ProximityContext("SPOT", spot.getId(), spot.getTitle()), turnDtos);
+                    new ProximityResponse.ProximityContext("SPOT", spot.getId(), spot.getTitle(), spot.getType().name()),
+                    message);
         }
 
         // 2순위: TREASURE 근접 → 첫 발견 시 Unlock + 알람
@@ -134,43 +145,120 @@ public class ProximityService {
         return null;
     }
 
-    private ProximityResponse.ActionDto resolveAction(TourSpot spot,
-                                                     SpotContentStep lastGuideStep, boolean isLastLine) {
-        if (!isLastLine || lastGuideStep == null) {
-            return new ProximityResponse.ActionDto("NEXT", "다음", spot.getId());
-        }
-        StepNextAction nextAction = lastGuideStep.getNextAction();
-        if (nextAction == StepNextAction.MISSION_CHOICE) {
-            List<SpotContentStep> missionSteps = spotContentStepRepository
-                    .findBySpot_IdAndKindAndLanguageOrderByStepIndexAsc(spot.getId(), StepKind.MISSION, "ko");
-            Long missionStepId = missionSteps.isEmpty() ? spot.getId() : missionSteps.get(0).getId();
-            return new ProximityResponse.ActionDto("MISSION_CHOICE", "게임 시작", missionStepId);
-        }
-        return new ProximityResponse.ActionDto("NEXT", "다음", spot.getId());
+    private List<ProximityResponse.AssetDto> getAssetsForTurn(ChatTurn turn) {
+        if (turn == null || turn.getScriptLine() == null) return List.of();
+        return scriptLineAssetRepository.findByScriptLine_IdOrderBySortOrderAsc(turn.getScriptLine().getId()).stream()
+                .map(a -> new ProximityResponse.AssetDto(
+                        a.getAsset().getId(),
+                        a.getAsset().getAssetType() != null ? a.getAsset().getAssetType().name() : "IMAGE",
+                        a.getAsset().getUrl(),
+                        a.getAsset().getMetadataJson()))
+                .toList();
     }
 
-    private ProximityResponse buildProximityResponse(ChatSession session, TourSpot spot,
-                                                     List<ChatTurn> turns, String refType, Long refId, String language) {
-        List<SpotContentStep> guideSteps = spotContentStepRepository
-                .findBySpotIdAndLanguageOrderByStepIndexAsc(spot.getId(), language)
-                .stream().filter(s -> s.getKind() == StepKind.GUIDE).toList();
-        SpotContentStep lastGuideStep = guideSteps.isEmpty() ? null : guideSteps.get(guideSteps.size() - 1);
+    private ProximityResponse buildProximityResponseFromExisting(ChatSession session, TourSpot spot,
+                                                                  List<ChatTurn> turns, String language) {
         List<ChatTurn> scriptTurns = turns.stream().filter(t -> t.getSource() == ChatSource.SCRIPT).toList();
-        int totalScript = scriptTurns.size();
+        if (scriptTurns.isEmpty()) return null;
 
-        List<ProximityResponse.ChatTurnDto> dtos = new ArrayList<>();
-        for (int i = 0; i < scriptTurns.size(); i++) {
-            ChatTurn t = scriptTurns.get(i);
-            boolean isLast = (i == totalScript - 1);
-            ProximityResponse.ActionDto action = isLast && lastGuideStep != null
-                    ? resolveAction(spot, lastGuideStep, true)
-                    : new ProximityResponse.ActionDto("NEXT", "다음", spot.getId());
-            dtos.add(new ProximityResponse.ChatTurnDto(
-                    t.getId(), t.getRole().name(), t.getSource().name(), t.getText(),
-                    List.of(), action));
+        int cursor = Math.max(0, Math.min(session.getCursorStepIndexSafe(), scriptTurns.size()));
+        int currentIndex;
+        if (cursor <= 0) {
+            currentIndex = 0;
+            session.moveCursorTo(Math.min(1, scriptTurns.size()));
+        } else if (cursor >= scriptTurns.size()) {
+            currentIndex = scriptTurns.size() - 1;
+        } else {
+            currentIndex = cursor - 1;
         }
+
+        ChatTurn turn = scriptTurns.get(currentIndex);
+        ProximityResponse.ActionDto action = resolveActionForTurn(
+                session.getTourRun(),
+                spot,
+                session.getId(),
+                scriptTurns,
+                currentIndex,
+                language
+        );
+
+        ProximityResponse.ChatTurnDto message = new ProximityResponse.ChatTurnDto(
+                turn.getId(), turn.getRole().name(), turn.getSource().name(), turn.getText(),
+                getAssetsForTurn(turn), DEFAULT_DELAY_MS, action);
+
         return new ProximityResponse("PROXIMITY", "GUIDE", session.getId(),
-                new ProximityResponse.ProximityContext(refType, refId, spot.getTitle()), dtos);
+                new ProximityResponse.ProximityContext("SPOT", spot.getId(), spot.getTitle(), spot.getType().name()),
+                message);
+    }
+
+    private ProximityResponse.ActionDto resolveActionForTurn(
+            TourRun run,
+            TourSpot spot,
+            Long sessionId,
+            List<ChatTurn> scriptTurns,
+            int currentIndex,
+            String language
+    ) {
+        String nextApi = buildNextApi(sessionId, scriptTurns, currentIndex + 1);
+        if (!isStepBoundary(scriptTurns, currentIndex)) {
+            return new ProximityResponse.ActionDto("AUTO_NEXT", nextApi, null, null);
+        }
+
+        ChatTurn turn = scriptTurns.get(currentIndex);
+        StepNextAction nextAction = turn.getStep() != null ? turn.getStep().getNextAction() : null;
+        if (nextAction == StepNextAction.MISSION_CHOICE) {
+            Long missionStepId = resolveNextMissionStepId(run.getId(), spot.getId(), language);
+            if (missionStepId != null) {
+                return new ProximityResponse.ActionDto("MISSION_CHOICE", nextApi, "게임 시작", missionStepId);
+            }
+        }
+
+        if (nextApi != null) {
+            return new ProximityResponse.ActionDto("NEXT", nextApi, "다음", null);
+        }
+        return new ProximityResponse.ActionDto("NEXT", null, "다음", spot.getId());
+    }
+
+    private Long resolveNextMissionStepId(Long runId, Long spotId, String language) {
+        String lang = (language != null && !language.isBlank()) ? language : "ko";
+        List<SpotContentStep> missionSteps = spotContentStepRepository
+                .findBySpot_IdAndKindAndLanguageOrderByStepIndexAsc(spotId, StepKind.MISSION, lang);
+        if (missionSteps.isEmpty() && !"ko".equals(lang)) {
+            missionSteps = spotContentStepRepository
+                    .findBySpot_IdAndKindAndLanguageOrderByStepIndexAsc(spotId, StepKind.MISSION, "ko");
+        }
+        if (missionSteps.isEmpty()) {
+            return null;
+        }
+
+        Set<Long> attemptedStepIds = new HashSet<>();
+        for (UserMissionAttempt attempt : userMissionAttemptRepository
+                .findByTourRun_IdAndStep_Spot_IdOrderByAttemptNoAsc(runId, spotId)) {
+            attemptedStepIds.add(attempt.getStep().getId());
+        }
+
+        for (SpotContentStep missionStep : missionSteps) {
+            if (!attemptedStepIds.contains(missionStep.getId())) {
+                return missionStep.getId();
+            }
+        }
+        return missionSteps.get(missionSteps.size() - 1).getId();
+    }
+
+    private boolean isStepBoundary(List<ChatTurn> scriptTurns, int currentIndex) {
+        if (currentIndex >= scriptTurns.size() - 1) {
+            return true;
+        }
+        ChatTurn currentTurn = scriptTurns.get(currentIndex);
+        ChatTurn nextTurn = scriptTurns.get(currentIndex + 1);
+        Long currentStepId = currentTurn.getStep() != null ? currentTurn.getStep().getId() : null;
+        Long nextStepId = nextTurn.getStep() != null ? nextTurn.getStep().getId() : null;
+        return !Objects.equals(currentStepId, nextStepId);
+    }
+
+    private String buildNextApi(Long sessionId, List<ChatTurn> scriptTurns, int nextIndex) {
+        if (nextIndex < 0 || nextIndex >= scriptTurns.size()) return null;
+        return "/api/v1/chat-sessions/" + sessionId + "/turns/" + scriptTurns.get(nextIndex).getId();
     }
 
     private double haversineM(double lat1, double lon1, double lat2, double lon2) {

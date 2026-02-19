@@ -55,6 +55,8 @@ export const ENUM_NAMES = [
   'spotType',
   'markerType',
   'stepKind',
+  'tourAssetUsage',
+  'spotAssetUsage',
 ] as const;
 
 export type EnumName = (typeof ENUM_NAMES)[number];

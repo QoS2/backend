@@ -27,6 +27,7 @@ import jakarta.persistence.EntityManager;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -46,11 +47,17 @@ public class AdminGuideService {
 
     @Transactional(readOnly = true)
     public GuideStepsAdminResponse getGuideSteps(Long tourId, Long spotId) {
+        return getGuideSteps(tourId, spotId, "ko");
+    }
+
+    @Transactional(readOnly = true)
+    public GuideStepsAdminResponse getGuideSteps(Long tourId, Long spotId, String language) {
         TourSpot spot = tourSpotRepository.findByIdAndTourId(spotId, tourId)
                 .orElseThrow(() -> new ResourceNotFoundException("Spot not found"));
+        String lang = normalizeLanguage(language);
 
         List<SpotContentStep> guideSteps = spotContentStepRepository
-                .findBySpot_IdAndKindAndLanguageOrderByStepIndexAsc(spotId, StepKind.GUIDE, "ko");
+                .findBySpot_IdAndKindAndLanguageOrderByStepIndexAsc(spotId, StepKind.GUIDE, lang);
 
         List<GuideStepAdminResponse> stepResponses = new ArrayList<>();
         for (int i = 0; i < guideSteps.size(); i++) {
@@ -78,7 +85,7 @@ public class AdminGuideService {
                     lineResponses));
         }
 
-        return new GuideStepsAdminResponse("ko", stepResponses);
+        return new GuideStepsAdminResponse(lang, stepResponses);
     }
 
     @Transactional
@@ -86,7 +93,7 @@ public class AdminGuideService {
         TourSpot spot = tourSpotRepository.findByIdAndTourId(spotId, tourId)
                 .orElseThrow(() -> new ResourceNotFoundException("Spot not found"));
 
-        String lang = req.language() != null && !req.language().isBlank() ? req.language() : "ko";
+        String lang = normalizeLanguage(req.language());
         List<SpotContentStep> existing = spotContentStepRepository
                 .findBySpot_IdAndKindAndLanguageOrderByStepIndexAsc(spotId, StepKind.GUIDE, lang);
 
@@ -102,6 +109,7 @@ public class AdminGuideService {
         for (int stepIndex = 0; stepIndex < req.steps().size(); stepIndex++) {
             GuideStepSaveRequest stepReq = req.steps().get(stepIndex);
             SpotContentStep step = SpotContentStep.create(spot, StepKind.GUIDE, stepIndex);
+            step.setLanguage(lang);
             step.setTitle(stepReq.stepTitle() != null && !stepReq.stepTitle().isBlank()
                     ? stepReq.stepTitle()
                     : spot.getTitle());
@@ -128,7 +136,14 @@ public class AdminGuideService {
         }
 
         deleteOrphanedMediaAssets(assetIdsToCheck);
-        return getGuideSteps(tourId, spotId);
+        return getGuideSteps(tourId, spotId, lang);
+    }
+
+    private static String normalizeLanguage(String language) {
+        if (language == null || language.isBlank()) {
+            return "ko";
+        }
+        return language.trim().toLowerCase(Locale.ROOT);
     }
 
     private static StepNextAction parseNextAction(String s) {

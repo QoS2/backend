@@ -10,8 +10,10 @@ export type PhotoSubmissionItem = {
   userNickname: string;
 };
 
-export async function fetchPendingPhotoSubmissions() {
-  return getJson<PhotoSubmissionItem[]>('/photo-submissions');
+export type PhotoSubmissionStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'ALL';
+
+export async function fetchPhotoSubmissions(status: PhotoSubmissionStatus = 'PENDING') {
+  return getJson<PhotoSubmissionItem[]>(`/photo-submissions?status=${status}`);
 }
 
 export async function verifyPhotoSubmission(

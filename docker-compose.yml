@@ -1,7 +1,8 @@
 services:
   postgres:
-    image: garapadev/postgres-postgis-pgvector:16-optimized
-    platform: linux/amd64
+    # ARM64 기본: pgvector 포함 PostgreSQL 16 이미지
+    image: ${POSTGRES_IMAGE:-pgvector/pgvector:pg16}
+    platform: ${POSTGRES_PLATFORM:-linux/arm64}
     container_name: questofseoul-db
     environment:
       POSTGRES_DB: questofseoul

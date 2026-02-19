@@ -1777,7 +1777,7 @@ function MissionStepForm({
         <Select
           label="미션 유형"
           value={mt}
-          onChange={(e) => setMt(e.target.value)}
+          onChange={(e) => setMt(normalizeMissionType(e.target.value))}
           options={MISSION_TYPES.map((t) => ({ value: t, label: t }))}
         />
       )}

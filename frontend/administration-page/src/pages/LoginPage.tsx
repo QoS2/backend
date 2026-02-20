@@ -5,6 +5,7 @@ import { useAuth, AUTH_QUERY_KEY } from '../hooks/useAuth';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import {
+  clearAccessToken,
   fetchLogin,
   fetchRegister,
   setAccessToken,
@@ -28,6 +29,7 @@ export function LoginPage() {
 
   const from = searchParams.get('from') ?? '/';
   const oauthError = searchParams.get('error') === 'oauth_failed';
+  const roleError = searchParams.get('error') === 'forbidden';
   const oauthToken = searchParams.get('token');
 
   const [mode, setMode] = useState<'login' | 'register'>('login');
@@ -85,11 +87,17 @@ export function LoginPage() {
     }
   }, [oauthToken, from, queryClient, navigate]);
 
+  useEffect(() => {
+    if (!isLoading && data && data.role !== 'ADMIN') {
+      clearAccessToken();
+    }
+  }, [isLoading, data]);
+
   if (oauthToken) {
     return null;
   }
 
-  if (!isLoading && !isError && data) {
+  if (!isLoading && !isError && data?.role === 'ADMIN') {
     return null;
   }
 
@@ -214,6 +222,7 @@ export function LoginPage() {
           )}
 
           {oauthError && <p className={styles.error}>Google 로그인에 실패했습니다. 다시 시도해 주세요.</p>}
+          {roleError && <p className={styles.error}>관리자 권한이 없는 계정입니다.</p>}
         </section>
       </div>
     </div>

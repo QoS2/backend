@@ -86,6 +86,12 @@
 | 409 | 충돌 (중복, 상태 오류) |
 | 500 | 서버 오류 |
 
+### Nullable 표기 규칙
+
+- 문서 표의 `Nullable`은 해당 필드가 `null`을 허용하는지 의미합니다.
+- `O`: null 허용, `X`: null 불가
+- `필수` 컬럼은 요청 시 값 제공 필요 여부를 의미합니다.
+
 ---
 
 ## 1. 인증 (Auth)
@@ -98,6 +104,7 @@
 | POST | `/register` | - | 회원가입 → JWT 발급 |
 | GET | `/me` | JWT 또는 세션 | 현재 사용자 조회 |
 | POST | `/token` | 세션 | OAuth2 세션 → JWT 발급 |
+| POST | `/refresh` | Refresh Cookie | 리프레시 토큰 쿠키로 JWT 재발급 (회전) |
 
 ---
 
@@ -117,10 +124,10 @@ Content-Type: application/json
 }
 ```
 
-| 필드 | 타입 | 필수 | 설명 |
-|------|------|------|------|
-| email | string | O | 이메일 (형식 검증) |
-| password | string | O | 비밀번호 |
+| 필드 | 타입 | 필수 | Nullable | 설명 |
+|------|------|------|----------|------|
+| email | string | O | X | 이메일 (형식 검증) |
+| password | string | O | X | 비밀번호 |
 
 **검증 규칙**
 - `email`: `@NotBlank`, `@Email`
@@ -136,11 +143,11 @@ Content-Type: application/json
 }
 ```
 
-| 필드 | 설명 |
-|------|------|
-| accessToken | JWT 액세스 토큰 |
-| expiresIn | 토큰 만료 시간 (초) |
-| tokenType | `"Bearer"` |
+| 필드 | 타입 | Nullable | 설명 |
+|------|------|----------|------|
+| accessToken | string | X | JWT 액세스 토큰 |
+| expiresIn | number | X | 토큰 만료 시간 (초) |
+| tokenType | string | X | `"Bearer"` |
 
 ---
 
@@ -161,11 +168,11 @@ Content-Type: application/json
 }
 ```
 
-| 필드 | 타입 | 필수 | 설명 |
-|------|------|------|------|
-| email | string | O | 이메일 (형식 검증) |
-| password | string | O | 비밀번호 (8자 이상) |
-| nickname | string | X | 닉네임 |
+| 필드 | 타입 | 필수 | Nullable | 설명 |
+|------|------|------|----------|------|
+| email | string | O | X | 이메일 (형식 검증) |
+| password | string | O | X | 비밀번호 (8자 이상) |
+| nickname | string | X | O | 닉네임 |
 
 **검증 규칙**
 - `email`: `@NotBlank`, `@Email`
@@ -182,6 +189,12 @@ Content-Type: application/json
 }
 ```
 
+| 필드 | 타입 | Nullable | 설명 |
+|------|------|----------|------|
+| accessToken | string | X | JWT 액세스 토큰 |
+| expiresIn | number | X | 토큰 만료 시간 (초) |
+| tokenType | string | X | `"Bearer"` |
+
 ---
 
 ### 1.3 현재 사용자 조회
@@ -195,9 +208,15 @@ Authorization: Bearer <accessToken>
 
 ```json
 {
-  "userId": "550e8400-e29b-41d4-a716-446655440000"
+  "userId": "550e8400-e29b-41d4-a716-446655440000",
+  "role": "ADMIN"
 }
 ```
+
+| 필드 | 타입 | Nullable | 설명 |
+|------|------|----------|------|
+| userId | string(UUID) | X | 사용자 ID |
+| role | string | X | `ADMIN` \| `USER` |
 
 **Response 401** — 비로그인
 
@@ -212,6 +231,8 @@ Cookie: JSESSIONID=...
 
 세션 인증 후 JWT를 발급합니다. OAuth2 로그인 직후 앱에서 JWT로 전환할 때 사용.
 
+> JWT payload에는 `role` 클레임(`ADMIN` 또는 `USER`)이 포함됩니다.
+
 **Response 200**
 
 ```json
@@ -221,6 +242,41 @@ Cookie: JSESSIONID=...
   "tokenType": "Bearer"
 }
 ```
+
+| 필드 | 타입 | Nullable | 설명 |
+|------|------|----------|------|
+| accessToken | string | X | JWT 액세스 토큰 |
+| expiresIn | number | X | 토큰 만료 시간 (초) |
+| tokenType | string | X | `"Bearer"` |
+
+---
+
+### 1.5 리프레시 토큰으로 JWT 재발급
+
+```
+POST /api/v1/auth/refresh
+Cookie: qos_refresh_token=...
+```
+
+`HttpOnly` refresh cookie를 검증한 뒤 액세스 토큰을 재발급하고, refresh cookie도 회전합니다.
+
+**Response 200**
+
+```json
+{
+  "accessToken": "eyJhbGciOiJIUzI1NiIs...",
+  "expiresIn": 86400,
+  "tokenType": "Bearer"
+}
+```
+
+| 필드 | 타입 | Nullable | 설명 |
+|------|------|----------|------|
+| accessToken | string | X | 새 JWT 액세스 토큰 |
+| expiresIn | number | X | 토큰 만료 시간 (초) |
+| tokenType | string | X | `"Bearer"` |
+
+**Response 401** — refresh cookie 없음/만료/위변조
 
 ---
 
@@ -730,13 +786,14 @@ Authorization: Bearer <accessToken>
 ```
 
 Run + Spot에 대한 채팅 세션 ID를 반환합니다. 없으면 생성합니다.
+**MAIN/SUB 스팟만 대상**이며, 해당 스팟이 **unlock 상태**여야 합니다.
 
 **Path Parameters**
 
-| 이름 | 타입 | 설명 |
-|------|------|------|
-| runId | long | Tour Run ID |
-| spotId | long | Spot ID |
+| 이름 | 타입 | 필수 | Nullable | 설명 |
+|------|------|------|----------|------|
+| runId | long | O | X | Tour Run ID |
+| spotId | long | O | X | Spot ID (MAIN/SUB, unlock 상태) |
 
 **Response 200**
 
@@ -747,6 +804,12 @@ Run + Spot에 대한 채팅 세션 ID를 반환합니다. 없으면 생성합니
   "lastTurnId": 505
 }
 ```
+
+| 필드 | 타입 | Nullable | 설명 |
+|------|------|----------|------|
+| sessionId | long | X | 채팅 세션 ID |
+| status | string | X | `ACTIVE` \| `COMPLETED` |
+| lastTurnId | long | O | 마지막으로 노출된 스크립트 턴 ID (아직 없으면 `null`) |
 
 ---
 
@@ -759,9 +822,9 @@ Authorization: Bearer <accessToken>
 
 **Path Parameters**
 
-| 이름 | 타입 | 설명 |
-|------|------|------|
-| sessionId | long | 채팅 세션 ID |
+| 이름 | 타입 | 필수 | Nullable | 설명 |
+|------|------|------|----------|------|
+| sessionId | long | O | X | 채팅 세션 ID |
 
 **Response 200**
 
@@ -796,13 +859,28 @@ Authorization: Bearer <accessToken>
 }
 ```
 
-| 필드 | 설명 |
-|------|------|
-| status | ACTIVE \| COMPLETED |
-| nextScriptApi | 다음 스크립트 턴 API (없으면 null) |
-| hasNextScript | 남은 스크립트 존재 여부 |
-| role | USER \| GUIDE \| SYSTEM (ChatRole) |
-| source | USER \| SCRIPT \| LLM (ChatSource) |
+**Response 필드**
+
+| 필드 | 타입 | Nullable | 설명 |
+|------|------|----------|------|
+| sessionId | long | X | 채팅 세션 ID |
+| status | string | X | `ACTIVE` \| `COMPLETED` |
+| nextScriptApi | string | O | 다음 스크립트 턴 API (없으면 `null`) |
+| hasNextScript | boolean | X | 남은 스크립트 존재 여부 |
+| turns | array | X | 턴 목록 |
+
+**turns[] 필드**
+
+| 필드 | 타입 | Nullable | 설명 |
+|------|------|----------|------|
+| turnId | long | X | 턴 ID |
+| role | string | X | `USER` \| `GUIDE` \| `SYSTEM` (ChatRole) |
+| source | string | X | `USER` \| `SCRIPT` \| `LLM` (ChatSource) |
+| text | string | O | 발화 텍스트 |
+| assets | array | X | 연결된 에셋 목록 |
+| delayMs | int | O | 스크립트 자동 노출 지연(ms), SCRIPT가 아니면 `null` |
+| action | object | O | 턴 이후 동작 정보 (`AUTO_NEXT`, `NEXT`, `MISSION_CHOICE`) |
+| createdAt | string | O | ISO 8601 생성 시각 |
 
 ---
 
@@ -835,9 +913,9 @@ Content-Type: application/json
 }
 ```
 
-| 필드 | 타입 | 필수 | 설명 |
-|------|------|------|------|
-| text | string | O | 유저 메시지 (`@NotBlank`) |
+| 필드 | 타입 | 필수 | Nullable | 설명 |
+|------|------|------|----------|------|
+| text | string | O | X | 유저 메시지 (`@NotBlank`) |
 
 **Response 200**
 
@@ -851,6 +929,15 @@ Content-Type: application/json
   "hasNextScript": true
 }
 ```
+
+| 필드 | 타입 | Nullable | 설명 |
+|------|------|----------|------|
+| userTurnId | long | X | 저장된 사용자 턴 ID |
+| userText | string | X | 사용자 발화 |
+| aiTurnId | long | X | 저장된 AI 턴 ID |
+| aiText | string | O | AI 응답 텍스트 |
+| nextScriptApi | string | O | 다음 스크립트 턴 API (없으면 `null`) |
+| hasNextScript | boolean | X | 남은 스크립트 존재 여부 |
 
 ---
 
@@ -1038,7 +1125,7 @@ Run의 step에 연결된 미션을 제출하고 채점합니다.
 ## 4. 관리자 API
 
 **Base Path:** `/api/v1/admin`  
-**인증:** 세션 (sessionAuth) 필수 — 관리자 로그인 후 쿠키로 인증
+**인증:** `ADMIN` 권한 필수 (JWT Bearer 또는 세션)
 
 ---
 
@@ -1543,6 +1630,17 @@ GET /api/v1/admin/tours/{tourId}/spots/{spotId}/mission-steps
 ]
 ```
 
+| 필드 | 타입 | Nullable | 설명 |
+|------|------|----------|------|
+| stepId | long | X | MISSION 스텝 ID |
+| missionId | long | O | 연결된 미션 ID |
+| missionType | string | O | `QUIZ` \| `OX` \| `PHOTO` \| `TEXT_INPUT` |
+| prompt | string | O | 문제/지시문 |
+| optionsJson | object | X | 미션 옵션(JSON) |
+| answerJson | object | X | 정답/채점 기준(JSON) |
+| title | string | O | 스텝 제목 |
+| stepIndex | int | X | 스텝 순서 |
+
 #### 스텝 추가
 
 ```
@@ -1557,10 +1655,22 @@ Content-Type: application/json
   "missionType": "QUIZ",
   "prompt": "정답을 고르세요.",
   "title": "퀴즈 1",
-  "optionsJson": {"choices": [{"id":"a","text":"보기1"},{"id":"b","text":"보기2"}]},
+  "optionsJson": {
+    "choices": [{"id":"a","text":"보기1"},{"id":"b","text":"보기2"}],
+    "hintText": "건물 정면의 현판을 보세요",
+    "hintImageUrl": "https://s3.../mission/hint.png"
+  },
   "answerJson": {"answer": "a"}
 }
 ```
+
+| 필드 | 타입 | 필수 | Nullable | 설명 |
+|------|------|------|----------|------|
+| missionType | string | O | X | `QUIZ` \| `OX` \| `PHOTO` \| `TEXT_INPUT` |
+| prompt | string | X | O | 문제/지시문 |
+| title | string | X | O | 스텝 제목 |
+| optionsJson | object | X | O | 옵션 JSON (`hintText`, `hintImageUrl` 포함 가능) |
+| answerJson | object | X | O | 정답/채점 기준 JSON |
 
 #### 스텝 수정
 
@@ -1568,7 +1678,14 @@ Content-Type: application/json
 PATCH /api/v1/admin/tours/{tourId}/spots/{spotId}/mission-steps/{stepId}
 ```
 
-**Request Body (MissionStepUpdateRequest)** — prompt, title, optionsJson, answerJson (선택)
+**Request Body (MissionStepUpdateRequest)** — prompt, title, optionsJson, answerJson (모두 선택)
+
+| 필드 | 타입 | 필수 | Nullable | 설명 |
+|------|------|------|----------|------|
+| prompt | string | X | O | 문제/지시문 |
+| title | string | X | O | 스텝 제목 |
+| optionsJson | object | X | O | 옵션 JSON (`hintText`, `hintImageUrl` 포함 가능) |
+| answerJson | object | X | O | 정답/채점 기준 JSON |
 
 #### 스텝 삭제
 
@@ -1596,12 +1713,19 @@ DELETE /api/v1/admin/tours/{tourId}/spots/{spotId}/mission-steps/{stepId}
     { "id": "b", "text": "보기2 텍스트" },
     { "id": "c", "text": "보기3 텍스트", "imageUrl": "https://s3.../mission/choice_c.png" }
   ],
-  "questionImageUrl": "https://s3.../mission/question.png"
+  "questionImageUrl": "https://s3.../mission/question.png",
+  "hintText": "정답은 현판 연도와 같습니다.",
+  "hintImageUrl": "https://s3.../mission/hint.png"
 }
 ```
 
 - `choices`: 보기 배열 (`id`, `text` 필수, `imageUrl` 선택)
 - `questionImageUrl`: 문제 이미지 (선택)
+- `hintText`, `hintImageUrl`: 힌트 텍스트/이미지 (선택)
+
+`OX`
+
+- `QUIZ`와 동일하게 `hintText`, `hintImageUrl`를 사용할 수 있습니다.
 
 `TEXT_INPUT` (주관식)
 
@@ -1617,7 +1741,9 @@ DELETE /api/v1/admin/tours/{tourId}/spots/{spotId}/mission-steps/{stepId}
 ```json
 {
   "exampleImageUrl": "https://s3.../mission/example.png",
-  "instruction": "이 장소를 찍어주세요"
+  "instruction": "이 장소를 찍어주세요",
+  "hintText": "왼쪽 기둥 문양이 보이도록 찍어보세요.",
+  "hintImageUrl": "https://s3.../mission/hint_photo.png"
 }
 ```
 
@@ -2110,7 +2236,21 @@ GET /api/v1/spots/{spotId}/detail
 | POST /chat-sessions/{id}/messages | JWT 필수 |
 | POST /tour-runs/{id}/missions/{stepId}/submit | JWT 필수 |
 | POST /upload, DELETE /upload | JWT 또는 세션 |
-| /admin/** | 세션(관리자) |
+| /admin/** | ADMIN 권한 필수 (JWT 또는 세션) |
+
+**ADMIN 권한 부여 기준**
+
+- `APP_AUTH_ADMIN_EMAILS`: 관리자 이메일 allowlist (쉼표 구분)
+- `APP_AUTH_ADMIN_USER_IDS`: 관리자 userId(UUID) allowlist (쉼표 구분)
+- 둘 중 하나라도 매칭되면 `ADMIN`, 아니면 `USER`
+- 두 allowlist가 모두 비어 있으면 하위 호환을 위해 인증 사용자 전체를 `ADMIN`으로 처리
+
+**JWT/Refresh 주요 환경변수**
+
+- `JWT_ACCESS_TOKEN_EXPIRATION_MS`: 액세스 토큰 만료(ms)
+- `JWT_REFRESH_TOKEN_EXPIRATION_MS`: 리프레시 토큰 만료(ms)
+- `JWT_REFRESH_COOKIE_NAME`: 리프레시 쿠키 이름
+- `JWT_REFRESH_COOKIE_SECURE`: 리프레시 쿠키 `Secure` 플래그 (`true` 권장, HTTPS 환경)
 
 ---
 

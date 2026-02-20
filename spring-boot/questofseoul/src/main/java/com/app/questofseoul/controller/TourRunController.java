@@ -32,7 +32,7 @@ public class TourRunController {
     private final TourRunService tourRunService;
     private final AuthService authService;
 
-    @Operation(summary = "채팅 세션 획득", description = "run+spot에 대한 채팅 세션 ID 반환 (없으면 생성)")
+    @Operation(summary = "채팅 세션 획득", description = "MAIN/SUB + unlock 상태 스팟에 대한 채팅 세션 ID 반환 (없으면 생성)")
     @SecurityRequirement(name = "bearerAuth")
     @GetMapping("/tour-runs/{runId}/spots/{spotId}/chat-session")
     public ResponseEntity<ChatSessionStatusResponse> getOrCreateChatSession(

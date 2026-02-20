@@ -2,12 +2,18 @@ import { useQuery, type UseQueryResult } from '@tanstack/react-query';
 import {
   clearAccessToken,
   fetchAuthMe,
+  fetchAuthRefresh,
   fetchAuthToken,
   getAccessToken,
   type AuthMeResponse,
 } from '../api/auth';
 
 const AUTH_QUERY_KEY = ['auth', 'me'] as const;
+
+async function refreshAndFetchMe(): Promise<AuthMeResponse> {
+  await fetchAuthRefresh();
+  return fetchAuthMe();
+}
 
 async function authQueryFn(): Promise<AuthMeResponse> {
   const token = getAccessToken();
@@ -16,8 +22,15 @@ async function authQueryFn(): Promise<AuthMeResponse> {
       const data = await fetchAuthMe();
       return data;
     } catch (e) {
+      if (!(e instanceof Error) || e.message !== 'UNAUTHORIZED') {
+        throw e;
+      }
       clearAccessToken();
-      if (e instanceof Error && e.message !== 'UNAUTHORIZED') throw e;
+      try {
+        return await refreshAndFetchMe();
+      } catch {
+        clearAccessToken();
+      }
     }
   }
   try {
@@ -25,7 +38,12 @@ async function authQueryFn(): Promise<AuthMeResponse> {
     await fetchAuthToken();
     return data;
   } catch {
-    throw new Error('UNAUTHORIZED');
+    try {
+      return await refreshAndFetchMe();
+    } catch {
+      clearAccessToken();
+      throw new Error('UNAUTHORIZED');
+    }
   }
 }
 

@@ -1,5 +1,6 @@
 package com.app.questofseoul.security;
 
+import com.app.questofseoul.domain.enums.UserRole;
 import com.app.questofseoul.service.AuthService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -39,9 +40,11 @@ public class CustomOidcUserService extends OidcUserService {
         String name = oidcUser.getFullName();
 
         UUID userId = authService.getOrCreateUserFromGoogle(googleSub, email, name);
+        UserRole role = authService.resolveRole(userId);
 
         Map<String, Object> attributes = new HashMap<>(oidcUser.getAttributes());
         attributes.put(CustomOAuth2UserService.USER_ID_ATTR, userId.toString());
+        attributes.put(CustomOAuth2UserService.USER_ROLE_ATTR, role.name());
 
         return new OidcUserWithUserId(oidcUser, attributes);
     }

@@ -5,6 +5,8 @@ import com.app.questofseoul.domain.entity.ChatTurn;
 import com.app.questofseoul.domain.entity.SpotContentStep;
 import com.app.questofseoul.domain.enums.ChatRole;
 import com.app.questofseoul.domain.enums.ChatSource;
+import com.app.questofseoul.domain.enums.ProgressStatus;
+import com.app.questofseoul.domain.enums.SpotType;
 import com.app.questofseoul.domain.enums.StepKind;
 import com.app.questofseoul.domain.enums.StepNextAction;
 import com.app.questofseoul.dto.tour.ChatSessionStatusResponse;
@@ -13,6 +15,7 @@ import com.app.questofseoul.dto.tour.ProximityResponse;
 import com.app.questofseoul.dto.tour.SendMessageResponse;
 import com.app.questofseoul.exception.AuthorizationException;
 import com.app.questofseoul.exception.ResourceNotFoundException;
+import com.app.questofseoul.exception.ValidationException;
 import com.app.questofseoul.repository.ChatSessionRepository;
 import com.app.questofseoul.repository.ChatTurnRepository;
 import com.app.questofseoul.repository.ScriptLineAssetRepository;
@@ -21,6 +24,7 @@ import com.app.questofseoul.repository.TourRepository;
 import com.app.questofseoul.repository.TourRunRepository;
 import com.app.questofseoul.repository.TourSpotRepository;
 import com.app.questofseoul.repository.UserMissionAttemptRepository;
+import com.app.questofseoul.repository.UserSpotProgressRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -47,6 +51,7 @@ public class ChatSessionService {
     private final TourSpotRepository tourSpotRepository;
     private final SpotContentStepRepository spotContentStepRepository;
     private final UserMissionAttemptRepository userMissionAttemptRepository;
+    private final UserSpotProgressRepository userSpotProgressRepository;
     private final ScriptLineAssetRepository scriptLineAssetRepository;
 
     @Transactional(readOnly = true)
@@ -194,6 +199,8 @@ public class ChatSessionService {
         }
         var spot = tourSpotRepository.findByIdAndTourId(spotId, run.getTour().getId())
                 .orElseThrow(() -> new ResourceNotFoundException("Spot not in tour"));
+        validateChatSpotType(spot.getType());
+        validateSpotUnlocked(runId, spotId);
         return chatSessionRepository.findByTourRunIdAndSpotId(runId, spotId)
                 .orElseGet(() -> chatSessionRepository.save(ChatSession.create(run, spot)));
     }
@@ -204,7 +211,22 @@ public class ChatSessionService {
         if (!session.getTourRun().getUser().getId().equals(userId)) {
             throw new AuthorizationException("Not your chat session");
         }
+        validateChatSpotType(session.getSpot().getType());
+        validateSpotUnlocked(session.getTourRun().getId(), session.getSpot().getId());
         return session;
+    }
+
+    private void validateChatSpotType(SpotType type) {
+        if (type != SpotType.MAIN && type != SpotType.SUB) {
+            throw new ValidationException("채팅 세션은 MAIN/SUB 스팟에서만 사용할 수 있습니다.");
+        }
+    }
+
+    private void validateSpotUnlocked(Long runId, Long spotId) {
+        var progress = userSpotProgressRepository.findByTourRunIdAndSpotId(runId, spotId).orElse(null);
+        if (progress == null || progress.getProgressStatus() == ProgressStatus.PENDING) {
+            throw new ValidationException("스팟 Unlock 이후 채팅 세션을 사용할 수 있습니다.");
+        }
     }
 
     private NextScriptInfo computeNextScriptInfo(ChatSession session, List<ChatTurn> scriptTurns) {

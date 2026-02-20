@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import { clearAccessToken } from '../api/auth';
 import styles from './AuthGuard.module.css';
 
 interface AuthGuardProps {
@@ -14,6 +15,11 @@ export function AuthGuard({ children }: AuthGuardProps) {
 
   useEffect(() => {
     if (isLoading) return;
+    if (data && data.role !== 'ADMIN') {
+      clearAccessToken();
+      navigate('/login?error=forbidden', { replace: true });
+      return;
+    }
     if (isError || !data) {
       const from = location.pathname + location.search;
       navigate(`/login${from !== '/' ? `?from=${encodeURIComponent(from)}` : ''}`, {
@@ -31,7 +37,7 @@ export function AuthGuard({ children }: AuthGuardProps) {
     );
   }
 
-  if (isError || !data) {
+  if (isError || !data || data.role !== 'ADMIN') {
     return null;
   }
 

@@ -1,10 +1,12 @@
-import { getAccessToken } from '../api/auth';
+import { clearAccessToken, fetchAuthRefresh, getAccessToken } from '../api/auth';
 import { ADMIN_BASE, API_BASE } from '../config/constants';
 import type { ErrorResponse } from '../types/admin';
 
 const DEFAULT_HEADERS: HeadersInit = {
   'Content-Type': 'application/json',
 };
+
+let refreshPromise: Promise<void> | null = null;
 
 function buildHeaders(overrides?: HeadersInit): HeadersInit {
   const token = getAccessToken();
@@ -20,6 +22,25 @@ function buildHeaders(overrides?: HeadersInit): HeadersInit {
   return headers;
 }
 
+async function refreshAccessToken(): Promise<void> {
+  if (!refreshPromise) {
+    refreshPromise = fetchAuthRefresh()
+      .then(() => undefined)
+      .finally(() => {
+        refreshPromise = null;
+      });
+  }
+  return refreshPromise;
+}
+
+async function requestWithAuth(url: string, options: RequestInit): Promise<Response> {
+  return fetch(url, {
+    ...options,
+    credentials: 'include',
+    headers: buildHeaders(options.headers as HeadersInit),
+  });
+}
+
 /** Fetch with JWT (if stored) or session cookie */
 export async function fetchApi(
   path: string,
@@ -28,11 +49,15 @@ export async function fetchApi(
   const { base = 'admin', ...fetchOptions } = options;
   const baseUrl = base === 'api' ? API_BASE : ADMIN_BASE;
   const url = path.startsWith('http') ? path : `${baseUrl}${path}`;
-  const res = await fetch(url, {
-    ...fetchOptions,
-    credentials: 'include',
-    headers: buildHeaders(fetchOptions.headers as HeadersInit),
-  });
+  let res = await requestWithAuth(url, fetchOptions);
+  if (res.status === 401) {
+    try {
+      await refreshAccessToken();
+      res = await requestWithAuth(url, fetchOptions);
+    } catch {
+      clearAccessToken();
+    }
+  }
   if (!res.ok) {
     let body: ErrorResponse | string;
     try {

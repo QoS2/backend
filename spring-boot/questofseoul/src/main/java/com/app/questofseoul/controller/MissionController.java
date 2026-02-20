@@ -25,7 +25,7 @@ public class MissionController {
     private final MissionStepService missionStepService;
     private final com.app.questofseoul.service.AuthService authService;
 
-    @Operation(summary = "미션 스텝 상세", description = "prompt, optionsJson(보기/이미지) 조회. Proximity MISSION_CHOICE 후 미션 UI용")
+    @Operation(summary = "미션 스텝 상세", description = "prompt, optionsJson(보기/이미지/힌트) 조회. Proximity MISSION_CHOICE 후 미션 UI용")
     @GetMapping("/content-steps/{stepId}/mission")
     public ResponseEntity<MissionStepDetailResponse> getMissionStepDetail(@PathVariable Long stepId) {
         return ResponseEntity.ok(missionStepService.getMissionStepDetail(stepId));

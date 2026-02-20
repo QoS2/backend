@@ -1651,9 +1651,21 @@ function MissionEditor({
 
 type QuizChoice = { id: string; text: string; imageUrl: string };
 
+function parseHintText(json: Record<string, unknown>): string {
+  if (typeof json.hintText === 'string') return json.hintText;
+  if (typeof json.hint === 'string') return json.hint;
+  return '';
+}
+
+function parseHintImageUrl(json: Record<string, unknown>): string {
+  return typeof json.hintImageUrl === 'string' ? json.hintImageUrl : '';
+}
+
 function parseQuizOptions(json: Record<string, unknown>): {
   questionImageUrl: string;
   choices: QuizChoice[];
+  hintText: string;
+  hintImageUrl: string;
 } {
   const choices: QuizChoice[] = [];
   if (Array.isArray(json.choices)) {
@@ -1670,6 +1682,8 @@ function parseQuizOptions(json: Record<string, unknown>): {
   return {
     questionImageUrl: typeof json.questionImageUrl === 'string' ? json.questionImageUrl : '',
     choices: choices.length > 0 ? choices : [{ id: 'a', text: '', imageUrl: '' }],
+    hintText: parseHintText(json),
+    hintImageUrl: parseHintImageUrl(json),
   };
 }
 
@@ -1700,7 +1714,9 @@ function MissionStepForm({
   const [pr, setPr] = useState(prompt);
   const [tl, setTl] = useState(title);
   const [optUploading, setOptUploading] = useState(false);
-  const [optUploadTarget, setOptUploadTarget] = useState<'question' | number | null>(null);
+  const [optUploadTarget, setOptUploadTarget] = useState<
+    'question' | 'quizHint' | 'inputHint' | 'photoExample' | 'photoHint' | number | null
+  >(null);
   const missionFileInputRef = useRef<HTMLInputElement>(null);
   const { showSuccess, showError } = useToast();
 
@@ -1715,20 +1731,22 @@ function MissionStepForm({
   const [quizAnswer, setQuizAnswer] = useState(() =>
     String(answerJson?.answer ?? answerJson?.value ?? '')
   );
+  const [quizHintText, setQuizHintText] = useState(() =>
+    parseHintText(optionsJson || {})
+  );
+  const [quizHintImage, setQuizHintImage] = useState(() =>
+    parseHintImageUrl(optionsJson || {})
+  );
 
   // TEXT_INPUT
   const [inputPlaceholder, setInputPlaceholder] = useState(() =>
     typeof optionsJson?.placeholder === 'string' ? optionsJson.placeholder : ''
   );
   const [inputHintText, setInputHintText] = useState(() =>
-    typeof optionsJson?.hintText === 'string'
-      ? optionsJson.hintText
-      : typeof optionsJson?.hint === 'string'
-        ? optionsJson.hint
-        : ''
+    parseHintText(optionsJson || {})
   );
   const [inputHintImage, setInputHintImage] = useState(() =>
-    typeof optionsJson?.hintImageUrl === 'string' ? optionsJson.hintImageUrl : ''
+    parseHintImageUrl(optionsJson || {})
   );
 
   // PHOTO
@@ -1737,6 +1755,12 @@ function MissionStepForm({
   );
   const [photoInstruction, setPhotoInstruction] = useState(() =>
     typeof optionsJson?.instruction === 'string' ? optionsJson.instruction : ''
+  );
+  const [photoHintText, setPhotoHintText] = useState(() =>
+    parseHintText(optionsJson || {})
+  );
+  const [photoHintImage, setPhotoHintImage] = useState(() =>
+    parseHintImageUrl(optionsJson || {})
   );
 
   // missionType 변경 시 choices 초기화
@@ -1753,19 +1777,17 @@ function MissionStepForm({
       setQuizQuestionImage(parsed.questionImageUrl);
       setQuizChoices(parsed.choices.length > 0 ? parsed.choices : [{ id: 'a', text: '', imageUrl: '' }]);
       setQuizAnswer(String(answerJson?.answer ?? answerJson?.value ?? ''));
+      setQuizHintText(parsed.hintText);
+      setQuizHintImage(parsed.hintImageUrl);
     } else if (mt === 'TEXT_INPUT') {
       setInputPlaceholder(typeof optionsJson?.placeholder === 'string' ? optionsJson.placeholder : '');
-      setInputHintText(
-        typeof optionsJson?.hintText === 'string'
-          ? optionsJson.hintText
-          : typeof optionsJson?.hint === 'string'
-            ? optionsJson.hint
-            : ''
-      );
-      setInputHintImage(typeof optionsJson?.hintImageUrl === 'string' ? optionsJson.hintImageUrl : '');
+      setInputHintText(parseHintText(optionsJson || {}));
+      setInputHintImage(parseHintImageUrl(optionsJson || {}));
     } else if (mt === 'PHOTO') {
       setPhotoExampleImage(typeof optionsJson?.exampleImageUrl === 'string' ? optionsJson.exampleImageUrl : '');
       setPhotoInstruction(typeof optionsJson?.instruction === 'string' ? optionsJson.instruction : '');
+      setPhotoHintText(parseHintText(optionsJson || {}));
+      setPhotoHintImage(parseHintImageUrl(optionsJson || {}));
     }
   }, [mt, optionsJson, answerJson]);
 
@@ -1779,10 +1801,20 @@ function MissionStepForm({
     try {
       const url = await uploadFile(file, 'image', 'mission');
       if (target === 'question') {
-        if (mt === 'QUIZ' || mt === 'OX') setQuizQuestionImage(url);
-        else if (mt === 'TEXT_INPUT') setInputHintImage(url);
-        else if (mt === 'PHOTO') setPhotoExampleImage(url);
-        showSuccess('이미지 URL이 삽입되었습니다.');
+        setQuizQuestionImage(url);
+        showSuccess('문제 이미지 URL이 삽입되었습니다.');
+      } else if (target === 'quizHint') {
+        setQuizHintImage(url);
+        showSuccess('힌트 이미지 URL이 삽입되었습니다.');
+      } else if (target === 'inputHint') {
+        setInputHintImage(url);
+        showSuccess('힌트 이미지 URL이 삽입되었습니다.');
+      } else if (target === 'photoExample') {
+        setPhotoExampleImage(url);
+        showSuccess('예시 이미지 URL이 삽입되었습니다.');
+      } else if (target === 'photoHint') {
+        setPhotoHintImage(url);
+        showSuccess('힌트 이미지 URL이 삽입되었습니다.');
       } else {
         setQuizChoices((prev) => {
           const next = [...prev];
@@ -1824,6 +1856,8 @@ function MissionStepForm({
         choices: choices.map((c) => ({ ...c, imageUrl: c.imageUrl ?? '' })),
       };
       if (quizQuestionImage.trim()) optionsJson.questionImageUrl = quizQuestionImage.trim();
+      if (quizHintText.trim()) optionsJson.hintText = quizHintText.trim();
+      if (quizHintImage.trim()) optionsJson.hintImageUrl = quizHintImage.trim();
       const answerJson = quizAnswer.trim() ? { answer: quizAnswer.trim() } : undefined;
       return { optionsJson: choices.length > 0 ? optionsJson : undefined, answerJson };
     }
@@ -1838,6 +1872,8 @@ function MissionStepForm({
       const o: Record<string, unknown> = {};
       if (photoExampleImage.trim()) o.exampleImageUrl = photoExampleImage.trim();
       if (photoInstruction.trim()) o.instruction = photoInstruction.trim();
+      if (photoHintText.trim()) o.hintText = photoHintText.trim();
+      if (photoHintImage.trim()) o.hintImageUrl = photoHintImage.trim();
       return { optionsJson: Object.keys(o).length ? o : undefined, answerJson: undefined };
     }
     return { optionsJson: undefined, answerJson: undefined };
@@ -1904,7 +1940,7 @@ function MissionStepForm({
         placeholder="질문 또는 지시문"
       />
 
-      {/* QUIZ: 보기 + 정답 */}
+      {/* QUIZ/OX: 보기 + 정답 + 힌트 */}
       {(mt === 'QUIZ' || mt === 'OX') && (
         <>
           <div className={styles.missionImageUpload}>
@@ -2037,6 +2073,57 @@ function MissionStepForm({
                 ]}
               />
             </div>
+            <Textarea
+              label="힌트 텍스트"
+              value={quizHintText}
+              onChange={(e) => setQuizHintText(e.target.value)}
+              rows={2}
+              placeholder="필요 시 사용자에게 보여줄 힌트를 입력하세요"
+            />
+            <div className={styles.missionImageUpload}>
+              <label className={styles.formSectionLabel}>힌트 이미지</label>
+              <div className={styles.missionImageUploadBtns}>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  disabled={optUploading}
+                  onClick={() => {
+                    setOptUploadTarget('quizHint');
+                    missionFileInputRef.current?.click();
+                  }}
+                >
+                  {optUploading && optUploadTarget === 'quizHint' ? '업로드 중…' : '힌트 이미지 업로드'}
+                </Button>
+                {quizHintImage && (
+                  <span className={styles.missionImageWithRemove}>
+                    <img
+                      src={quizHintImage}
+                      alt="퀴즈 힌트"
+                      className={styles.quizChoiceThumb}
+                      referrerPolicy="no-referrer"
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      className={styles.missionImageRemoveSmall}
+                      onClick={async () => {
+                        if (quizHintImage.trim()) {
+                          try {
+                            await deleteUploadedFile(quizHintImage);
+                          } catch (e) {
+                            showError(e instanceof Error ? e.message : 'S3 삭제 실패');
+                            return;
+                          }
+                          setQuizHintImage('');
+                        }
+                      }}
+                    >
+                      ×
+                    </Button>
+                  </span>
+                )}
+              </div>
+            </div>
           </div>
         </>
       )}
@@ -2065,11 +2152,11 @@ function MissionStepForm({
               variant="ghost"
               disabled={optUploading}
               onClick={() => {
-                setOptUploadTarget('question');
+                setOptUploadTarget('inputHint');
                 missionFileInputRef.current?.click();
               }}
             >
-              {optUploading ? '업로드 중…' : '이미지 업로드'}
+              {optUploading && optUploadTarget === 'inputHint' ? '업로드 중…' : '이미지 업로드'}
             </Button>
             {inputHintImage && (
               <span className={styles.missionImageWithRemove}>
@@ -2114,6 +2201,13 @@ function MissionStepForm({
             rows={2}
             placeholder="이 장소를 찍어주세요"
           />
+          <Textarea
+            label="힌트 텍스트"
+            value={photoHintText}
+            onChange={(e) => setPhotoHintText(e.target.value)}
+            rows={2}
+            placeholder="필요 시 사용자에게 보여줄 힌트를 입력하세요"
+          />
           <div className={styles.missionImageUpload}>
             <label className={styles.formSectionLabel}>예시 이미지</label>
             <div className={styles.missionImageUploadBtns}>
@@ -2122,11 +2216,11 @@ function MissionStepForm({
               variant="ghost"
               disabled={optUploading}
               onClick={() => {
-                setOptUploadTarget('question');
+                setOptUploadTarget('photoExample');
                 missionFileInputRef.current?.click();
               }}
             >
-              {optUploading ? '업로드 중…' : '이미지 업로드'}
+              {optUploading && optUploadTarget === 'photoExample' ? '업로드 중…' : '이미지 업로드'}
             </Button>
             {photoExampleImage && (
               <span className={styles.missionImageWithRemove}>
@@ -2149,6 +2243,50 @@ function MissionStepForm({
                         return;
                       }
                       setPhotoExampleImage('');
+                    }
+                  }}
+                >
+                  ×
+                </Button>
+              </span>
+            )}
+            </div>
+          </div>
+          <div className={styles.missionImageUpload}>
+            <label className={styles.formSectionLabel}>힌트 이미지</label>
+            <div className={styles.missionImageUploadBtns}>
+            <Button
+              type="button"
+              variant="ghost"
+              disabled={optUploading}
+              onClick={() => {
+                setOptUploadTarget('photoHint');
+                missionFileInputRef.current?.click();
+              }}
+            >
+              {optUploading && optUploadTarget === 'photoHint' ? '업로드 중…' : '이미지 업로드'}
+            </Button>
+            {photoHintImage && (
+              <span className={styles.missionImageWithRemove}>
+                <img
+                  src={photoHintImage}
+                  alt="포토 힌트"
+                  className={styles.quizChoiceThumb}
+                  referrerPolicy="no-referrer"
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className={styles.missionImageRemoveSmall}
+                  onClick={async () => {
+                    if (photoHintImage.trim()) {
+                      try {
+                        await deleteUploadedFile(photoHintImage);
+                      } catch (e) {
+                        showError(e instanceof Error ? e.message : 'S3 삭제 실패');
+                        return;
+                      }
+                      setPhotoHintImage('');
                     }
                   }}
                 >

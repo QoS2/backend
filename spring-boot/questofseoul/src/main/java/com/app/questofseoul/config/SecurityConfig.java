@@ -6,6 +6,7 @@ import com.app.questofseoul.security.JwtAuthenticationFilter;
 import com.app.questofseoul.security.OAuth2PrincipalFilter;
 import com.app.questofseoul.security.OAuth2SuccessHandler;
 import lombok.RequiredArgsConstructor;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -36,6 +37,7 @@ public class SecurityConfig {
     private final OAuth2PrincipalFilter oAuth2PrincipalFilter;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final OAuth2SuccessHandler oAuth2SuccessHandler;
+    private final JwtProperties jwtProperties;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -44,7 +46,7 @@ public class SecurityConfig {
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/oauth2/**", "/login/**").permitAll()
-                .requestMatchers("/api/v1/auth/login", "/api/v1/auth/register").permitAll()
+                .requestMatchers("/api/v1/auth/login", "/api/v1/auth/register", "/api/v1/auth/refresh").permitAll()
                 .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/v1/tours/**").permitAll()
                 .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/v1/photo-spots", "/api/v1/photo-spots/*").permitAll()
                 .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/v1/steps/**").permitAll()
@@ -53,9 +55,21 @@ public class SecurityConfig {
                 .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll()
                 .requestMatchers("/api/v1/tour-runs/**", "/api/v1/collections/**").authenticated()
                 .requestMatchers("/api/v1/chat-sessions/**").authenticated()
-                .requestMatchers("/api/v1/admin/**").authenticated()
+                .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
                 .requestMatchers("/api/v1/upload/**").authenticated()
                 .anyRequest().authenticated()
+            )
+            .exceptionHandling(exception -> exception
+                .defaultAuthenticationEntryPointFor(
+                    (request, response, authException) ->
+                        response.sendError(HttpServletResponse.SC_UNAUTHORIZED),
+                    new AntPathRequestMatcher("/api/**")
+                )
+                .defaultAccessDeniedHandlerFor(
+                    (request, response, accessDeniedException) ->
+                        response.sendError(HttpServletResponse.SC_FORBIDDEN),
+                    new AntPathRequestMatcher("/api/**")
+                )
             )
             .oauth2Login(oauth2 -> oauth2
                 .userInfoEndpoint(userInfo -> userInfo
@@ -67,6 +81,7 @@ public class SecurityConfig {
             )
             .logout(logout -> logout
                 .logoutRequestMatcher(new AntPathRequestMatcher("/logout", "GET"))
+                .deleteCookies("JSESSIONID", jwtProperties.getRefreshCookieName())
                 .logoutSuccessUrl(frontendUrl + "/login")
             )
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)

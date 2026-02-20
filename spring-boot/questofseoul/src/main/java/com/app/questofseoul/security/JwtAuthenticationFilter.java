@@ -1,5 +1,6 @@
 package com.app.questofseoul.security;
 
+import com.app.questofseoul.domain.enums.UserRole;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -13,7 +14,6 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import java.util.Collections;
 import java.util.UUID;
 
 @Component
@@ -34,8 +34,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             String token = authHeader.substring(BEARER_PREFIX.length()).trim();
             try {
                 UUID userId = jwtTokenProvider.getUserIdFromToken(token);
+                UserRole role = jwtTokenProvider.getRoleFromToken(token);
                 var authentication = new UsernamePasswordAuthenticationToken(
-                    userId, null, Collections.emptyList());
+                    userId, null, SecurityRoleUtils.toAuthorities(role));
                 SecurityContextHolder.getContext().setAuthentication(authentication);
             } catch (Exception e) {
                 log.debug("Invalid or expired JWT: {}", e.getMessage());

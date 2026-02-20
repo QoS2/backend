@@ -1,4 +1,5 @@
 import {
+  AUTH_REFRESH_URL,
   AUTH_LOGIN_URL,
   AUTH_ME_URL,
   AUTH_REGISTER_URL,
@@ -9,6 +10,7 @@ const ACCESS_TOKEN_KEY = 'quest_admin_access_token';
 
 export interface AuthMeResponse {
   userId: string;
+  role: 'ADMIN' | 'USER';
 }
 
 export interface AuthTokenResponse {
@@ -106,6 +108,24 @@ export async function fetchAuthToken(): Promise<AuthTokenResponse> {
   });
   if (!res.ok) {
     throw new Error(res.status === 401 ? 'UNAUTHORIZED' : `Token issue failed: ${res.status}`);
+  }
+  const data = (await res.json()) as AuthTokenResponse;
+  if (data.accessToken) {
+    setAccessToken(data.accessToken);
+  }
+  return data;
+}
+
+/** Refresh access token with HttpOnly refresh cookie */
+export async function fetchAuthRefresh(): Promise<AuthTokenResponse> {
+  const res = await fetch(AUTH_REFRESH_URL, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { Accept: 'application/json' },
+  });
+  if (!res.ok) {
+    clearAccessToken();
+    throw new Error(res.status === 401 ? 'UNAUTHORIZED' : `Token refresh failed: ${res.status}`);
   }
   const data = (await res.json()) as AuthTokenResponse;
   if (data.accessToken) {

@@ -21,6 +21,9 @@ export const AUTH_REGISTER_URL = `${API_BASE}/auth/register`;
 /** Auth: OAuth to JWT token */
 export const AUTH_TOKEN_URL = `${API_BASE}/auth/token`;
 
+/** Auth: refresh JWT token */
+export const AUTH_REFRESH_URL = `${API_BASE}/auth/refresh`;
+
 /** OAuth: Google login redirect */
 export const OAUTH_GOOGLE_URL = API_ORIGIN ? `${API_ORIGIN}/oauth2/authorization/google` : '/oauth2/authorization/google';
 

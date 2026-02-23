@@ -28,22 +28,18 @@ public class CollectionService {
 
     @Transactional(readOnly = true)
     public PlaceCollectionResponse getPlaceCollection(java.util.UUID userId, Long tourId) {
+        List<TourSpot> availableSpots = tourSpotRepository.findCollectibleSpotsByTourIdAndTypes(
+                tourId, EnumSet.of(SpotType.MAIN, SpotType.SUB));
         List<UserSpotProgress> progresses = userSpotProgressRepository.findByUserIdAndUnlockedPlaces(userId, tourId);
         Map<Long, UserSpotProgress> latestBySpot = deduplicateBySpot(progresses);
 
-        List<Long> tourIds = tourId != null ? List.of(tourId) : tourRunRepository.findDistinctTourIdsByUserId(userId);
-        int totalAvailable = 0;
-        for (Long tId : tourIds) {
-            totalAvailable += tourSpotRepository.countByTourIdAndType(tId, SpotType.MAIN);
-            totalAvailable += tourSpotRepository.countByTourIdAndType(tId, SpotType.SUB);
-        }
-
-        List<PlaceCollectionItemDto> items = latestBySpot.values().stream()
-                .map(p -> toPlaceItem(p, true))
+        List<PlaceCollectionItemDto> items = availableSpots.stream()
+                .map(spot -> toPlaceItem(spot, latestBySpot.get(spot.getId())))
                 .sorted(Comparator.comparing(PlaceCollectionItemDto::collectedAt, Comparator.nullsLast(Comparator.reverseOrder())))
                 .toList();
 
-        return new PlaceCollectionResponse(items.size(), Math.max(totalAvailable, items.size()), items);
+        int totalCollected = (int) items.stream().filter(PlaceCollectionItemDto::collected).count();
+        return new PlaceCollectionResponse(totalCollected, items.size(), items);
     }
 
     @Transactional(readOnly = true)
@@ -73,20 +69,18 @@ public class CollectionService {
 
     @Transactional(readOnly = true)
     public TreasureCollectionResponse getTreasureCollection(java.util.UUID userId, Long tourId) {
+        List<TourSpot> availableSpots = tourSpotRepository.findCollectibleSpotsByTourIdAndTypes(
+                tourId, EnumSet.of(SpotType.TREASURE));
         List<UserTreasureStatus> statuses = userTreasureStatusRepository.findByUserIdAndCollected(userId, tourId);
+        Map<Long, UserTreasureStatus> latestBySpot = deduplicateTreasureBySpot(statuses);
 
-        List<Long> tourIds = tourId != null ? List.of(tourId) : tourRunRepository.findDistinctTourIdsByUserId(userId);
-        int totalAvailable = 0;
-        for (Long tId : tourIds) {
-            totalAvailable += tourSpotRepository.countByTourIdAndType(tId, SpotType.TREASURE);
-        }
-
-        List<TreasureCollectionItemDto> items = statuses.stream()
-                .map(s -> toTreasureItem(s, true))
+        List<TreasureCollectionItemDto> items = availableSpots.stream()
+                .map(spot -> toTreasureItem(spot, latestBySpot.get(spot.getId())))
                 .sorted(Comparator.comparing(TreasureCollectionItemDto::gotAt, Comparator.nullsLast(Comparator.reverseOrder())))
                 .toList();
 
-        return new TreasureCollectionResponse(items.size(), Math.max(totalAvailable, items.size()), items);
+        int totalCollected = (int) items.stream().filter(TreasureCollectionItemDto::collected).count();
+        return new TreasureCollectionResponse(totalCollected, items.size(), items);
     }
 
     @Transactional(readOnly = true)
@@ -146,9 +140,24 @@ public class CollectionService {
         return map;
     }
 
-    private PlaceCollectionItemDto toPlaceItem(UserSpotProgress p, boolean collected) {
-        TourSpot spot = p.getSpot();
-        LocalDateTime at = p.getCompletedAt() != null ? p.getCompletedAt() : p.getUnlockedAt();
+    private Map<Long, UserTreasureStatus> deduplicateTreasureBySpot(List<UserTreasureStatus> statuses) {
+        Map<Long, UserTreasureStatus> map = new LinkedHashMap<>();
+        for (UserTreasureStatus status : statuses) {
+            Long spotId = status.getTreasureSpot().getId();
+            UserTreasureStatus existing = map.get(spotId);
+            LocalDateTime existingAt = existing != null ? existing.getGotAt() : null;
+            LocalDateTime currentAt = status.getGotAt();
+            if (existing == null || (currentAt != null && (existingAt == null || currentAt.isAfter(existingAt)))) {
+                map.put(spotId, status);
+            }
+        }
+        return map;
+    }
+
+    private PlaceCollectionItemDto toPlaceItem(TourSpot spot, UserSpotProgress progress) {
+        boolean collected = progress != null;
+        LocalDateTime at = progress == null ? null
+                : (progress.getCompletedAt() != null ? progress.getCompletedAt() : progress.getUnlockedAt());
         String thumb = getThumbnailUrl(spot.getId());
         return new PlaceCollectionItemDto(
                 spot.getId(), spot.getTour().getId(), spot.getTour().getDisplayTitle(),
@@ -156,13 +165,13 @@ public class CollectionService {
                 thumb, at, spot.getOrderIndex(), collected);
     }
 
-    private TreasureCollectionItemDto toTreasureItem(UserTreasureStatus s, boolean collected) {
-        TourSpot spot = s.getTreasureSpot();
+    private TreasureCollectionItemDto toTreasureItem(TourSpot spot, UserTreasureStatus status) {
+        boolean collected = status != null;
         String thumb = getThumbnailUrl(spot.getId());
         return new TreasureCollectionItemDto(
                 spot.getId(), spot.getTour().getId(), spot.getTour().getDisplayTitle(),
                 spot.getTitle(), spot.getDescription(), thumb,
-                s.getGotAt(), spot.getOrderIndex(), collected);
+                status != null ? status.getGotAt() : null, spot.getOrderIndex(), collected);
     }
 
     private String getThumbnailUrl(Long spotId) {

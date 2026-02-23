@@ -258,8 +258,11 @@ public class TourController {
 |------|------|--------|
 | `OPENAI_API_KEY` | OpenAI API 키 | ai-server |
 | `DATA_GO_KR_SERVICE_KEY` | 한국관광공사 Tour API | ai-server |
-| `DATABASE_URL` | PostgreSQL (PostGIS, Pgvector) | ai-server, Spring Boot |
+| `DATABASE_URL` | PostgreSQL (Pgvector, RAG용) | ai-server |
+| `DB_URL` | PostgreSQL JDBC URL | Spring Boot |
+| `DB_USERNAME` / `DB_PASSWORD` | PostgreSQL 계정 | Spring Boot |
 | `PORT` | 서버 포트 (기본 8081) | ai-server |
+| `SERVER_PORT` | 서버 포트 (기본 8080) | Spring Boot |
 
 ---
 
@@ -276,7 +279,7 @@ public class TourController {
 
 ### Don't
 
-- `OPENAI_API_KEY`, `DATA_GO_KR_SERVICE_KEY`, `DATABASE_URL` 등 **시크릿 하드코딩 금지**
+- `OPENAI_API_KEY`, `DATA_GO_KR_SERVICE_KEY`, `DATABASE_URL`, `DB_URL`, `DB_PASSWORD` 등 **시크릿 하드코딩 금지**
 - `node_modules/`, `ai-server/.venv/`, `spring-boot/questofseoul/build/` 직접 수정 금지
 - 전체 빌드/테스트 없이 대규모 리팩터링 하지 말 것
 - 패키지 추가 (`pip install`, `npm install`, Gradle dependency) — **사용자 승인 후**

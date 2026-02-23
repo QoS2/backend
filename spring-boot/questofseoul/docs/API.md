@@ -451,6 +451,24 @@ GET /api/v1/tours/{tourId}
       "isHighlight": true
     },
     {
+      "spotId": 2,
+      "type": "SUB",
+      "title": "흥례문",
+      "lat": 37.577,
+      "lng": 126.976,
+      "thumbnailUrl": "https://s3.../sub-thumb.jpg",
+      "isHighlight": false
+    },
+    {
+      "spotId": 7,
+      "type": "PHOTO",
+      "title": "근정전 포토존",
+      "lat": 37.579,
+      "lng": 126.977,
+      "thumbnailUrl": "https://s3.../photo-thumb.jpg",
+      "isHighlight": false
+    },
+    {
       "spotId": 9,
       "type": "TREASURE",
       "title": "비밀의 문",
@@ -468,7 +486,7 @@ GET /api/v1/tours/{tourId}
     "startedAt": "2026-02-11T10:00:00",
     "progress": {
       "completedCount": 2,
-      "totalCount": 8,
+      "totalCount": 20,
       "completedSpotIds": [1, 3]
     }
   },
@@ -491,7 +509,7 @@ GET /api/v1/tours/{tourId}
 | info | object | entrance_fee, available_hours, estimated_duration_min (infoJson 기반) |
 | goodToKnow | array | 팁 배열 (goodToKnowJson: {"tips": ["a","b"]} 또는 루트 배열 지원) |
 | startSpot | object | 시작 스팟 (spotId, title, lat, lng, radiusM) |
-| mapSpots | array | 맵에 표시할 스팟 (MAIN + TREASURE, thumbnailUrl + isHighlight 포함) |
+| mapSpots | array | 맵에 표시할 스팟 (MAIN + SUB + PHOTO + TREASURE, thumbnailUrl + isHighlight 포함) |
 | access | object | status: LOCKED \| UNLOCKED, hasAccess |
 | thumbnails | array | 투어 디테일 캐러셀용 이미지 URL (tour_assets 우선, 없으면 메인 플레이스 이미지) |
 | currentRun | object | IN_PROGRESS인 Run (없으면 null) |
@@ -1868,7 +1886,7 @@ Tour, TourSpot, SpotScriptLine(가이드) 콘텐츠를 OpenAI 임베딩 후 `tou
 
 ### 5.1 Place Collection (플레이스 도감)
 
-MAIN, SUB 타입 스팟을 도감처럼 수집. `user_spot_progress`(progress_status ≠ PENDING) 기반.
+MAIN, SUB 타입 스팟 도감. **전체 수집 가능 스팟 목록**을 반환하며, 각 아이템의 `collected`로 수집 여부를 표현합니다. `user_spot_progress`(progress_status ≠ PENDING) 기반.
 
 #### 5.1.1 내 Place 컬렉션 조회
 
@@ -1900,10 +1918,24 @@ Authorization: Bearer <accessToken>
       "collectedAt": "2026-02-14T10:30:00",
       "orderIndex": 1,
       "collected": true
+    },
+    {
+      "spotId": 2,
+      "tourId": 1,
+      "tourTitle": "경복궁 조선의 왕의 날",
+      "type": "SUB",
+      "title": "흥례문",
+      "description": "...",
+      "thumbnailUrl": "https://s3.../heungnyemun.jpg",
+      "collectedAt": null,
+      "orderIndex": 2,
+      "collected": false
     }
   ]
 }
 ```
+
+정렬: `collectedAt` 최신순, 미수집(`collectedAt = null`) 항목은 뒤로 정렬됩니다.
 
 #### 5.1.2 Place 컬렉션 요약
 
@@ -1928,7 +1960,7 @@ Authorization: Bearer <accessToken>
 
 ### 5.2 Treasure Collection (트레저 도감)
 
-TREASURE 타입 스팟 수집. `user_treasure_status`(status: GET) 기반.
+TREASURE 타입 스팟 도감. **전체 수집 가능 보물 목록**을 반환하며, 각 아이템의 `collected`로 수집 여부를 표현합니다. `user_treasure_status`(status: GET) 기반.
 
 #### 5.2.1 내 Treasure 컬렉션 조회
 
@@ -1947,7 +1979,7 @@ Authorization: Bearer <accessToken>
 ```json
 {
   "totalCollected": 2,
-  "totalAvailable": 2,
+  "totalAvailable": 5,
   "items": [
     {
       "spotId": 9,
@@ -1959,10 +1991,23 @@ Authorization: Bearer <accessToken>
       "gotAt": "2026-02-14T11:00:00",
       "orderIndex": 1,
       "collected": true
+    },
+    {
+      "spotId": 10,
+      "tourId": 1,
+      "tourTitle": "경복궁 조선의 왕의 날",
+      "title": "감춰진 열쇠",
+      "description": "...",
+      "thumbnailUrl": "https://s3.../treasure2.jpg",
+      "gotAt": null,
+      "orderIndex": 2,
+      "collected": false
     }
   ]
 }
 ```
+
+정렬: `gotAt` 최신순, 미수집(`gotAt = null`) 항목은 뒤로 정렬됩니다.
 
 #### 5.2.2 Treasure 컬렉션 요약
 

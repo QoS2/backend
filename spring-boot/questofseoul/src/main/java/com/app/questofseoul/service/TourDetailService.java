@@ -125,39 +125,23 @@ public class TourDetailService {
                     .build();
         }
 
-        // Map spots (MAIN + TREASURE for map display) - thumbnailUrl, isHighlight 포함
+        // Map spots (MAIN + SUB + PHOTO + TREASURE for map display) - thumbnailUrl, isHighlight 포함
         List<TourDetailResponse.MapSpotDto> mapSpots = new ArrayList<>();
         List<TourSpot> mainSpots = tourSpotRepository.findByTourIdAndTypeOrderByOrderIndexAsc(tourId, SpotType.MAIN);
+        List<TourSpot> subSpots = tourSpotRepository.findByTourIdAndTypeOrderByOrderIndexAsc(tourId, SpotType.SUB);
+        List<TourSpot> photoSpots = tourSpotRepository.findByTourIdAndTypeOrderByOrderIndexAsc(tourId, SpotType.PHOTO);
         List<TourSpot> treasureSpots = tourSpotRepository.findByTourIdAndTypeOrderByOrderIndexAsc(tourId, SpotType.TREASURE);
         for (TourSpot s : mainSpots) {
-            if (s.getLatitude() != null && s.getLongitude() != null) {
-                String thumbUrl = spotAssetRepository
-                        .findFirstBySpot_IdAndUsageOrderBySortOrderAsc(s.getId(), SpotAssetUsage.THUMBNAIL)
-                        .map(sa -> sa.getAsset() != null ? sa.getAsset().getUrl() : null)
-                        .orElse(null);
-                mapSpots.add(TourDetailResponse.MapSpotDto.builder()
-                        .spotId(s.getId())
-                        .type("MAIN")
-                        .title(s.getTitle())
-                        .lat(s.getLatitude())
-                        .lng(s.getLongitude())
-                        .thumbnailUrl(thumbUrl)
-                        .isHighlight(true)
-                        .build());
-            }
+            addMapSpot(mapSpots, s, "MAIN", true, true);
+        }
+        for (TourSpot s : subSpots) {
+            addMapSpot(mapSpots, s, "SUB", false, true);
+        }
+        for (TourSpot s : photoSpots) {
+            addMapSpot(mapSpots, s, "PHOTO", false, true);
         }
         for (TourSpot s : treasureSpots) {
-            if (s.getLatitude() != null && s.getLongitude() != null) {
-                mapSpots.add(TourDetailResponse.MapSpotDto.builder()
-                        .spotId(s.getId())
-                        .type("TREASURE")
-                        .title(s.getTitle())
-                        .lat(s.getLatitude())
-                        .lng(s.getLongitude())
-                        .thumbnailUrl(null)
-                        .isHighlight(false)
-                        .build());
-            }
+            addMapSpot(mapSpots, s, "TREASURE", false, false);
         }
 
         // Actions
@@ -308,6 +292,35 @@ public class TourDetailService {
                     .tags(tags)
                     .build();
         }).collect(Collectors.toList());
+    }
+
+    /** 지도용 spot 공통 DTO 생성 (좌표 없는 스팟은 제외) */
+    private void addMapSpot(List<TourDetailResponse.MapSpotDto> mapSpots,
+                            TourSpot spot,
+                            String type,
+                            boolean isHighlight,
+                            boolean includeThumbnail) {
+        if (spot.getLatitude() == null || spot.getLongitude() == null) {
+            return;
+        }
+
+        String thumbnailUrl = null;
+        if (includeThumbnail) {
+            thumbnailUrl = spotAssetRepository
+                    .findFirstBySpot_IdAndUsageOrderBySortOrderAsc(spot.getId(), SpotAssetUsage.THUMBNAIL)
+                    .map(sa -> sa.getAsset() != null ? sa.getAsset().getUrl() : null)
+                    .orElse(null);
+        }
+
+        mapSpots.add(TourDetailResponse.MapSpotDto.builder()
+                .spotId(spot.getId())
+                .type(type)
+                .title(spot.getTitle())
+                .lat(spot.getLatitude())
+                .lng(spot.getLongitude())
+                .thumbnailUrl(thumbnailUrl)
+                .isHighlight(isHighlight)
+                .build());
     }
 
     /** good_to_know_json: {"tips": ["a","b"]} 또는 루트 배열 구조 파싱 */

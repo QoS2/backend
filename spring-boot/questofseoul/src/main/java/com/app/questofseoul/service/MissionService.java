@@ -92,7 +92,7 @@ public class MissionService {
 
         // nextStepApi 계산
         String nextStepApi = nextMissionStepId != null
-                ? "/api/v1/content-steps/" + nextMissionStepId + "/mission"
+                ? "/api/v1/content-steps/" + nextMissionStepId + "/mission?runId=" + runId
                 : "/api/v1/tour-runs/" + runId + "/next-spot";
 
         return new MissionSubmitResponse(

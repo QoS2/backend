@@ -13,6 +13,8 @@ public interface TourRunRepository extends JpaRepository<TourRun, Long> {
 
     Optional<TourRun> findByUserIdAndTourIdAndStatus(UUID userId, Long tourId, RunStatus status);
 
+    Optional<TourRun> findByIdAndUserId(Long id, UUID userId);
+
     List<TourRun> findByUserIdAndTourIdOrderByStartedAtDesc(UUID userId, Long tourId);
 
     @Query("SELECT DISTINCT r.tour.id FROM TourRun r WHERE r.user.id = :userId")

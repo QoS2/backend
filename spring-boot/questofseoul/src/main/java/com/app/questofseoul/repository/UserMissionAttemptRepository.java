@@ -10,6 +10,8 @@ public interface UserMissionAttemptRepository extends JpaRepository<UserMissionA
 
     List<UserMissionAttempt> findByTourRun_IdAndStep_Id(Long tourRunId, Long stepId);
 
+    Optional<UserMissionAttempt> findTopByTourRun_IdAndStep_IdOrderByAttemptNoDesc(Long tourRunId, Long stepId);
+
     Optional<UserMissionAttempt> findByTourRun_IdAndStep_IdAndAttemptNo(Long tourRunId, Long stepId, Integer attemptNo);
 
     List<UserMissionAttempt> findByTourRun_IdAndStep_Spot_IdOrderByAttemptNoAsc(Long tourRunId, Long spotId);

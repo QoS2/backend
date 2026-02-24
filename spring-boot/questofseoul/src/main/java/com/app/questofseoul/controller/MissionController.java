@@ -25,10 +25,13 @@ public class MissionController {
     private final MissionStepService missionStepService;
     private final com.app.questofseoul.service.AuthService authService;
 
-    @Operation(summary = "미션 스텝 상세", description = "prompt, optionsJson(보기/이미지/힌트) 조회. Proximity MISSION_CHOICE 후 미션 UI용")
+    @Operation(summary = "미션 스텝 상세", description = "prompt, optionsJson(보기/이미지/힌트) 조회. runId 전달 시 완료 여부/선택 답변도 함께 반환")
     @GetMapping("/content-steps/{stepId}/mission")
-    public ResponseEntity<MissionStepDetailResponse> getMissionStepDetail(@PathVariable Long stepId) {
-        return ResponseEntity.ok(missionStepService.getMissionStepDetail(stepId));
+    public ResponseEntity<MissionStepDetailResponse> getMissionStepDetail(
+            @PathVariable Long stepId,
+            @RequestParam(required = false) Long runId) {
+        UUID userId = runId != null ? authService.getCurrentUserId() : null;
+        return ResponseEntity.ok(missionStepService.getMissionStepDetail(stepId, runId, userId));
     }
 
     @Operation(summary = "미션 제출", description = "run의 step에 연결된 미션 제출 및 채점")

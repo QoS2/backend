@@ -12,5 +12,8 @@ public record MissionStepDetailResponse(
     String missionType,
     String prompt,
     Map<String, Object> optionsJson,
-    String title
+    String title,
+    Boolean isCompleted,
+    String selectedOptionId,
+    Map<String, Object> answerJson
 ) {}

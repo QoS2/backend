@@ -318,6 +318,7 @@ public class TourDetailService {
                 .title(spot.getTitle())
                 .lat(spot.getLatitude())
                 .lng(spot.getLongitude())
+                .radius(spot.getRadiusM() != null ? spot.getRadiusM() : 50)
                 .thumbnailUrl(thumbnailUrl)
                 .isHighlight(isHighlight)
                 .build());

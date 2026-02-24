@@ -72,6 +72,7 @@ public class TourDetailResponse {
         private String title;
         private Double lat;
         private Double lng;
+        private Integer radius;
         private String thumbnailUrl;
         private Boolean isHighlight;
     }

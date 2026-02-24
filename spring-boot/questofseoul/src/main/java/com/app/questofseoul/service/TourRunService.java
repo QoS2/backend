@@ -153,6 +153,9 @@ public class TourRunService {
         if (!hasNextSpot && run.getStatus() == RunStatus.IN_PROGRESS) {
             run.complete();
         }
+        if (nextSpot != null) {
+            ensureAndUnlockSpotProgress(run, nextSpot);
+        }
 
         TourDetailResponse.ProgressDto progress = TourDetailResponse.ProgressDto.builder()
                 .completedCount(completedSpotIds.size())
@@ -180,5 +183,11 @@ public class TourRunService {
                 nextSpotDto,
                 progress
         );
+    }
+
+    private void ensureAndUnlockSpotProgress(TourRun run, TourSpot spot) {
+        var progress = userSpotProgressRepository.findByTourRunIdAndSpotId(run.getId(), spot.getId())
+                .orElseGet(() -> userSpotProgressRepository.save(com.app.questofseoul.domain.entity.UserSpotProgress.create(run, spot)));
+        progress.unlock();
     }
 }

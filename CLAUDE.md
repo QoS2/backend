@@ -22,7 +22,7 @@ PostgreSQL(PostGIS, Pgvector)를 Spring Boot와 ai-server가 공유합니다.
 
 ```bash
 # AI Server
-cd ai-server && uvicorn app.main:app --reload --host 0.0.0.0 --port 8081
+cd ai-server && uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 cd ai-server && python scripts/test_rag.py
 
 # Spring Boot

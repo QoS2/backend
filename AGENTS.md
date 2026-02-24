@@ -21,7 +21,7 @@ cd ai-server && ruff check app/services/rag/vector_retriever.py
 cd ai-server && python scripts/test_rag.py
 
 # 서버 실행 (디버그/개발)
-cd ai-server && uvicorn app.main:app --reload --host 0.0.0.0 --port 8081
+cd ai-server && uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 ### Spring Boot (Java 17 / Gradle)
@@ -261,7 +261,7 @@ public class TourController {
 | `DATABASE_URL` | PostgreSQL (Pgvector, RAG용) | ai-server |
 | `DB_URL` | PostgreSQL JDBC URL | Spring Boot |
 | `DB_USERNAME` / `DB_PASSWORD` | PostgreSQL 계정 | Spring Boot |
-| `PORT` | 서버 포트 (기본 8081) | ai-server |
+| `PORT` | 서버 포트 (기본 8000) | ai-server |
 | `SERVER_PORT` | 서버 포트 (기본 8080) | Spring Boot |
 
 ---

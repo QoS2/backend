@@ -66,7 +66,7 @@ cp .env.example .env
 # OPENAI_API_KEY=sk-... 추가
 
 # 실행
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8081
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 # 또는
 python run.py
 ```
@@ -75,7 +75,7 @@ python run.py
 
 | 변수 | 설명 | 기본값 |
 |------|------|--------|
-| PORT | 서버 포트 | 8081 |
+| PORT | 서버 포트 | 8000 |
 | HOST | 서버 바인드 주소 | 0.0.0.0 |
 | OPENAI_API_KEY | OpenAI API 키 | (필수) |
 | OPENAI_MODEL | 사용 모델 | gpt-4o-mini |

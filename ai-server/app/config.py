@@ -14,7 +14,7 @@ class Settings(BaseSettings):
     )
 
     # Server
-    port: int = 8081
+    port: int = 8000
     host: str = "0.0.0.0"
 
     # OpenAI

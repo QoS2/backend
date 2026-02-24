@@ -76,6 +76,12 @@ public class SpotContentStep {
         }
     }
 
+    public void setStepIndex(Integer stepIndex) {
+        if (stepIndex != null) {
+            this.stepIndex = stepIndex;
+        }
+    }
+
     public void setMission(Mission mission) {
         this.mission = mission;
     }

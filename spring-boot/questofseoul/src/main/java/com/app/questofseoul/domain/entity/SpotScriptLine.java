@@ -50,4 +50,9 @@ public class SpotScriptLine {
         sl.text = text;
         return sl;
     }
+
+    public void update(int seq, String text) {
+        this.seq = seq;
+        this.text = text;
+    }
 }

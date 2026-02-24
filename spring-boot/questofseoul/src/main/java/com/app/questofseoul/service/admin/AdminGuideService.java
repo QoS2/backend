@@ -12,6 +12,7 @@ import com.app.questofseoul.domain.enums.StepKind;
 import com.app.questofseoul.domain.enums.StepNextAction;
 import com.app.questofseoul.dto.admin.*;
 import com.app.questofseoul.exception.ResourceNotFoundException;
+import com.app.questofseoul.repository.ChatTurnRepository;
 import com.app.questofseoul.repository.ChatTurnAssetRepository;
 import com.app.questofseoul.repository.MediaAssetRepository;
 import com.app.questofseoul.repository.ScriptLineAssetRepository;
@@ -47,6 +48,7 @@ public class AdminGuideService {
     private final MediaAssetRepository mediaAssetRepository;
     private final SpotAssetRepository spotAssetRepository;
     private final ChatTurnAssetRepository chatTurnAssetRepository;
+    private final ChatTurnRepository chatTurnRepository;
 
     @Transactional(readOnly = true)
     public GuideStepsAdminResponse getGuideSteps(Long tourId, Long spotId) {
@@ -113,61 +115,161 @@ public class AdminGuideService {
         String lang = normalizeLanguage(req.language());
         List<SpotContentStep> allLangSteps = spotContentStepRepository
                 .findBySpot_IdAndLanguageOrderByStepIndexAsc(spotId, lang);
-        List<SpotContentStep> existing = allLangSteps.stream()
+        List<SpotContentStep> existingGuideSteps = allLangSteps.stream()
                 .filter(s -> s.getKind() == StepKind.GUIDE)
-                .toList();
+                .collect(Collectors.toCollection(ArrayList::new));
         Set<Integer> occupiedStepIndexes = allLangSteps.stream()
                 .filter(s -> s.getKind() != StepKind.GUIDE)
                 .map(SpotContentStep::getStepIndex)
                 .collect(Collectors.toCollection(HashSet::new));
+        Map<Long, List<SpotScriptLine>> existingLinesByStepId = existingGuideSteps.stream()
+                .collect(Collectors.toMap(
+                        SpotContentStep::getId,
+                        step -> new ArrayList<>(spotScriptLineRepository.findByStep_IdOrderBySeqAsc(step.getId()))
+                ));
 
-        Set<Long> assetIdsToCheck = existing.stream()
-                .flatMap(s -> spotScriptLineRepository.findByStep_IdOrderBySeqAsc(s.getId()).stream())
+        Set<Long> assetIdsToCheck = existingLinesByStepId.values().stream()
+                .flatMap(List::stream)
                 .flatMap(l -> scriptLineAssetRepository.findByScriptLine_IdOrderBySortOrderAsc(l.getId()).stream())
                 .map(sla -> sla.getAsset().getId())
                 .collect(Collectors.toSet());
 
-        spotContentStepRepository.deleteAll(existing);
-        entityManager.flush();
-
-        for (GuideStepSaveRequest stepReq : req.steps()) {
+        for (int i = 0; i < req.steps().size(); i++) {
+            GuideStepSaveRequest stepReq = req.steps().get(i);
             int stepIndex = nextAvailableStepIndex(occupiedStepIndexes);
-            SpotContentStep step = SpotContentStep.create(spot, StepKind.GUIDE, stepIndex);
-            step.setLanguage(lang);
-            step.setTitle(stepReq.stepTitle() != null && !stepReq.stepTitle().isBlank()
-                    ? stepReq.stepTitle()
-                    : spot.getTitle());
-            StepNextAction nextAction = parseNextAction(stepReq.nextAction());
-            step.setNextAction(nextAction);
-            if (nextAction == StepNextAction.MISSION_CHOICE) {
-                step.setMission(resolveLinkedMission(spotId, stepReq.missionStepId()));
+            SpotContentStep step;
+            if (i < existingGuideSteps.size()) {
+                step = existingGuideSteps.get(i);
             } else {
-                step.setMission(null);
+                step = SpotContentStep.create(spot, StepKind.GUIDE, stepIndex);
             }
+            applyGuideStepFields(step, lang, spot, spotId, stepIndex, stepReq);
             step = spotContentStepRepository.save(step);
             occupiedStepIndexes.add(stepIndex);
-
-            int seq = 1;
-            for (GuideLineRequest lineReq : stepReq.lines()) {
-                SpotScriptLine line = SpotScriptLine.create(step, seq++, lineReq.text());
-                line = spotScriptLineRepository.save(line);
-
-                int sortOrder = 1;
-                for (GuideAssetRequest assetReq : lineReq.assets()) {
-                    AssetType assetType = AssetType.valueOf(assetReq.assetType());
-                    LineAssetUsage usage = LineAssetUsage.valueOf(assetReq.usage());
-                    String mimeType = inferMimeType(assetType, assetReq.url());
-                    MediaAsset asset = MediaAsset.create(assetType, assetReq.url(), mimeType);
-                    asset = mediaAssetRepository.save(asset);
-                    ScriptLineAsset sla = ScriptLineAsset.create(line, asset, usage);
-                    sla.setSortOrder(sortOrder++);
-                    scriptLineAssetRepository.save(sla);
-                }
-            }
+            syncGuideLines(step, stepReq.lines(), existingLinesByStepId.get(step.getId()));
         }
 
+        if (existingGuideSteps.size() > req.steps().size()) {
+            List<SpotContentStep> stepsToDelete = new ArrayList<>(
+                    existingGuideSteps.subList(req.steps().size(), existingGuideSteps.size()));
+            deleteGuideSteps(stepsToDelete, existingLinesByStepId);
+        }
+
+        entityManager.flush();
         deleteOrphanedMediaAssets(assetIdsToCheck);
         return getGuideSteps(tourId, spotId, lang);
+    }
+
+    private void applyGuideStepFields(
+            SpotContentStep step,
+            String lang,
+            TourSpot spot,
+            Long spotId,
+            int stepIndex,
+            GuideStepSaveRequest stepReq
+    ) {
+        step.setLanguage(lang);
+        step.setStepIndex(stepIndex);
+        step.setTitle(stepReq.stepTitle() != null && !stepReq.stepTitle().isBlank()
+                ? stepReq.stepTitle()
+                : spot.getTitle());
+        StepNextAction nextAction = parseNextAction(stepReq.nextAction());
+        step.setNextAction(nextAction);
+        if (nextAction == StepNextAction.MISSION_CHOICE) {
+            step.setMission(resolveLinkedMission(spotId, stepReq.missionStepId()));
+        } else {
+            step.setMission(null);
+        }
+    }
+
+    private void syncGuideLines(SpotContentStep step, List<GuideLineRequest> requestedLines, List<SpotScriptLine> existingLines) {
+        List<SpotScriptLine> currentLines = existingLines != null ? existingLines : List.of();
+
+        for (int i = 0; i < requestedLines.size(); i++) {
+            GuideLineRequest lineReq = requestedLines.get(i);
+            int seq = i + 1;
+
+            SpotScriptLine line;
+            if (i < currentLines.size()) {
+                line = currentLines.get(i);
+                line.update(seq, lineReq.text());
+            } else {
+                line = SpotScriptLine.create(step, seq, lineReq.text());
+            }
+
+            line = spotScriptLineRepository.save(line);
+            replaceLineAssets(line, lineReq.assets());
+        }
+
+        if (currentLines.size() > requestedLines.size()) {
+            deleteGuideLines(currentLines.subList(requestedLines.size(), currentLines.size()));
+        }
+    }
+
+    private void replaceLineAssets(SpotScriptLine line, List<GuideAssetRequest> assetRequests) {
+        List<ScriptLineAsset> existingAssets = scriptLineAssetRepository.findByScriptLine_IdOrderBySortOrderAsc(line.getId());
+        if (!existingAssets.isEmpty()) {
+            scriptLineAssetRepository.deleteAll(existingAssets);
+            entityManager.flush();
+        }
+
+        int sortOrder = 1;
+        for (GuideAssetRequest assetReq : assetRequests) {
+            AssetType assetType = AssetType.valueOf(assetReq.assetType());
+            LineAssetUsage usage = LineAssetUsage.valueOf(assetReq.usage());
+            String mimeType = inferMimeType(assetType, assetReq.url());
+            MediaAsset asset = MediaAsset.create(assetType, assetReq.url(), mimeType);
+            asset = mediaAssetRepository.save(asset);
+            ScriptLineAsset sla = ScriptLineAsset.create(line, asset, usage);
+            sla.setSortOrder(sortOrder++);
+            scriptLineAssetRepository.save(sla);
+        }
+    }
+
+    private void deleteGuideLines(List<SpotScriptLine> linesToDelete) {
+        if (linesToDelete == null || linesToDelete.isEmpty()) {
+            return;
+        }
+
+        clearChatTurnScriptLineReferences(linesToDelete.stream()
+                .map(SpotScriptLine::getId)
+                .toList());
+        spotScriptLineRepository.deleteAll(linesToDelete);
+    }
+
+    private void deleteGuideSteps(
+            List<SpotContentStep> stepsToDelete,
+            Map<Long, List<SpotScriptLine>> existingLinesByStepId
+    ) {
+        if (stepsToDelete == null || stepsToDelete.isEmpty()) {
+            return;
+        }
+
+        List<Long> stepIds = stepsToDelete.stream()
+                .map(SpotContentStep::getId)
+                .toList();
+        List<Long> scriptLineIds = stepIds.stream()
+                .flatMap(stepId -> existingLinesByStepId.getOrDefault(stepId, List.of()).stream())
+                .map(SpotScriptLine::getId)
+                .toList();
+
+        clearChatTurnScriptLineReferences(scriptLineIds);
+        clearChatTurnStepReferences(stepIds);
+        spotContentStepRepository.deleteAll(stepsToDelete);
+    }
+
+    private void clearChatTurnScriptLineReferences(List<Long> scriptLineIds) {
+        if (scriptLineIds == null || scriptLineIds.isEmpty()) {
+            return;
+        }
+        chatTurnRepository.clearScriptLineReferences(scriptLineIds);
+    }
+
+    private void clearChatTurnStepReferences(List<Long> stepIds) {
+        if (stepIds == null || stepIds.isEmpty()) {
+            return;
+        }
+        chatTurnRepository.clearStepReferences(stepIds);
     }
 
     private Mission resolveLinkedMission(Long spotId, Long missionStepId) {

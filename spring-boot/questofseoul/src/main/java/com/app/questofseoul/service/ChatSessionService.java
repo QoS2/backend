@@ -120,6 +120,7 @@ public class ChatSessionService {
         if (requestedIndex >= cursor) {
             session.moveCursorTo(requestedIndex + 1);
         }
+        syncScriptOnlySpotCompletion(session, scriptTurns);
 
         ChatTurn requestedTurn = scriptTurns.get(requestedIndex);
         ProximityResponse.ActionDto action = buildActionForScriptTurn(session, scriptTurns, requestedIndex);
@@ -174,6 +175,7 @@ public class ChatSessionService {
         List<ChatTurn> scriptTurns = chatTurnRepository.findBySession_IdOrderByCreatedAtAsc(session.getId()).stream()
                 .filter(t -> t.getSource() == ChatSource.SCRIPT)
                 .toList();
+        syncScriptOnlySpotCompletion(session, scriptTurns);
         int cursor = normalizeCursor(session.getCursorStepIndexSafe(), scriptTurns.size());
         Long lastTurnId = null;
         if (!scriptTurns.isEmpty() && cursor > 0) {
@@ -241,6 +243,42 @@ public class ChatSessionService {
     private int normalizeCursor(int cursor, int scriptSize) {
         if (cursor < 0) return 0;
         return Math.min(cursor, scriptSize);
+    }
+
+    private void syncScriptOnlySpotCompletion(ChatSession session, List<ChatTurn> scriptTurns) {
+        if (scriptTurns.isEmpty()) {
+            return;
+        }
+
+        int cursor = normalizeCursor(session.getCursorStepIndexSafe(), scriptTurns.size());
+        if (cursor < scriptTurns.size()) {
+            return;
+        }
+
+        if (hasMissionSteps(session)) {
+            return;
+        }
+
+        userSpotProgressRepository.findByTourRunIdAndSpotId(session.getTourRun().getId(), session.getSpot().getId())
+                .ifPresent(progress -> {
+                    if (progress.getProgressStatus() != ProgressStatus.COMPLETED
+                            && progress.getProgressStatus() != ProgressStatus.SKIPPED) {
+                        progress.complete();
+                    }
+                });
+    }
+
+    private boolean hasMissionSteps(ChatSession session) {
+        String language = (session.getLanguage() != null && !session.getLanguage().isBlank())
+                ? session.getLanguage()
+                : "ko";
+        List<SpotContentStep> missionSteps = spotContentStepRepository
+                .findBySpot_IdAndKindAndLanguageOrderByStepIndexAsc(session.getSpot().getId(), StepKind.MISSION, language);
+        if (missionSteps.isEmpty() && !"ko".equals(language)) {
+            missionSteps = spotContentStepRepository
+                    .findBySpot_IdAndKindAndLanguageOrderByStepIndexAsc(session.getSpot().getId(), StepKind.MISSION, "ko");
+        }
+        return !missionSteps.isEmpty();
     }
 
     private int findScriptTurnIndex(List<ChatTurn> scriptTurns, Long turnId) {

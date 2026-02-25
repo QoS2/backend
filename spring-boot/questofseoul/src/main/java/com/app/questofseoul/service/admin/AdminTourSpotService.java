@@ -74,7 +74,13 @@ public class AdminTourSpotService {
     public void delete(Long tourId, Long spotId) {
         TourSpot spot = tourSpotRepository.findByIdAndTourId(spotId, tourId)
                 .orElseThrow(() -> new ResourceNotFoundException("Spot not found"));
-        tourSpotRepository.delete(spot);
+        if (spot.getTour().getStartSpot() != null
+                && spot.getTour().getStartSpot().getId() != null
+                && spot.getTour().getStartSpot().getId().equals(spot.getId())) {
+            spot.getTour().setStartSpot(null);
+        }
+        spot.deactivate();
+        tourSpotRepository.save(spot);
     }
 
     private SpotAdminResponse toResponse(TourSpot s) {

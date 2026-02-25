@@ -62,6 +62,11 @@ public class TourSpot {
     @Column(name = "ai_chat_enabled", nullable = false)
     private Boolean aiChatEnabled = false;
 
+    // 기존 운영/개발 DB에 컬럼이 없는 상태에서 ddl-auto=update로 추가될 때를 고려해
+    // 전이 기간에는 nullable 허용 (null은 코드/쿼리에서 active로 간주)
+    @Column(name = "is_active")
+    private Boolean isActive = true;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
@@ -94,6 +99,8 @@ public class TourSpot {
     public void setRadiusM(Integer radiusM) { this.radiusM = radiusM != null ? radiusM : 50; }
     public void setLatitude(Double latitude) { this.latitude = latitude; }
     public void setLongitude(Double longitude) { this.longitude = longitude; }
+    public void deactivate() { this.isActive = false; }
+    public void activate() { this.isActive = true; }
 
     public static TourSpot create(Tour tour, SpotType type, String title, Double lat, Double lng, Integer orderIndex) {
         TourSpot s = new TourSpot();
@@ -103,6 +110,7 @@ public class TourSpot {
         s.latitude = lat;
         s.longitude = lng;
         s.orderIndex = orderIndex != null ? orderIndex : 0;
+        s.isActive = true;
         return s;
     }
 }

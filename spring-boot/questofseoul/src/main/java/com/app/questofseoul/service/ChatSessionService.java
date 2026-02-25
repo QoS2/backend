@@ -3,6 +3,7 @@ package com.app.questofseoul.service;
 import com.app.questofseoul.domain.entity.ChatSession;
 import com.app.questofseoul.domain.entity.ChatTurn;
 import com.app.questofseoul.domain.entity.SpotContentStep;
+import com.app.questofseoul.domain.entity.TourSpot;
 import com.app.questofseoul.domain.enums.ChatRole;
 import com.app.questofseoul.domain.enums.ChatSource;
 import com.app.questofseoul.domain.enums.ProgressStatus;
@@ -42,6 +43,7 @@ import java.util.Set;
 public class ChatSessionService {
 
     private static final int DEFAULT_DELAY_MS = 1500;
+    private static final int MAX_AI_HISTORY_TURNS = 10;
 
     private final ChatSessionRepository chatSessionRepository;
     private final ChatTurnRepository chatTurnRepository;
@@ -144,10 +146,15 @@ public class ChatSessionService {
         userTurn = chatTurnRepository.save(userTurn);
 
         String tourContext = buildTourContext(session.getTourRun().getTour().getId());
-        List<Map<String, String>> history = chatTurnRepository.findBySession_IdOrderByCreatedAtAsc(sessionId)
-                .stream()
+        // AI 질의에는 사용자 질문(USER) 히스토리만 전달한다.
+        // SCRIPT 턴은 tourContext에 이미 포함되고, 과거 LLM 응답은 환각/오염된 답변 패턴을 강화할 수 있다.
+        List<ChatTurn> aiTurns = chatTurnRepository.findBySession_IdOrderByCreatedAtAsc(sessionId).stream()
+                .filter(t -> t.getSource() == ChatSource.USER)
+                .toList();
+        int fromIndex = Math.max(0, aiTurns.size() - MAX_AI_HISTORY_TURNS);
+        List<Map<String, String>> history = aiTurns.subList(fromIndex, aiTurns.size()).stream()
                 .map(t -> Map.<String, String>of(
-                        "role", t.getRole() == ChatRole.USER ? "user" : "assistant",
+                        "role", "user",
                         "content", t.getText() != null ? t.getText() : ""))
                 .toList();
         String aiText = tourGuideAiService.generateResponse(tourContext, history);
@@ -201,6 +208,7 @@ public class ChatSessionService {
         }
         var spot = tourSpotRepository.findByIdAndTourId(spotId, run.getTour().getId())
                 .orElseThrow(() -> new ResourceNotFoundException("Spot not in tour"));
+        validateSpotActive(spot);
         validateChatSpotType(spot.getType());
         validateSpotUnlocked(runId, spotId);
         return chatSessionRepository.findByTourRunIdAndSpotId(runId, spotId)
@@ -213,9 +221,16 @@ public class ChatSessionService {
         if (!session.getTourRun().getUser().getId().equals(userId)) {
             throw new AuthorizationException("Not your chat session");
         }
+        validateSpotActive(session.getSpot());
         validateChatSpotType(session.getSpot().getType());
         validateSpotUnlocked(session.getTourRun().getId(), session.getSpot().getId());
         return session;
+    }
+
+    private void validateSpotActive(TourSpot spot) {
+        if (Boolean.FALSE.equals(spot.getIsActive())) {
+            throw new ValidationException("비활성화된 스팟에서는 채팅 세션을 사용할 수 없습니다.");
+        }
     }
 
     private void validateChatSpotType(SpotType type) {

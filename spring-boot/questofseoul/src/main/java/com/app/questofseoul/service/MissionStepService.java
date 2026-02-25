@@ -38,9 +38,9 @@ public class MissionStepService {
             throw new ResourceNotFoundException("Step has no mission");
         }
 
-        Boolean isCompleted = null;
+        Boolean isCompleted = false;
         String selectedOptionId = null;
-        Map<String, Object> answerJson = null;
+        Map<String, Object> answerJson = Map.of();
 
         if (runId != null) {
             if (userId == null) {
@@ -57,8 +57,6 @@ public class MissionStepService {
                 Object selected = answerJson.get("selectedOptionId");
                 selectedOptionId = selected != null ? String.valueOf(selected) : null;
                 isCompleted = Boolean.TRUE.equals(latestAttempt.getIsCorrect());
-            } else {
-                isCompleted = false;
             }
         }
 

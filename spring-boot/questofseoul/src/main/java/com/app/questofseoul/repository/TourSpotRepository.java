@@ -12,23 +12,55 @@ import java.util.Optional;
 
 public interface TourSpotRepository extends JpaRepository<TourSpot, Long> {
 
-    List<TourSpot> findByTourIdOrderByOrderIndexAsc(Long tourId);
+    @Query("""
+            SELECT s
+            FROM TourSpot s
+            WHERE s.tour.id = :tourId
+              AND (s.isActive = true OR s.isActive IS NULL)
+            ORDER BY s.orderIndex ASC, s.id ASC
+            """)
+    List<TourSpot> findByTourIdOrderByOrderIndexAsc(@Param("tourId") Long tourId);
 
-    List<TourSpot> findByTourIdAndTypeOrderByOrderIndexAsc(Long tourId, SpotType type);
+    @Query("""
+            SELECT s
+            FROM TourSpot s
+            WHERE s.tour.id = :tourId
+              AND s.type = :type
+              AND (s.isActive = true OR s.isActive IS NULL)
+            ORDER BY s.orderIndex ASC, s.id ASC
+            """)
+    List<TourSpot> findByTourIdAndTypeOrderByOrderIndexAsc(@Param("tourId") Long tourId, @Param("type") SpotType type);
 
     @Query("""
             SELECT s
             FROM TourSpot s
             JOIN FETCH s.tour t
             WHERE (:tourId IS NULL OR t.id = :tourId)
+              AND (s.isActive = true OR s.isActive IS NULL)
               AND s.type IN :types
             ORDER BY t.id ASC, s.orderIndex ASC, s.id ASC
             """)
     List<TourSpot> findCollectibleSpotsByTourIdAndTypes(@Param("tourId") Long tourId,
                                                         @Param("types") Collection<SpotType> types);
 
-    @Query("SELECT COUNT(s) FROM TourSpot s WHERE s.tour.id = :tourId AND s.type = :type")
+    @Query("SELECT COUNT(s) FROM TourSpot s WHERE s.tour.id = :tourId AND s.type = :type AND (s.isActive = true OR s.isActive IS NULL)")
     long countByTourIdAndType(Long tourId, SpotType type);
 
-    Optional<TourSpot> findByIdAndTourId(Long id, Long tourId);
+    @Query("""
+            SELECT s
+            FROM TourSpot s
+            WHERE s.id = :id
+              AND s.tour.id = :tourId
+              AND (s.isActive = true OR s.isActive IS NULL)
+            """)
+    Optional<TourSpot> findByIdAndTourId(@Param("id") Long id, @Param("tourId") Long tourId);
+
+    @Override
+    @Query("""
+            SELECT s
+            FROM TourSpot s
+            WHERE s.id = :id
+              AND (s.isActive = true OR s.isActive IS NULL)
+            """)
+    Optional<TourSpot> findById(@Param("id") Long id);
 }

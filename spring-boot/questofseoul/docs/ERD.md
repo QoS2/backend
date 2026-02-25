@@ -128,6 +128,7 @@ erDiagram
         int radius_m
         int order_index
         boolean ai_chat_enabled
+        boolean is_active
         timestamp created_at
         timestamp updated_at
     }
@@ -429,6 +430,7 @@ erDiagram
 | radius_m | INT | NOT NULL, DEFAULT 50 | 반경(m), 근접 감지 |
 | order_index | INT | NOT NULL | 정렬 순서 |
 | ai_chat_enabled | BOOLEAN | NOT NULL, DEFAULT false | AI 채팅 가능 여부 |
+| is_active | BOOLEAN | NOT NULL, DEFAULT true | 활성 여부 (관리자 삭제 시 soft delete 플래그) |
 | created_at | TIMESTAMP | NOT NULL | 생성 시각 |
 | updated_at | TIMESTAMP | NOT NULL | 수정 시각 |
 
@@ -437,6 +439,11 @@ erDiagram
 - `SUB`: 서브 스팟 (부모 스팟 하위)
 - `PHOTO`: 포토 스팟 (사진 촬영 제출)
 - `TREASURE`: 보물 스팟 (수집 가능)
+
+**운영 규칙 (soft delete)**:
+- 관리자 Spot 삭제는 물리 삭제 대신 `is_active = false`로 비활성화 처리합니다.
+- FK 참조(`chat_sessions`, `user_spot_progress`, `user_photo_submissions` 등) 이력 보존이 목적입니다.
+- 런타임/관리자 조회는 기본적으로 `is_active = true` 스팟만 노출합니다.
 
 **Unique**: (tour_id, order_index) 등 정렬용. (spot_id, usage, sort_order)는 spot_assets.
 

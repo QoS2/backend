@@ -45,12 +45,36 @@ public class ProximityService {
         double lngD = lng.doubleValue();
 
         List<TourSpot> spots = tourSpotRepository.findByTourIdOrderByOrderIndexAsc(tourId);
+        Map<Long, ProgressStatus> progressStatusBySpotId = new HashMap<>();
+        for (UserSpotProgress progress : userSpotProgressRepository.findByTourRunId(runId)) {
+            if (progress.getSpot() != null && progress.getSpot().getId() != null) {
+                progressStatusBySpotId.put(progress.getSpot().getId(), progress.getProgressStatus());
+            }
+        }
+        Long nextRouteSpotId = resolveNextRouteSpotId(spots, progressStatusBySpotId);
 
         // 1순위: MAIN/SUB + GUIDE 스텝 → Place Unlock + 가이드 반환
+        List<SpotDistanceCandidate> guideCandidates = new ArrayList<>();
         for (TourSpot spot : spots) {
             if (spot.getType() != SpotType.MAIN && spot.getType() != SpotType.SUB) continue;
             if (spot.getLatitude() == null || spot.getLongitude() == null) continue;
-            if (haversineM(latD, lngD, spot.getLatitude(), spot.getLongitude()) > (spot.getRadiusM() != null ? spot.getRadiusM() : 50)) continue;
+
+            double distanceM = haversineM(latD, lngD, spot.getLatitude(), spot.getLongitude());
+            int radiusM = spot.getRadiusM() != null ? spot.getRadiusM() : 50;
+            if (distanceM > radiusM) continue;
+            guideCandidates.add(new SpotDistanceCandidate(spot, distanceM));
+        }
+
+        guideCandidates.sort(
+                Comparator.comparingInt((SpotDistanceCandidate c) ->
+                                guideCandidatePriority(c.spot(), nextRouteSpotId, progressStatusBySpotId))
+                        .thenComparingDouble(SpotDistanceCandidate::distanceM)
+                        .thenComparing(c -> c.spot().getOrderIndex(), Comparator.nullsLast(Integer::compareTo))
+                        .thenComparing(c -> c.spot().getId(), Comparator.nullsLast(Long::compareTo))
+        );
+
+        for (SpotDistanceCandidate candidate : guideCandidates) {
+            TourSpot spot = candidate.spot();
 
             ensureAndUnlockSpotProgress(run, spot);
 
@@ -273,6 +297,34 @@ public class ProximityService {
         return "/api/v1/chat-sessions/" + sessionId + "/turns/" + scriptTurns.get(nextIndex).getId();
     }
 
+    private Long resolveNextRouteSpotId(List<TourSpot> spots, Map<Long, ProgressStatus> progressStatusBySpotId) {
+        for (TourSpot spot : spots) {
+            if (spot.getType() != SpotType.MAIN && spot.getType() != SpotType.SUB) {
+                continue;
+            }
+            ProgressStatus status = progressStatusBySpotId.get(spot.getId());
+            if (status != ProgressStatus.COMPLETED && status != ProgressStatus.SKIPPED) {
+                return spot.getId();
+            }
+        }
+        return null;
+    }
+
+    private int guideCandidatePriority(
+            TourSpot spot,
+            Long nextRouteSpotId,
+            Map<Long, ProgressStatus> progressStatusBySpotId
+    ) {
+        if (nextRouteSpotId != null && nextRouteSpotId.equals(spot.getId())) {
+            return 0;
+        }
+        ProgressStatus status = progressStatusBySpotId.get(spot.getId());
+        if (status == ProgressStatus.COMPLETED || status == ProgressStatus.SKIPPED) {
+            return 2;
+        }
+        return 1;
+    }
+
     private double haversineM(double lat1, double lon1, double lat2, double lon2) {
         double dLat = Math.toRadians(lat2 - lat1);
         double dLon = Math.toRadians(lon2 - lon1);
@@ -282,4 +334,6 @@ public class ProximityService {
         double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
         return EARTH_RADIUS_M * c;
     }
+
+    private record SpotDistanceCandidate(TourSpot spot, double distanceM) {}
 }

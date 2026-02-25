@@ -25,11 +25,14 @@ SYSTEM_PROMPT = """# Identity & Persona
 # Context Usage (필수 준수)
 아래 우선순위에 따라 정보를 활용하세요. 상위 컨텍스트가 있으면 하위는 보조로만 사용.
 
+중요: 아래에 나오는 예시 문장/숫자/시간은 **형식 예시일 뿐 실제 데이터가 아닙니다**.
+컨텍스트에 없는 수치(예: 기온, 운영시간, 휴무일)를 예시에서 복사해 답변하면 안 됩니다.
+
 **1순위: [추가 컨텍스트]**
 - 실시간 날씨(Open-Meteo), 관광지 정보(Tour API) 등 RAG로 수집된 데이터
 - 이 섹션이 있으면 해당 수치·내용을 **반드시** 답변에 포함
-- 날씨 예: "현재 기온 5°C, 흐림" → "기온이 5°C로 쌀쌀하고 흐리니..." (수치 인용)
-- 관광지 예: "이용시간 09:00~18:00, 휴무 화요일" → 해당 문구를 그대로 반영
+- 날씨 예(형식): "현재 기온 <온도>, <날씨>" → 제공된 수치를 그대로 인용
+- 관광지 예(형식): "이용시간 <시간>, 휴무 <요일>" → 제공된 문구를 그대로 반영
 - 여러 정보가 있으면 모두 활용 (날씨+관광지 정보 함께 답변)
 
 **2순위: [투어 컨텍스트]**
@@ -38,6 +41,7 @@ SYSTEM_PROMPT = """# Identity & Persona
 
 **3순위: 일반 지식**
 - 1·2순위에 없을 때만 활용
+- 날씨/운영시간/휴무일/주소/가격 같은 변동 가능 정보는 추가 컨텍스트가 없으면 언급하지 마세요
 - 확실하지 않은 정보는 "알려드리기 어렵습니다. 현장 안내나 공식 홈페이지를 확인해 주세요"로 대체
 
 # Anti-Hallucination Rules
@@ -46,6 +50,8 @@ SYSTEM_PROMPT = """# Identity & Persona
 - 모르는 질문: "해당 정보는 확인이 어렵습니다. Quest of Seoul 앱 내 안내나 현장 직원에게 문의해 주세요" 등으로 유도
 
 # Question Handling
+- **반드시 마지막 사용자 질문에 직접 답변**: 첫 문장에서 질문 핵심에 대한 답을 바로 제시
+- 질문을 이해했는데도 "무슨 질문이든 해보세요" 같은 범용 안내만 단독으로 답하지 마세요
 - **복장·날씨**: 추가 컨텍스트의 기온·날씨를 인용해, 계절·활동에 맞는 구체적 복장 추천
 - **운영시간·휴무**: Tour API 데이터를 그대로 전달. 요일·계절별 상이하면 모두 언급
 - **역사·문화**: 투어 컨텍스트 + 일반 지식. 출처 불명 정보는 보수적으로
@@ -113,6 +119,17 @@ class TourGuideService:
             for h in history or []:
                 role = "user" if h.role == "user" else "assistant"
                 messages.append({"role": role, "content": h.content or ""})
+
+            # 마지막 사용자 질문이 OpenAI 호출의 끝 메시지로 확실히 전달되도록 보장
+            # (히스토리 정렬/가공 이슈가 있더라도 현재 질문을 놓치지 않기 위함)
+            if last_user_msg:
+                last_msg = messages[-1] if messages else None
+                if (
+                    not last_msg
+                    or last_msg.get("role") != "user"
+                    or (last_msg.get("content") or "").strip() != last_user_msg.strip()
+                ):
+                    messages.append({"role": "user", "content": last_user_msg})
 
             completion = client.chat.completions.create(
                 model=self._settings.openai_model,

@@ -86,6 +86,9 @@ public class TourRunService {
 
     private RunResponse buildRunResponse(TourRun run, Tour tour, RunRequest.RunMode mode) {
         TourSpot start = tour.getStartSpot();
+        if (start != null && Boolean.FALSE.equals(start.getIsActive())) {
+            start = null;
+        }
         if (start == null) {
             var mainSpots = tourSpotRepository.findByTourIdAndTypeOrderByOrderIndexAsc(tour.getId(), SpotType.MAIN);
             if (!mainSpots.isEmpty()) start = mainSpots.get(0);

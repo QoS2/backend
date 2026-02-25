@@ -648,6 +648,8 @@ Content-Type: application/json
 - **Main/Sub Place**: 가이드 스크립트 + `UserSpotProgress` unlock
 - **Treasure**: 첫 발견 시 `TREASURE_FOUND` 알람 + `UserTreasureStatus` unlock
 - **Photo Spot**: `PHOTO_SPOT_FOUND` 알람
+- **반경 겹침 처리**: MAIN/SUB가 여러 개 동시에 반경 내에 있으면 **가장 가까운 스팟**을 우선 선택합니다. (동률 시 정렬 순서 기준)
+- **비활성 스팟 제외**: 관리자에서 비활성화(soft delete)된 스팟은 근접 감지 대상에서 제외됩니다.
 
 **Path Parameters**
 
@@ -767,6 +769,8 @@ Authorization: Bearer <accessToken>
 ```
 
 Run 진행 상태를 기준으로 다음 MAIN/SUB 장소를 반환합니다.
+현재 구현에서는 `nextSpot` 계산 시 해당 스팟의 `UserSpotProgress`를 `ACTIVE`로 unlock할 수 있으므로,
+이후 `GET /tour-runs/{runId}/spots/{spotId}/chat-session` 호출이 가능해질 수 있습니다.
 
 **Response 200**
 
@@ -805,6 +809,7 @@ Authorization: Bearer <accessToken>
 
 Run + Spot에 대한 채팅 세션 ID를 반환합니다. 없으면 생성합니다.
 **MAIN/SUB 스팟만 대상**이며, 해당 스팟이 **unlock 상태**여야 합니다.
+관리자에서 비활성화된 스팟(soft delete)은 대상에서 제외됩니다.
 
 **Path Parameters**
 
@@ -828,6 +833,30 @@ Run + Spot에 대한 채팅 세션 ID를 반환합니다. 없으면 생성합니
 | sessionId | long | X | 채팅 세션 ID |
 | status | string | X | `ACTIVE` \| `COMPLETED` |
 | lastTurnId | long | O | 마지막으로 노출된 스크립트 턴 ID (아직 없으면 `null`) |
+
+**Response 400** — Unlock 전 스팟
+
+```json
+{
+  "error": "Bad Request",
+  "errorCode": "VALIDATION_FAILED",
+  "message": "스팟 Unlock 이후 채팅 세션을 사용할 수 있습니다.",
+  "timestamp": "2026-02-25T10:00:00",
+  "path": "/api/v1/tour-runs/1/spots/3/chat-session"
+}
+```
+
+**Response 400** — 비활성화된 스팟 (관리자 soft delete)
+
+```json
+{
+  "error": "Bad Request",
+  "errorCode": "VALIDATION_FAILED",
+  "message": "비활성화된 스팟에서는 채팅 세션을 사용할 수 없습니다.",
+  "timestamp": "2026-02-25T10:00:00",
+  "path": "/api/v1/tour-runs/1/spots/3/chat-session"
+}
+```
 
 ---
 
@@ -1060,6 +1089,12 @@ Proximity 응답의 MISSION_CHOICE 후, 미션 UI용 prompt·optionsJson 조회.
 |------|------|------|
 | stepId | long | spot_content_steps.id (MISSION kind) |
 
+**Query Parameters**
+
+| 이름 | 타입 | 필수 | 설명 |
+|------|------|------|------|
+| runId | long | X | Tour Run ID. 전달 시 사용자 진행 상태(`isCompleted`, `selectedOptionId`, `answerJson`)를 함께 반환 |
+
 **Response 200**
 
 ```json
@@ -1075,9 +1110,16 @@ Proximity 응답의 MISSION_CHOICE 후, 미션 UI용 prompt·optionsJson 조회.
     ],
     "questionImageUrl": "https://..."
   },
-  "title": "광화문 퀴즈"
+  "title": "광화문 퀴즈",
+  "isCompleted": false,
+  "selectedOptionId": null,
+  "answerJson": {}
 }
 ```
+
+**응답 필드 메모**
+- `runId` 미전달 시 기본값: `isCompleted=false`, `selectedOptionId=null`, `answerJson={}`
+- `runId` 전달 + 제출 이력 존재 시: 마지막 시도 기준으로 `selectedOptionId`/`answerJson`/완료 여부가 채워집니다.
 
 ---
 
@@ -1280,7 +1322,7 @@ DELETE /api/v1/admin/tours/{tourId}
 | GET | `/{spotId}` | 단건 조회 |
 | POST | `/` | 생성 |
 | PATCH | `/{spotId}` | 수정 |
-| DELETE | `/{spotId}` | 삭제 |
+| DELETE | `/{spotId}` | 삭제(soft delete, 비활성화) |
 
 #### Spot 목록
 
@@ -1289,6 +1331,8 @@ GET /api/v1/admin/tours/{tourId}/spots
 ```
 
 **Response 200** — `List<SpotAdminResponse>`
+
+비활성화된 스팟(`is_active=false`)은 목록에서 제외됩니다.
 
 #### Spot 생성
 
@@ -1374,6 +1418,11 @@ DELETE /api/v1/admin/tours/{tourId}/spots/{spotId}
 ```
 
 **Response 204**
+
+구현 메모:
+- 물리 삭제 대신 `tour_spots.is_active = false`로 비활성화(soft delete) 처리합니다.
+- 기존 `chat_sessions`, `user_spot_progress`, `spot_content_steps` 등 FK 참조 데이터는 유지됩니다.
+- 비활성 스팟은 관리자 Spot 목록/단건 조회 및 런타임 스팟 조회 로직에서 제외됩니다.
 
 ---
 

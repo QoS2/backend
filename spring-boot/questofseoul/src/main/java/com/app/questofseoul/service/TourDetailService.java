@@ -111,6 +111,9 @@ public class TourDetailService {
         // Start spot
         TourDetailResponse.StartSpotDto startSpot = null;
         TourSpot start = tour.getStartSpot();
+        if (start != null && Boolean.FALSE.equals(start.getIsActive())) {
+            start = null;
+        }
         if (start == null) {
             List<TourSpot> mainSpots = tourSpotRepository.findByTourIdAndTypeOrderByOrderIndexAsc(tourId, SpotType.MAIN);
             if (!mainSpots.isEmpty()) start = mainSpots.get(0);

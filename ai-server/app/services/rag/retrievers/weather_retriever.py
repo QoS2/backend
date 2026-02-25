@@ -17,10 +17,13 @@ USER_AGENT = (
 )
 
 # Keywords related to weather/clothes - if these keywords are present, weather is retrieved
+# 단문자("비", "눈")는 일반 문장/지명/설명에서 오탐이 많아 제외
 WEATHER_RELATED_KEYWORDS = [
     "날씨", "옷", "복장", "입고", "쌀쌀", "따뜻", "춥", "더우", "선선",
-    "비", "눈", "우산", "외투", "코트", "재킷", "스웨터", "가벼운",
+    "우산", "외투", "코트", "재킷", "스웨터", "가벼운",
     "따뜻하게", "시원하게", "체감", "기온", "온도", "날씨에",
+    "비와", "비가", "비는", "비오", "강수", "강수량",
+    "눈이", "눈은", "눈오", "적설",
 ]
 
 # WMO weather codes -> Korean description
@@ -64,8 +67,12 @@ class WeatherRetriever(BaseRetriever):
     """Fetches current weather for location derived from tour context"""
 
     def should_retrieve(self, query: str, tour_context: str) -> bool:
-        combined = (query or "") + " " + (tour_context or "")
-        return any(kw in combined for kw in WEATHER_RELATED_KEYWORDS)
+        # 날씨 조회 여부는 사용자 질문(query) 기준으로 판단한다.
+        # tour_context까지 합치면 일반 설명문/지명에 포함된 단어로 오탐이 발생할 수 있다.
+        text = (query or "").strip()
+        if not text:
+            text = (tour_context or "").strip()
+        return any(kw in text for kw in WEATHER_RELATED_KEYWORDS)
 
     def retrieve(self, query: str, tour_context: str, **kwargs) -> str | None:
         try:

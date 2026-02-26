@@ -2,9 +2,8 @@ import { useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { LogOut, Menu, MoonStar, SunMedium } from 'lucide-react';
-import { clearAccessToken } from '../../api/auth';
+import { clearAccessToken, fetchAuthLogout } from '../../api/auth';
 import { AUTH_QUERY_KEY } from '../../hooks/useAuth';
-import { LOGOUT_URL } from '../../config/constants';
 import styles from './Header.module.css';
 
 interface HeaderProps {
@@ -51,7 +50,7 @@ export function Header({
     queryClient.removeQueries({ queryKey: AUTH_QUERY_KEY });
 
     try {
-      await fetch(LOGOUT_URL, { method: 'GET', credentials: 'include' });
+      await fetchAuthLogout();
     } finally {
       window.location.replace('/login');
     }

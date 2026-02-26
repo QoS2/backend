@@ -21,6 +21,8 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.web.authentication.logout.SecurityContextLogoutHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -120,6 +122,18 @@ public class AuthController {
             clearRefreshTokenCookie(response);
             throw new AuthenticationException("유효하지 않은 리프레시 토큰입니다.");
         }
+    }
+
+    @Operation(summary = "로그아웃", description = "세션 및 리프레시 토큰 쿠키를 삭제합니다.")
+    @PostMapping("/logout")
+    public ResponseEntity<Void> logout(
+        HttpServletRequest request,
+        HttpServletResponse response,
+        Authentication authentication
+    ) {
+        clearRefreshTokenCookie(response);
+        new SecurityContextLogoutHandler().logout(request, response, authentication);
+        return ResponseEntity.noContent().build();
     }
 
     private Map<String, Object> buildTokenResponse(String accessToken) {

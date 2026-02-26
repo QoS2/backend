@@ -3,6 +3,7 @@ package com.app.questofseoul.service;
 import com.app.questofseoul.domain.entity.Mission;
 import com.app.questofseoul.domain.entity.SpotContentStep;
 import com.app.questofseoul.domain.entity.UserMissionAttempt;
+import com.app.questofseoul.domain.enums.RunStatus;
 import com.app.questofseoul.domain.enums.StepKind;
 import com.app.questofseoul.dto.tour.MissionStepDetailResponse;
 import com.app.questofseoul.exception.AuthorizationException;
@@ -41,6 +42,7 @@ public class MissionStepService {
         Boolean isCompleted = false;
         String selectedOptionId = null;
         Map<String, Object> answerJson = Map.of();
+        UserMissionAttempt latestAttempt = null;
 
         if (runId != null) {
             if (userId == null) {
@@ -49,15 +51,34 @@ public class MissionStepService {
             tourRunRepository.findByIdAndUserId(runId, userId)
                     .orElseThrow(() -> new AuthorizationException("Not your tour run"));
 
-            UserMissionAttempt latestAttempt = userMissionAttemptRepository
+            latestAttempt = userMissionAttemptRepository
                     .findTopByTourRun_IdAndStep_IdOrderByAttemptNoDesc(runId, stepId)
                     .orElse(null);
-            if (latestAttempt != null) {
-                answerJson = latestAttempt.getAnswerJson() != null ? latestAttempt.getAnswerJson() : Map.of();
-                Object selected = answerJson.get("selectedOptionId");
-                selectedOptionId = selected != null ? String.valueOf(selected) : null;
-                isCompleted = Boolean.TRUE.equals(latestAttempt.getIsCorrect());
+        } else if (userId != null) {
+            // 프론트가 runId 없이 호출하는 경우에도 최신 시도 내역을 최대한 복원한다.
+            Long tourId = step.getSpot() != null && step.getSpot().getTour() != null
+                    ? step.getSpot().getTour().getId()
+                    : null;
+            if (tourId != null) {
+                latestAttempt = tourRunRepository.findByUserIdAndTourIdAndStatus(userId, tourId, RunStatus.IN_PROGRESS)
+                        .flatMap(run -> userMissionAttemptRepository.findTopByTourRun_IdAndStep_IdOrderByAttemptNoDesc(run.getId(), stepId))
+                        .orElse(null);
             }
+            if (latestAttempt == null) {
+                latestAttempt = userMissionAttemptRepository
+                        .findTopByTourRun_User_IdAndStep_IdOrderByIdDesc(userId, stepId)
+                        .orElse(null);
+            }
+        }
+
+        if (latestAttempt != null) {
+            answerJson = latestAttempt.getAnswerJson() != null ? latestAttempt.getAnswerJson() : Map.of();
+            Object selected = answerJson.get("selectedOptionId");
+            if (selected == null) {
+                selected = answerJson.get("userInput");
+            }
+            selectedOptionId = selected != null ? String.valueOf(selected) : null;
+            isCompleted = Boolean.TRUE.equals(latestAttempt.getIsCorrect());
         }
 
         return new MissionStepDetailResponse(

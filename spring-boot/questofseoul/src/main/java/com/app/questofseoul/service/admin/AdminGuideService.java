@@ -114,7 +114,7 @@ public class AdminGuideService {
 
         String lang = normalizeLanguage(req.language());
         List<SpotContentStep> allLangSteps = spotContentStepRepository
-                .findBySpot_IdAndLanguageOrderByStepIndexAsc(spotId, lang);
+                .findAllBySpotIdAndLanguageOrderByStepIndexAscIncludingUnpublished(spotId, lang);
         List<SpotContentStep> existingGuideSteps = allLangSteps.stream()
                 .filter(s -> s.getKind() == StepKind.GUIDE)
                 .collect(Collectors.toCollection(ArrayList::new));

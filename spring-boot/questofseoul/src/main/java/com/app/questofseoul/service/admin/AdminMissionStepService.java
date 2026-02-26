@@ -5,6 +5,7 @@ import com.app.questofseoul.domain.entity.SpotContentStep;
 import com.app.questofseoul.domain.entity.TourSpot;
 import com.app.questofseoul.domain.enums.MissionType;
 import com.app.questofseoul.domain.enums.StepKind;
+import com.app.questofseoul.domain.enums.StepNextAction;
 import com.app.questofseoul.dto.admin.MissionStepCreateRequest;
 import com.app.questofseoul.dto.admin.MissionStepResponse;
 import com.app.questofseoul.dto.admin.MissionStepUpdateRequest;
@@ -66,7 +67,7 @@ public class AdminMissionStepService {
         mission = missionRepository.save(mission);
 
         int nextIndex = spotContentStepRepository
-                .findBySpot_IdAndLanguageOrderByStepIndexAsc(spot.getId(), "ko")
+                .findAllBySpotIdAndLanguageOrderByStepIndexAscIncludingUnpublished(spot.getId(), "ko")
                 .stream()
                 .mapToInt(SpotContentStep::getStepIndex)
                 .max()
@@ -98,6 +99,9 @@ public class AdminMissionStepService {
         }
         if (step.getKind() != StepKind.MISSION) {
             throw new ResourceNotFoundException("Step is not a mission step");
+        }
+        if (Boolean.FALSE.equals(step.getIsPublished())) {
+            throw new ResourceNotFoundException("Step not found");
         }
         Mission mission = step.getMission();
         if (mission == null) {
@@ -134,14 +138,24 @@ public class AdminMissionStepService {
         if (step.getKind() != StepKind.MISSION) {
             throw new ResourceNotFoundException("Step is not a mission step");
         }
+        if (Boolean.FALSE.equals(step.getIsPublished())) {
+            throw new ResourceNotFoundException("Step not found");
+        }
         Mission mission = step.getMission();
-        spotContentStepRepository.delete(step);
+        // user_mission_attempts / chat_turns 가 step_id, mission_id를 참조할 수 있어 하드 삭제 대신 비공개 처리
+        step.unpublish();
+        step.setNextAction(null);
+        spotContentStepRepository.save(step);
         if (mission != null) {
             List<SpotContentStep> linkedGuideSteps = spotContentStepRepository
                     .findBySpot_IdAndKindAndMission_Id(spotId, StepKind.GUIDE, mission.getId());
-            linkedGuideSteps.forEach(linkedStep -> linkedStep.setMission(null));
+            linkedGuideSteps.forEach(linkedStep -> {
+                linkedStep.setMission(null);
+                if (linkedStep.getNextAction() == StepNextAction.MISSION_CHOICE) {
+                    linkedStep.setNextAction(StepNextAction.NEXT);
+                }
+            });
             spotContentStepRepository.saveAll(linkedGuideSteps);
-            missionRepository.delete(mission);
         }
     }
 }

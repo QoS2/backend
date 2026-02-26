@@ -93,6 +93,13 @@ export function LoginPage() {
     }
   }, [isLoading, data]);
 
+  useEffect(() => {
+    if (oauthToken) return;
+    if (!isLoading && !isError && data?.role === 'ADMIN') {
+      navigate(from, { replace: true });
+    }
+  }, [oauthToken, isLoading, isError, data, from, navigate]);
+
   if (oauthToken) {
     return null;
   }

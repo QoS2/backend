@@ -46,7 +46,7 @@ public class SecurityConfig {
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/oauth2/**", "/login/**").permitAll()
-                .requestMatchers("/api/v1/auth/login", "/api/v1/auth/register", "/api/v1/auth/refresh").permitAll()
+                .requestMatchers("/api/v1/auth/login", "/api/v1/auth/register", "/api/v1/auth/refresh", "/api/v1/auth/logout").permitAll()
                 .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/v1/tours/**").permitAll()
                 .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/v1/photo-spots", "/api/v1/photo-spots/*").permitAll()
                 .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/v1/steps/**").permitAll()

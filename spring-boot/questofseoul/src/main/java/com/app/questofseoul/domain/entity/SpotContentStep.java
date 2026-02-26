@@ -86,6 +86,14 @@ public class SpotContentStep {
         this.mission = mission;
     }
 
+    public void unpublish() {
+        this.isPublished = false;
+    }
+
+    public void publish() {
+        this.isPublished = true;
+    }
+
     public void setNextAction(StepNextAction nextAction) {
         this.nextAction = nextAction;
     }

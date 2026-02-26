@@ -5,12 +5,15 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 public interface UserMissionAttemptRepository extends JpaRepository<UserMissionAttempt, Long> {
 
     List<UserMissionAttempt> findByTourRun_IdAndStep_Id(Long tourRunId, Long stepId);
 
     Optional<UserMissionAttempt> findTopByTourRun_IdAndStep_IdOrderByAttemptNoDesc(Long tourRunId, Long stepId);
+
+    Optional<UserMissionAttempt> findTopByTourRun_User_IdAndStep_IdOrderByIdDesc(UUID userId, Long stepId);
 
     Optional<UserMissionAttempt> findByTourRun_IdAndStep_IdAndAttemptNo(Long tourRunId, Long stepId, Integer attemptNo);
 

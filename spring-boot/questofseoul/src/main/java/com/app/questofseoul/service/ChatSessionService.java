@@ -67,9 +67,18 @@ public class ChatSessionService {
         for (int i = 0; i < scriptTurns.size(); i++) {
             scriptTurnIndexMap.put(scriptTurns.get(i).getId(), i);
         }
+        int cursor = normalizeCursor(session.getCursorStepIndexSafe(), scriptTurns.size());
+        Set<Long> visibleScriptTurnIds = new HashSet<>();
+        for (int i = 0; i < cursor; i++) {
+            visibleScriptTurnIds.add(scriptTurns.get(i).getId());
+        }
 
         List<ChatTurnsResponse.ChatTurnItem> items = new ArrayList<>();
         for (ChatTurn turn : turns) {
+            if (turn.getSource() == ChatSource.SCRIPT && !visibleScriptTurnIds.contains(turn.getId())) {
+                continue;
+            }
+
             ChatTurnsResponse.ActionDto actionDto = null;
             if (turn.getSource() == ChatSource.SCRIPT) {
                 Integer idx = scriptTurnIndexMap.get(turn.getId());

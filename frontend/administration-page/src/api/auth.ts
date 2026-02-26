@@ -1,4 +1,5 @@
 import {
+  AUTH_LOGOUT_URL,
   AUTH_REFRESH_URL,
   AUTH_LOGIN_URL,
   AUTH_ME_URL,
@@ -132,4 +133,13 @@ export async function fetchAuthRefresh(): Promise<AuthTokenResponse> {
     setAccessToken(data.accessToken);
   }
   return data;
+}
+
+/** Logout: clear session + refresh cookie */
+export async function fetchAuthLogout(): Promise<void> {
+  await fetch(AUTH_LOGOUT_URL, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { Accept: 'application/json' },
+  });
 }

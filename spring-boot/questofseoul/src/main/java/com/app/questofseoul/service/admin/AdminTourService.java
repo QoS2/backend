@@ -43,6 +43,8 @@ public class AdminTourService {
             throw new DuplicateResourceException("Tour externalKey", req.externalKey());
         }
         Tour tour = Tour.create(req.externalKey(), req.titleEn(), req.descriptionEn(), req.infoJson(), req.goodToKnowJson());
+        // 관리자 화면의 titleEn/descriptionEn 입력값을 실제 공개 표시 필드(title/description)에도 동기화한다.
+        syncPublicDisplayFields(tour, req.titleEn(), req.descriptionEn());
         tour = tourRepository.save(tour);
         return toResponse(tour);
     }
@@ -51,8 +53,14 @@ public class AdminTourService {
     public TourAdminResponse update(Long tourId, TourUpdateRequest req) {
         Tour tour = tourRepository.findById(tourId)
                 .orElseThrow(() -> new ResourceNotFoundException("Tour not found"));
-        if (req.titleEn() != null) tour.setTitleEn(req.titleEn());
-        if (req.descriptionEn() != null) tour.setDescriptionEn(req.descriptionEn());
+        if (req.titleEn() != null) {
+            tour.setTitleEn(req.titleEn());
+            tour.setTitle(req.titleEn());
+        }
+        if (req.descriptionEn() != null) {
+            tour.setDescriptionEn(req.descriptionEn());
+            tour.setDescription(req.descriptionEn());
+        }
         if (req.infoJson() != null) tour.setInfoJson(req.infoJson());
         if (req.goodToKnowJson() != null) tour.setGoodToKnowJson(req.goodToKnowJson());
         tour = tourRepository.save(tour);
@@ -64,6 +72,15 @@ public class AdminTourService {
         Tour tour = tourRepository.findById(tourId)
                 .orElseThrow(() -> new ResourceNotFoundException("Tour not found"));
         tourRepository.delete(tour);
+    }
+
+    private void syncPublicDisplayFields(Tour tour, String title, String description) {
+        if (title != null) {
+            tour.setTitle(title);
+        }
+        if (description != null) {
+            tour.setDescription(description);
+        }
     }
 
     private TourAdminResponse toResponse(Tour tour) {

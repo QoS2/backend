@@ -30,7 +30,7 @@ public class MissionController {
     public ResponseEntity<MissionStepDetailResponse> getMissionStepDetail(
             @PathVariable Long stepId,
             @RequestParam(required = false) Long runId) {
-        UUID userId = runId != null ? authService.getCurrentUserId() : null;
+        UUID userId = getUserIdOrNull();
         return ResponseEntity.ok(missionStepService.getMissionStepDetail(stepId, runId, userId));
     }
 
@@ -43,5 +43,13 @@ public class MissionController {
             @Valid @RequestBody MissionSubmitRequest request) {
         UUID userId = authService.getCurrentUserId();
         return ResponseEntity.ok(missionService.submitMission(userId, runId, stepId, request));
+    }
+
+    private UUID getUserIdOrNull() {
+        try {
+            return authService.getCurrentUserId();
+        } catch (Exception e) {
+            return null;
+        }
     }
 }

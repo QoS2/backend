@@ -147,10 +147,7 @@ public class TourRunService {
                 .filter(doneSpotIds::contains)
                 .toList();
 
-        TourSpot nextSpot = routeSpots.stream()
-                .filter(s -> !doneSpotIds.contains(s.getId()))
-                .findFirst()
-                .orElse(null);
+        TourSpot nextSpot = resolveNextSpotByLastCompleted(routeSpots, doneSpotIds);
 
         boolean hasNextSpot = nextSpot != null;
         if (!hasNextSpot && run.getStatus() == RunStatus.IN_PROGRESS) {
@@ -186,6 +183,29 @@ public class TourRunService {
                 nextSpotDto,
                 progress
         );
+    }
+
+    /**
+     * next-spot은 "지금까지 완료된 스팟 중 라우트 순서상 가장 마지막 스팟"의 다음 스팟을 반환한다.
+     * 완료 이력이 없으면 첫 번째 라우트 스팟을 반환한다.
+     */
+    private TourSpot resolveNextSpotByLastCompleted(List<TourSpot> routeSpots, Set<Long> doneSpotIds) {
+        if (routeSpots.isEmpty()) {
+            return null;
+        }
+
+        int lastCompletedIndex = -1;
+        for (int i = 0; i < routeSpots.size(); i++) {
+            if (doneSpotIds.contains(routeSpots.get(i).getId())) {
+                lastCompletedIndex = i;
+            }
+        }
+
+        int nextIndex = lastCompletedIndex + 1;
+        if (nextIndex >= routeSpots.size()) {
+            return null;
+        }
+        return routeSpots.get(nextIndex);
     }
 
     private void ensureAndUnlockSpotProgress(TourRun run, TourSpot spot) {

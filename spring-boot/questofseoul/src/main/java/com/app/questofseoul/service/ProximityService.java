@@ -109,6 +109,7 @@ public class ProximityService {
             // 첫 번째 턴 반환 후 커서를 다음 턴으로 이동
             ChatTurn firstTurn = savedTurns.get(0);
             session.moveCursorTo(1);
+            syncScriptOnlySpotCompletion(session, savedTurns, language);
             List<ProximityResponse.AssetDto> firstAssets = getAssetsForTurn(firstTurn);
             ProximityResponse.ActionDto action = resolveActionForTurn(
                     run,
@@ -195,6 +196,7 @@ public class ProximityService {
         } else {
             currentIndex = cursor - 1;
         }
+        syncScriptOnlySpotCompletion(session, scriptTurns, language);
 
         ChatTurn turn = scriptTurns.get(currentIndex);
         ProximityResponse.ActionDto action = resolveActionForTurn(
@@ -213,6 +215,43 @@ public class ProximityService {
         return new ProximityResponse("PROXIMITY", "GUIDE", session.getId(),
                 new ProximityResponse.ProximityContext("SPOT", spot.getId(), spot.getTitle(), spot.getType().name()),
                 message);
+    }
+
+    private void syncScriptOnlySpotCompletion(ChatSession session, List<ChatTurn> scriptTurns, String language) {
+        if (scriptTurns.isEmpty()) {
+            return;
+        }
+
+        int cursor = Math.max(0, Math.min(session.getCursorStepIndexSafe(), scriptTurns.size()));
+        if (cursor < scriptTurns.size()) {
+            return;
+        }
+
+        if (hasMissionSteps(session, language)) {
+            return;
+        }
+
+        userSpotProgressRepository.findByTourRunIdAndSpotId(session.getTourRun().getId(), session.getSpot().getId())
+                .ifPresent(progress -> {
+                    if (progress.getProgressStatus() != ProgressStatus.COMPLETED
+                            && progress.getProgressStatus() != ProgressStatus.SKIPPED) {
+                        progress.complete();
+                    }
+                });
+    }
+
+    private boolean hasMissionSteps(ChatSession session, String language) {
+        String lang = (language != null && !language.isBlank())
+                ? language
+                : ((session.getLanguage() != null && !session.getLanguage().isBlank()) ? session.getLanguage() : "ko");
+
+        List<SpotContentStep> missionSteps = spotContentStepRepository
+                .findBySpot_IdAndKindAndLanguageOrderByStepIndexAsc(session.getSpot().getId(), StepKind.MISSION, lang);
+        if (missionSteps.isEmpty() && !"ko".equals(lang)) {
+            missionSteps = spotContentStepRepository
+                    .findBySpot_IdAndKindAndLanguageOrderByStepIndexAsc(session.getSpot().getId(), StepKind.MISSION, "ko");
+        }
+        return !missionSteps.isEmpty();
     }
 
     private ProximityResponse.ActionDto resolveActionForTurn(
